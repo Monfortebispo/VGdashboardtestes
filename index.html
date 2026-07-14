@@ -1980,23 +1980,52 @@ body.vg-is-admin #vgSetupBtn{display:inline-flex!important;}
 </style>
 
 <style id="vg-custosab-integration-style">
-/* Integração VG · Custos A&B */
-body.vg-custosab-active { --context-w: 0px; }
-body.vg-custosab-active #contextPanel { display:none !important; }
+/* Integração visual contínua · VG Custos A&B */
+body.vg-custosab-active { --context-w:0px; }
+body.vg-custosab-active #contextPanel,
 body.vg-custosab-active #globalFilterBar { display:none !important; }
-body.vg-custosab-active .main { height:calc(100vh - 58px); min-height:0; }
-body.vg-custosab-active .view-content { flex:1; min-height:0; height:100%; padding:0 !important; overflow:hidden; }
-#view-custosab { height:100%; min-height:0; }
+body.vg-custosab-active .main { height:calc(100vh - 58px); min-height:0; padding:0 !important; background:var(--surface-0); }
+body.vg-custosab-active .view-content { flex:1; min-height:0; height:100%; padding:0 !important; overflow:hidden; background:var(--surface-0); }
+#view-custosab { height:100%; min-height:0; background:var(--surface-0); }
 #view-custosab.active { display:flex; flex-direction:column; }
-.vg-custosab-head { min-height:54px; display:flex; align-items:center; gap:14px; padding:10px 18px; background:var(--surface-1); border-bottom:1px solid var(--border); flex:0 0 auto; }
-.vg-custosab-title { min-width:0; }
-.vg-custosab-title strong { display:block; color:var(--text-1); font-size:14px; }
-.vg-custosab-title span { display:block; color:var(--text-3); font-size:10px; margin-top:2px; }
-.vg-custosab-actions { margin-left:auto; display:flex; align-items:center; gap:7px; }
-.vg-custosab-btn { border:1px solid var(--border-2); background:var(--surface-2); color:var(--text-2); border-radius:7px; padding:7px 10px; font:600 10px var(--font); cursor:pointer; }
-.vg-custosab-btn:hover { border-color:var(--gold); color:var(--gold); }
-#vgCustosABFrame { display:block; width:100%; flex:1 1 auto; min-height:0; border:0; background:#0b1526; }
-@media(max-width:960px){ .vg-custosab-head{padding:8px 10px}.vg-custosab-title span{display:none}.vg-custosab-btn span{display:none} }
+.vg-custosab-head {
+  min-height:50px; display:flex; align-items:center; gap:12px; padding:8px 16px;
+  background:var(--surface-1); border-bottom:1px solid var(--border); flex:0 0 auto;
+  box-shadow:0 1px 0 rgba(255,255,255,.015); z-index:2;
+}
+.vg-custosab-mark {
+  width:30px; height:30px; flex:0 0 30px; display:flex; align-items:center; justify-content:center;
+  border-radius:9px; background:var(--gold-dim); border:1px solid var(--border); color:var(--gold);
+  font:800 9px var(--font); letter-spacing:-.3px;
+}
+.vg-custosab-title { min-width:0; display:flex; align-items:baseline; gap:10px; }
+.vg-custosab-title strong { color:var(--text-1); font-size:13px; white-space:nowrap; }
+.vg-custosab-title span { color:var(--text-3); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vg-custosab-actions { margin-left:auto; display:flex; align-items:center; gap:6px; }
+.vg-custosab-btn {
+  width:31px; height:31px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-2);
+  background:var(--surface-2); color:var(--text-2); border-radius:8px; font:700 13px var(--font); cursor:pointer;
+  transition:border-color .15s,color .15s,transform .15s;
+}
+.vg-custosab-btn:hover { border-color:var(--gold); color:var(--gold); transform:translateY(-1px); }
+.vg-custosab-shell { position:relative; display:flex; flex:1 1 auto; min-height:0; background:var(--surface-0); }
+#vgCustosABFrame { display:block; width:100%; flex:1 1 auto; min-height:0; border:0; background:var(--surface-0); opacity:0; transition:opacity .2s ease; }
+.vg-custosab-shell.ready #vgCustosABFrame { opacity:1; }
+.vg-custosab-loader {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:1;
+  background:var(--surface-0); color:var(--text-3); font:600 11px var(--font); letter-spacing:.2px;
+}
+.vg-custosab-shell.ready .vg-custosab-loader { display:none; }
+.vg-custosab-loader::before {
+  content:''; width:18px; height:18px; margin-right:10px; border-radius:50%;
+  border:2px solid var(--border); border-top-color:var(--gold); animation:vgCabSpin .7s linear infinite;
+}
+@keyframes vgCabSpin { to { transform:rotate(360deg); } }
+body.theme-vilagale .vg-custosab-mark { background:rgba(95,190,181,.18); color:#1a7a72; }
+body.theme-erp .vg-custosab-mark { background:rgba(139,26,26,.10); color:#8b1a1a; }
+@media(max-width:960px){
+  .vg-custosab-head{padding:7px 10px}.vg-custosab-title span{display:none}.vg-custosab-mark{display:none}
+}
 </style>
 
 </head>
@@ -3328,16 +3357,20 @@ body.vg-custosab-active .view-content { flex:1; min-height:0; height:100%; paddi
 <!-- CUSTOS A&B — módulo integrado -->
 <div class="tab-content" id="view-custosab">
   <div class="vg-custosab-head">
+    <div class="vg-custosab-mark">A&amp;B</div>
     <div class="vg-custosab-title">
-      <strong>VG · Custos A&amp;B</strong>
-      <span id="vgCustosABStatus">Análise detalhada de comidas, bebidas, inventários, rácios e previsão de compras</span>
+      <strong>Custos A&amp;B</strong>
+      <span id="vgCustosABStatus">Resumo de Indicadores</span>
     </div>
     <div class="vg-custosab-actions">
-      <button class="vg-custosab-btn" type="button" onclick="vgCustosReload()">↻ <span>Recarregar módulo</span></button>
-      <button class="vg-custosab-btn" type="button" onclick="vgCustosOpenStandalone()">↗ <span>Abrir em janela</span></button>
+      <button class="vg-custosab-btn" type="button" onclick="vgCustosReload()" title="Recarregar módulo" aria-label="Recarregar módulo">↻</button>
+      <button class="vg-custosab-btn" type="button" onclick="vgCustosOpenStandalone()" title="Abrir em janela independente" aria-label="Abrir em janela independente">↗</button>
     </div>
   </div>
-  <iframe id="vgCustosABFrame" title="VG Custos A&B" src="custos-ab/index.html?embedded=1" loading="eager" allow="clipboard-write"></iframe>
+  <div class="vg-custosab-shell" id="vgCustosABShell">
+    <div class="vg-custosab-loader">A carregar o módulo de Custos A&amp;B</div>
+    <iframe id="vgCustosABFrame" title="VG Custos A&B" src="custos-ab/index.html?embedded=1" loading="eager" allow="clipboard-write"></iframe>
+  </div>
 </div>
 
 <div class="tab-content" id="view-costanalysis">
@@ -9699,6 +9732,7 @@ function setTheme(name) {
   if (header) header.style.background = gradients[name] || gradients.blue;
   // Persist preference
   try { localStorage.setItem('vg_theme', name); } catch(e) {}
+  try { if (typeof window.vgCustosSendTheme === 'function') window.vgCustosSendTheme(name); } catch(e) {}
 }
 
 // Restore saved theme on load
@@ -20177,17 +20211,40 @@ body.vg20-safe .logo-block{gap:11px!important;}
 (function(){
   'use strict';
   function frame(){ return document.getElementById('vgCustosABFrame'); }
+  function shell(){ return document.getElementById('vgCustosABShell'); }
   function currentUser(){ try { return typeof window.vgAuthCurrent === 'function' ? window.vgAuthCurrent() : null; } catch(e){ return null; } }
-  window.vgCustosSendSession = function(){ var f=frame(); if(!f||!f.contentWindow)return; f.contentWindow.postMessage({type:'VG_DASH_SESSION',user:currentUser()},'*'); };
-  window.vgCustosReload = function(){ var f=frame(); if(!f)return; f.src='custos-ab/index.html?embedded=1&reload='+Date.now(); };
+  function currentTheme(){
+    if(document.body.classList.contains('theme-vilagale')) return 'vilagale';
+    if(document.body.classList.contains('theme-erp')) return 'erp';
+    try { return localStorage.getItem('vg_theme') || 'blue'; } catch(e){ return 'blue'; }
+  }
+  window.vgCustosSendSession = function(){
+    var f=frame(); if(!f||!f.contentWindow)return;
+    f.contentWindow.postMessage({type:'VG_DASH_SESSION',user:currentUser(),theme:currentTheme()},'*');
+  };
+  window.vgCustosSendTheme = function(name){
+    var f=frame(); if(!f||!f.contentWindow)return;
+    f.contentWindow.postMessage({type:'VG_DASH_THEME',theme:name||currentTheme()},'*');
+  };
+  window.vgCustosReload = function(){
+    var f=frame(), s=shell(); if(!f)return;
+    if(s)s.classList.remove('ready');
+    f.src='custos-ab/index.html?embedded=1&reload='+Date.now();
+  };
   window.vgCustosOpenStandalone = function(){ window.open('custos-ab/index.html','_blank','noopener'); };
   window.addEventListener('message',function(ev){
-    var data=ev.data||{}, f=frame();
+    var data=ev.data||{}, f=frame(), s=shell();
+    if(f && ev.source!==f.contentWindow) return;
     if(data.type==='VG_COSTS_REQUEST_SESSION') window.vgCustosSendSession();
-    if(data.type==='VG_COSTS_VIEW' && document.getElementById('vgCustosABStatus')) document.getElementById('vgCustosABStatus').textContent=data.label||'Módulo Custos A&B';
-    if(data.type==='VG_COSTS_READY' && f && ev.source===f.contentWindow) window.vgCustosSendSession();
+    if(data.type==='VG_COSTS_VIEW' && document.getElementById('vgCustosABStatus')) document.getElementById('vgCustosABStatus').textContent=data.label||'Custos A&B';
+    if(data.type==='VG_COSTS_READY'){ window.vgCustosSendSession(); window.vgCustosSendTheme(); }
+    if(data.type==='VG_COSTS_UI_READY' && s) s.classList.add('ready');
   });
-  document.addEventListener('DOMContentLoaded',function(){ var f=frame(); if(f)f.addEventListener('load',function(){setTimeout(window.vgCustosSendSession,60);}); if(location.hash==='#custosab')document.body.classList.add('vg-custosab-active'); });
+  document.addEventListener('DOMContentLoaded',function(){
+    var f=frame();
+    if(f) f.addEventListener('load',function(){ setTimeout(window.vgCustosSendSession,50); setTimeout(window.vgCustosSendTheme,70); });
+    if(location.hash==='#custosab') document.body.classList.add('vg-custosab-active');
+  });
 })();
 </script>
 
