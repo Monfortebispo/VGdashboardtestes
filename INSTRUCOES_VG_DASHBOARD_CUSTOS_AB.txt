@@ -1,0 +1,31 @@
+VG DASHBOARD + CUSTOS A&B — VERSÃO INTEGRADA
+
+COMO UTILIZAR
+1. Extraia todo o conteúdo do ficheiro ZIP para uma pasta.
+2. Abra o ficheiro index.html existente na raiz.
+3. Entre no VG Dashboard normalmente.
+4. No menu lateral, selecione "Custos A&B".
+
+IMPORTANTE
+- Não mova nem elimine a pasta "custos-ab".
+- Não abra o index.html diretamente dentro do ZIP: extraia primeiro todos os ficheiros.
+- O módulo Custos A&B recebe automaticamente o utilizador, perfil e hotel do VG Dashboard.
+- Direção de Operações mantém acesso às áreas de carregamento e setup.
+- Diretores e assistentes ficam associados ao hotel configurado no utilizador do dashboard.
+- O botão "Abrir em janela" permite abrir o módulo Custos A&B de forma autónoma.
+
+ESTRUTURA
+index.html                         VG Dashboard principal
+custos-ab/index.html               Módulo VG Custos A&B
+netlify/functions/shared.js        Sincronização do módulo Custos A&B
+netlify.toml / package.json        Configuração de publicação Netlify
+
+INTEGRAÇÃO IMPLEMENTADA
+- Nova página "Custos A&B" no menu principal.
+- Módulo carregado dentro do dashboard.
+- Segundo login removido no modo integrado.
+- Cabeçalho interno ocultado.
+- Navegação lateral do módulo convertida em barra horizontal.
+- Transmissão automática da sessão e permissões.
+- Botões para recarregar e abrir o módulo numa janela separada.
+- Restauro automático do layout normal ao regressar às outras páginas.

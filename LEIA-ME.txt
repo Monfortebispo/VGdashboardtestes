@@ -1,0 +1,263 @@
+VG · CUSTOS A&B — v1.7.1
+======================
+
+Dashboard de análise de custos de Comidas & Bebidas (35 hotéis PT),
+com regiões e perfis de utilizador no mesmo modelo do VG Dashboard.
+
+CONTEÚDO
+--------
+index.html                    aplicação completa (single-file)
+netlify/functions/shared.js   função de dados partilhados (Netlify Blobs)
+netlify.toml                  configuração do site
+package.json                  dependência @netlify/blobs
+
+DEPLOY (GitHub + Netlify)
+-------------------------
+1. Criar um repositório novo no GitHub e carregar estes 4 ficheiros
+   (manter a estrutura de pastas: netlify/functions/shared.js).
+2. No Netlify: "Add new site" > "Import from Git" > escolher o repositório.
+   Build command: (vazio) · Publish directory: .
+3. O Netlify instala o @netlify/blobs automaticamente e expõe a função
+   em /api/shared. Não é preciso configurar mais nada.
+
+PRIMEIRO ARRANQUE
+-----------------
+- Login inicial (seed): pmonforte / vg2026  (perfil Direção de Operações)
+  >> Alterar a password em Setup > Utilizadores logo no primeiro acesso.
+- Criar os restantes utilizadores em Setup (perfis: Direção de Operações,
+  Diretor, Assistente de Direção). Todos os perfis veem todos os hotéis;
+  apenas a DO tem acesso a Carregar Dados e Setup.
+- Em Carregar Dados, arrastar o ficheiro Custos_A_B_PT_MMYYYY.xlsx e
+  clicar em "Publicar para todos os utilizadores". Cada publicação
+  substitui a anterior (o ficheiro é acumulado do ano).
+
+REGIÕES
+-------
+Mapa por defeito igual ao VG Dashboard (Norte e Centro, Lisboa & Ilhas,
+Alentejo, Algarve). ISLA CANELA ficou no Algarve e NEP KIDS em Lisboa &
+Ilhas — ambos editáveis em Setup > Regiões (a alteração é partilhada
+com todos os utilizadores).
+
+NOVIDADES v1.1
+--------------
+- Filtro de TIPOLOGIA na sidebar (4* AI, 4* Resorts, 4* Especiais,
+  4* Cidade, Collection), combinavel com o filtro de regiao.
+- Vista GRUPOS & ROTACAO: Familia > Sub-familia > Grupo com consumo,
+  compras, inventario e cobertura de stock em meses.
+- Vista INVENTARIO POR ARTIGO: stock inicial, compras, inventario final,
+  consumo implicito e cobertura, com filtro "so stock parado".
+- Vista RECEITAS BEBIDAS: detalhe por categoria (mes do ficheiro).
+- Vista CONFERENCIA P&L: diferencas ficheiro vs. MAPA RESUMO por hotel,
+  com alertas.
+- Analise Hotel: benchmark adicional vs. media da tipologia.
+- Comentario automatico: passa a incluir benchmark de tipologia,
+  artigos com stock parado e alertas de conferencia com o P&L.
+
+QUANTIDADES POR ARTIGO (v1.7.1)
+-------------------------------
+- CORRECAO (v1.7.1): o carregamento do ficheiro grande dava erro
+  ("nao foi possivel carregar o descompactador" e depois "array buffer
+  allocation failed"). Causa: (1) o URL do fflate tinha .min.js que nao
+  existe; (2) mesmo carregando, descomprimir o ZIP inteiro estourava a
+  memoria (a pivot cache tem ~2,5 GB descomprimidos). Agora a ferramenta
+  le o INDICE do ZIP e extrai FISICAMENTE so as folhas (~21 MB, <1 s),
+  saltando a pivot cache sem lhe tocar. Robusto e rapido (5 s para 229 MB).
+- Nova fonte de dados: ficheiro de quantidades com a aba "Pivot livre"
+  (quantidade por artigo, hotel e mes). Carrega-se em Carregar Dados ->
+  Quantidades por artigo. Guardado por ANO, funciona perpetuamente
+  (2025, 2026, 2027...). Carregar o ano anterior 1x e o ano corrente a
+  cada mes (substitui-se).
+- IMPORTANTE - ficheiros grandes: o ficheiro traz uma "pivot cache"
+  enorme (pode ter centenas de MB / GBs descomprimido) que rebentaria a
+  memoria do browser. A ferramenta remove-a AUTOMATICAMENTE antes de ler
+  (ex.: 229 MB -> 3,6 MB). Nao e preciso fazer nada; so manter sempre a
+  MESMA configuracao da pivot (mesmos campos em linhas/colunas).
+- Nova vista "Quantidades por Artigo": consumo real (historico) e
+  previsao (meses futuros) em unidades reais (kg, litros, caixas...),
+  por hotel ou selecao, com filtro de artigo.
+- Previsao de quantidades: mesmo metodo dos euros (qtd/bednight x
+  bednights previstas x sazonalidade).
+- Sugestao de Encomenda: opcao "mostrar quantidades (unidades)" que
+  acrescenta a lista de quantidades previstas por artigo.
+- PDF de posicao de compra: passa a incluir seccao de quantidades
+  previstas por artigo (unidades), alem dos euros.
+- NOTA: os nomes de artigo das quantidades sao mais detalhados e
+  distintos dos das abas de custos (ex.: "AGUA LUSO 1LT" vs familia
+  "AGUAS"). Por isso as quantidades sao uma camada paralela em unidades,
+  nao substituem a previsao em euros.
+
+PDF DE POSICAO DE COMPRA (v1.6)
+-------------------------------
+- Botao "Gerar PDF" nas vistas Previsao de Compras e Sugestao de
+  Encomenda: gera um PDF profissional da posicao de compra para o hotel
+  e mes escolhidos, com cabecalho, analise do hotel (food/beverage cost,
+  bednights), consumo previsto por familia e a lista de encomenda por
+  artigo com totais. O PDF descarrega para o computador.
+- Ao enviar email, pergunta se queres gerar tambem o PDF; se sim, gera-o
+  e o email lembra-te de o arrastar como anexo.
+- NOTA: o mailto nao permite anexos automaticos (limitacao dos clientes
+  de email, nao da ferramenta). O PDF descarrega e arrasta-se para o
+  email num gesto. Anexo 100%% automatico exigiria ligar a ferramenta ao
+  Microsoft 365 (Graph API), com autenticacao e apoio do IT.
+
+ENVIO DE PREVISOES POR EMAIL (v1.5.5)
+-------------------------------------
+- CORRECAO: o corpo do email aparecia em branco no Outlook porque o
+  mailto nao aceita corpos longos. Agora o email abre com um RESUMO
+  (analise do hotel + consumo previsto por familia) ja preenchido, e a
+  LISTA DETALHADA POR ARTIGO e copiada para a area de transferencia
+  para colar no email com Ctrl+V (indicado no proprio corpo).
+- Botao "Enviar por email" (vista Sugestao de Encomenda) e "Email ao
+  diretor" (vista Previsao de Compras). Escolhe-se o hotel especifico e
+  a ferramenta gera um email com:
+   1) situacao atual do hotel (food/beverage cost, bednights previstas);
+   2) consumo previsto por familia para o mes;
+   3) sugestao de encomenda por artigo (so o que e preciso repor).
+- O email abre no cliente de mail do utilizador (mailto), pre-preenchido
+  com assunto e corpo, pronto a rever e enviar. Se a lista for muito
+  longa, o corpo e copiado para a area de transferencia (colar no mail).
+- O email do diretor de cada hotel fica memorizado (partilhado) para nao
+  ser preciso escrever de novo.
+- Mantem a cautela: o email diz explicitamente que e um ponto de partida
+  a validar com a operacao antes de encomendar.
+
+CLAREZA NO PREVISTO VS REAL (v1.5.3)
+------------------------------------
+- O detalhe por hotel so pode existir depois do mes fechar (e preciso o
+  consumo real para comparar). Antes, um mes por fechar nao mostrava nada
+  e parecia um erro. Agora, ao abrir um mes ainda nao fechado, aparece
+  uma explicacao clara ("aguarda fecho") em vez de vazio, e a coluna Real
+  mostra um indicador visivel. Assim que o mapa de custos com esse mes for
+  publicado, o detalhe hotel-a-hotel preenche-se automaticamente.
+
+DRILL-DOWN DE ARTIGO POR HOTEL (v1.5.2)
+---------------------------------------
+- Na vista Inventario por Artigo, clicar num artigo abre um mapa de
+  comparacao desse artigo entre os hoteis da selecao (regiao/tipologia),
+  com stock e cobertura, ordenado da maior cobertura (stock parado) para
+  a menor (risco de rutura). Clicar de novo, ou no X, fecha.
+
+ACOMPANHAMENTO POR HOTEL (v1.5.1)
+---------------------------------
+- Previsto vs. Real deixou de ser so global: cada mes guardado abre um
+  DETALHE POR HOTEL (clica no mes) com previsto/real/desvio de cada um,
+  ordenado pelos maiores desvios.
+- O "erro medio" passou a ser a media dos desvios ABSOLUTOS por hotel,
+  para que erros opostos entre hoteis nao se cancelem e escondam
+  problemas (ex.: um mes pode ter +1% global mas 12% de erro por hotel).
+- Aviso ao guardar com cenario ativo (o ideal e guardar no cenario base).
+
+GESTAO DE COMPRAS (v1.5)
+------------------------
+- SUGESTAO DE ENCOMENDA (nova vista): por hotel/regiao e mes futuro,
+  calcula por artigo quanto encomendar = consumo previsto + stock de
+  seguranca (1 semana por defeito, ajustavel) - stock atual. Artigos
+  urgentes (stock < ~1 semana do previsto) ficam assinalados. Exclui
+  linhas de receita (so artigos de compra reais). Respeita o cenario
+  de ocupacao/preco definido na Previsao.
+- ALERTAS DE RUTURA (na Previsao de Compras): painel vermelho no topo
+  com os artigos cujo stock atual nao cobre metade do consumo previsto
+  do proximo mes, com dias estimados de cobertura.
+- PREVISTO VS REAL (nova vista): guarda a previsao de um mes; quando o
+  consumo real desse mes entra no ficheiro, mostra o desvio e o erro
+  medio, para calibrar a confianca nas previsoes. Partilhado por Blobs.
+- CAUTELA: todas estas saidas sao apresentadas como PONTO DE PARTIDA
+  editavel pelo diretor (aviso visivel), nunca como ordem de compra
+  a executar as cegas - o modelo nao conhece eventos/reservas futuras.
+- NOTA: previsao e encomenda sao em EUROS (o mapa de custos nao tem
+  quantidades). Para unidades a comprar, seria preciso um export do
+  economato com quantidades por artigo.
+
+BASE DE CONSUMO NA COBERTURA (v1.4.1)
+-------------------------------------
+- O inventario usado na cobertura e sempre o ATUAL (fecho do ultimo mes
+  com dados) - e o stock que ainda podes gerir hoje.
+- Novo seletor de BASE DE CONSUMO para a cobertura, nas vistas
+  Inventario por Artigo e Grupos & Rotacao:
+   * Ultimo mes (por defeito) - o ritmo atual, o mais util para decidir;
+   * Media dos ultimos 3 meses;
+   * Media do ano (acumulado) - como estava antes.
+  Antes usava-se sempre a media do ano, que em epocas de arranque
+  (ex.: verao) inflacionava a cobertura porque incluia meses fracos ja
+  passados. O comentario automatico passou a usar o ultimo mes.
+
+CENARIOS E GRANULARIDADE MENSAL (v1.4)
+--------------------------------------
+- PREVISAO DE COMPRAS ganhou um painel de CENARIO (ajusta e ve na hora):
+   * slider de ocupacao (+/- 30% as bednights previstas);
+   * slider de preco de compra (+/- 20% ao euro/bednight);
+   * edicao manual do total de bednights de cada mes do horizonte
+     ("e se Agosto encher mais?"), repartido pelos hoteis da selecao.
+   Combinaveis entre si; botao para repor o cenario base.
+- Seletor ACUMULADO / MES ESPECIFICO nas vistas Resumo e Sub-Familias
+  (a de Detalhe de Artigos ja tinha). Permite ver os racios e o custo
+  por couvert mes a mes, alem do acumulado do ano.
+
+CORRECAO CRITICA DA COBERTURA (v1.3.2)
+--------------------------------------
+- Descoberto que a aba "Detalhe de consumo" (e as matrizes de artigo)
+  so contem ~1/4 do consumo real (movimentos de economato central),
+  o que inflacionava a cobertura de stock em cerca de 4x.
+- A cobertura passou a usar o CONSUMO REAL das abas mensais (completo),
+  repartido por grupo/artigo na proporcao do inventario. Ex.: aguas no
+  Cascais passaram de ~4 meses (errado) para ~0,8 meses (correto).
+- Aplica-se as vistas Grupos & Rotacao, Inventario por Artigo e ao
+  comentario automatico.
+
+CORRECAO DA COBERTURA DE STOCK (v1.3.1)
+---------------------------------------
+- A cobertura em meses passou a usar os MESES ATIVOS de cada hotel
+  (meses em que operou), ignorando meses fechados/baixa ocupacao que
+  antes distorciam o consumo medio e empolavam a cobertura.
+- So e calculada para artigos com inventario >= 100 EUR e consumo real;
+  artigos de baixo giro ou stock irrelevante deixam de gerar numeros
+  enganadores (aparecem como "." ou "baixo giro").
+- Nas tabelas mostra-se sempre o inventario e o consumo medio/mes ao
+  lado, para a cobertura ter contexto (passar o rato nas celulas da
+  matriz mostra o inventario).
+
+PREVISAO DE COMPRAS POR BEDNIGHTS (v1.3)
+----------------------------------------
+- Nova vista PREVISAO DE COMPRAS: preve o custo de compras futuro por
+  familia, sub-familia e ARTIGO, com base nas bednights (room nights).
+  Horizontes: proximos 3 meses / resto do ano / todo o futuro (inclui
+  o proximo ano). Por hotel ou por regiao/tipologia.
+- Nova vista BEDNIGHTS: room nights por hotel/ano/mes (total, individual,
+  grupo, DRHP), passado e futuro.
+- Metodo de previsao "misto": racio euro/bednight por artigo do ano
+  corrente, modulado pela forma sazonal do mesmo artigo no ano anterior
+  (se publicado o historico), aplicado as bednights previstas de cada mes.
+  Validado com backtest: erro medio ~8%.
+- Em "Carregar Dados" ha agora 3 zonas:
+   1) Custos do ano (como antes, guardado por ano);
+   2) Bednights / Ocupacao (uma publicacao cobre todos os anos);
+   3) Historico anual de custos (mapa completo do ano anterior, para a
+      sazonalidade da previsao) - opcional mas recomendado.
+- A COBERTURA de stock foi clarificada: e sempre em MESES de consumo
+  (inventario final / consumo medio mensal), com nova coluna de consumo
+  medio/mes na vista Inventario por Artigo.
+- NOTA: o ficheiro de custos so tem valores em euros, nao quantidades,
+  pelo que a previsao e em custo (euros). Se um dia houver quantidades
+  no economato, a previsao de unidades pode ser acrescentada.
+
+HISTORICO MULTI-ANO (v1.2)
+--------------------------
+- Cada publicacao fica guardada POR ANO (o ano e detetado do nome do
+  ficheiro, ex.: Custos_A_B_PT_062026.xlsx -> 2026).
+- Publicar um ficheiro substitui APENAS os dados desse ano; os outros
+  anos ficam intactos. Os pedacos antigos do ano sao limpos.
+- No topo da aplicacao aparece um seletor de ano para consultar o
+  historico (2026, 2027, ...). Por defeito abre o ano mais recente.
+- Todos os rotulos de comparacao (ex.: "Media 2025") sao lidos do
+  proprio Excel, pelo que em 2027/2028 passam automaticamente a
+  "Media 2026"/"Media 2027" sem alterar codigo.
+- Recomendacao: guardar sempre os ficheiros Excel originais; sao a
+  fonte de verdade e permitem republicar qualquer ano em segundos.
+
+NOTAS
+-----
+- Limiares de alerta conforme as notas do próprio Excel:
+  Comidas >= 40% · Bebidas >= 25% (vigilância a partir de 33% / 20%).
+- Os valores são lidos diretamente das abas de resumo do Excel
+  (RESUMO - INDICADORES, RÁCIOS MÊS A MÊS, RESUMO GERAL, abas mensais,
+  DADOS DIVERSOS, Comentários Hotel) — não são recalculados.
