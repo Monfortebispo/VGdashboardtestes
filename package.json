@@ -1,0 +1,17 @@
+{
+  "name": "vg-guest-experience-semestral",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ferramenta semestral de análise de guest experience da Vila Galé, com diagnóstico executivo por unidade.",
+  "scripts": {
+    "dev": "netlify dev",
+    "check": "node --check netlify/functions/auth.mjs && node --check netlify/functions/semesters.mjs && node --check netlify/functions/semester.mjs && node --check netlify/functions/settings.mjs"
+  },
+  "dependencies": {
+    "@netlify/database": "latest"
+  },
+  "devDependencies": {
+    "netlify-cli": "latest"
+  }
+}
