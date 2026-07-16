@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VG · Reputação — Análise Semestral · Lisboa, Ilhas, Norte & Centro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#141b24; --panel:#161d27; --panel2:#1b2531;
+  --line:#232f3d; --line2:#2d3d4f;
+  --ink:#e8eef5; --ink2:#9fb0c3; --ink3:#6b7d92;
+  --pos:#3fb950; --posbg:#0f2417;
+  --neu:#d8a642; --neubg:#251d0c;
+  --neg:#e5534b; --negbg:#2a1210;
+  --accent:#4c9df0; --accentbg:#0e2135;
+  --gold:#c9a227;
+  --mono:'SF Mono',ui-monospace,'Cascadia Code','Roboto Mono',Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body.locked{overflow:hidden}
+h1,h2,h3,h4{font-weight:650;letter-spacing:-0.01em;line-height:1.2}
+a{color:var(--accent);text-decoration:none}
+.mono{font-family:var(--mono)}
+.dim{color:var(--ink2)}
+.dim3{color:var(--ink3)}
+
+/* ---------- LOADER / DROPZONE ---------- */
+#gate{position:fixed;inset:0;background:radial-gradient(1200px 600px at 50% -10%,#16202c,#0d1117);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.gate-card{width:100%;max-width:820px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:38px 40px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.gate-brand{font-family:var(--mono);font-size:11px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase;margin-bottom:14px}
+.gate-card h1{font-size:30px;margin-bottom:8px}
+.gate-card .sub{color:var(--ink2);font-size:15px;margin-bottom:8px}
+.gate-card .rng{font-family:var(--mono);font-size:12px;color:var(--ink3);margin-bottom:26px}
+#drop{border:1.5px dashed var(--line2);border-radius:12px;padding:34px;text-align:center;transition:.18s;cursor:pointer;background:var(--bg2)}
+#drop.hot{border-color:var(--accent);background:var(--accentbg)}
+#drop .big{font-size:16px;font-weight:600;margin-bottom:6px}
+#drop .sm{color:var(--ink3);font-size:12.5px}
+.filelist{margin-top:20px;display:grid;gap:7px}
+.frow{display:flex;align-items:center;gap:11px;padding:9px 13px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;font-size:12.5px}
+.frow .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--line2)}
+.frow.ok .dot{background:var(--pos)}
+.frow.miss{opacity:.55}
+.frow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11.5px}
+.frow .tag{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:0 0 auto}
+.frow .st{font-size:11px;flex:0 0 auto}
+.gate-actions{margin-top:24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{font-family:var(--sans);font-size:13.5px;font-weight:600;border:none;border-radius:9px;padding:12px 22px;cursor:pointer;transition:.15s}
+.btn-primary{background:var(--accent);color:#04121f}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--ink2);border:1px solid var(--line2)}
+.btn-ghost:hover{color:var(--ink);border-color:var(--ink3)}
+.gate-note{margin-top:16px;font-size:11.5px;color:var(--ink3);line-height:1.6}
+.gate-err{margin-top:14px;color:var(--neg);font-size:12.5px;display:none}
+
+/* ---------- APP SHELL ---------- */
+#app{display:none}
+header.top{position:sticky;top:0;z-index:40;background:rgba(13,17,23,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1360px;margin:0 auto;padding:13px 26px;display:flex;align-items:center;gap:20px}
+.top .brand{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--gold);text-transform:uppercase;white-space:nowrap}
+.top .ttl{font-size:15px;font-weight:650}
+.top .rng{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-left:auto;white-space:nowrap}
+.top .reload{font-family:var(--mono);font-size:11px;color:var(--ink3);border:1px solid var(--line2);padding:5px 11px;border-radius:7px;cursor:pointer}
+.top .reload:hover{color:var(--ink)}
+nav.tabs{position:sticky;top:52px;z-index:39;background:rgba(13,17,23,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.tabs-in{max-width:1360px;margin:0 auto;padding:0 26px;display:flex;gap:2px;overflow-x:auto}
+.tab{font-family:var(--sans);font-size:13px;font-weight:550;color:var(--ink3);background:none;border:none;padding:13px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:.15s}
+.tab:hover{color:var(--ink2)}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+main{max-width:1360px;margin:0 auto;padding:28px 26px 90px}
+.view{display:none;animation:fade .3s}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- PRIMITIVES ---------- */
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.sec-h{font-size:19px;margin-bottom:4px}
+.sec-sub{color:var(--ink2);font-size:13.5px;margin-bottom:20px;max-width:760px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden}
+.kpi .lab{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:9px}
+.kpi .val{font-size:30px;font-weight:680;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.kpi .val small{font-size:15px;font-weight:600;color:var(--ink3);margin-left:2px}
+.kpi .chg{font-family:var(--mono);font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .spark{position:absolute;right:0;bottom:0;left:0;height:34px;opacity:.5}
+.up{color:var(--pos)} .down{color:var(--neg)} .flat{color:var(--ink3)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:20px;font-variant-numeric:tabular-nums}
+.pill.up{background:var(--posbg);color:var(--pos)}
+.pill.down{background:var(--negbg);color:var(--neg)}
+.pill.flat{background:var(--bg2);color:var(--ink3)}
+
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);text-align:right;padding:11px 12px;border-bottom:1px solid var(--line2);font-weight:500;cursor:pointer;user-select:none;white-space:nowrap}
+th:first-child{text-align:left}
+th.sortable:hover{color:var(--ink)}
+th .arr{opacity:.4;font-size:9px}
+td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;font-size:13px;white-space:nowrap}
+td:first-child{text-align:left;font-weight:550}
+tbody tr{cursor:pointer;transition:.1s}
+tbody tr:hover{background:var(--panel2)}
+tbody tr.norow{cursor:default}
+tbody tr.norow:hover{background:none}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+
+.bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;display:inline-block;vertical-align:middle;width:70px}
+.bar>span{display:block;height:100%}
+.sent-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--line);min-width:120px}
+.sent-bar>i{display:block;height:100%}
+
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);color:var(--ink2)}
+.rank{font-family:var(--mono);font-weight:600;font-size:12px}
+.gri-cell{font-weight:650;font-variant-numeric:tabular-nums}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.two,.three{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.card h3{font-size:14px;margin-bottom:3px}
+.card .ch-sub{font-size:11.5px;color:var(--ink3);margin-bottom:14px;font-family:var(--mono);letter-spacing:.03em}
+.chart-box{position:relative;height:260px}
+.chart-box.tall{height:340px}
+
+/* unit picker */
+.unit-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+select.usel{font-family:var(--sans);font-size:15px;font-weight:600;background:var(--panel2);color:var(--ink);border:1px solid var(--line2);border-radius:9px;padding:10px 14px;cursor:pointer;min-width:280px}
+.unit-nav{display:flex;gap:6px}
+.unit-nav button{background:var(--panel2);border:1px solid var(--line2);color:var(--ink2);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px}
+.unit-nav button:hover{color:var(--ink);border-color:var(--ink3)}
+
+.badge-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.badge{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:7px;border:1px solid var(--line2);background:var(--bg2)}
+.badge b{color:var(--ink)}
+.badge.good{border-color:#1d3a24;background:var(--posbg);color:var(--pos)}
+.badge.warn{border-color:#3a2f10;background:var(--neubg);color:var(--neu)}
+.badge.bad{border-color:#3a1512;background:var(--negbg);color:var(--neg)}
+
+.insight{border-left:3px solid var(--line2);padding:11px 15px;background:var(--bg2);border-radius:0 8px 8px 0;font-size:13px;line-height:1.55;margin-bottom:9px}
+.insight.pos{border-left-color:var(--pos)}
+.insight.neg{border-left-color:var(--neg)}
+.insight.neu{border-left-color:var(--neu)}
+.insight.acc{border-left-color:var(--accent)}
+.insight b{color:var(--ink)}
+.insight .k{font-family:var(--mono);font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:3px}
+
+.subgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:6px}
+.subcard{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:12px 14px}
+.subcard .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.subcard .nm{font-weight:600;font-size:13px;text-transform:capitalize}
+.subcard .ct{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.subcard .meter{height:6px;border-radius:4px;background:var(--line);overflow:hidden}
+.subcard .meter>span{display:block;height:100%}
+
+.verbatim{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--neg);border-radius:0 8px 8px 0;padding:11px 14px;margin-bottom:8px;font-size:12.5px;line-height:1.5}
+.verbatim.pos{border-left-color:var(--pos)}
+.verbatim .meta{font-family:var(--mono);font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-top:7px;display:flex;gap:10px;flex-wrap:wrap}
+.verbatim .txt{color:var(--ink2);font-style:italic}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);font-family:var(--mono)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+.split-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.split-h h3{font-size:15px}
+.mini{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+
+.rowbars{display:grid;gap:9px}
+.rowbar{display:grid;grid-template-columns:150px 1fr 62px;align-items:center;gap:12px;font-size:12.5px}
+.rowbar .lb{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowbar .tk{height:20px;border-radius:5px;background:var(--line);overflow:hidden;position:relative}
+.rowbar .tk>span{display:block;height:100%;border-radius:5px}
+.rowbar .vv{font-family:var(--mono);text-align:right;color:var(--ink)}
+
+footer{max-width:1360px;margin:0 auto;padding:22px 26px 50px;border-top:1px solid var(--line);color:var(--ink3);font-size:11.5px;font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+.empty{padding:40px;text-align:center;color:var(--ink3);font-family:var(--mono);font-size:12px}
+.scroll-x{overflow-x:auto}
+::-webkit-scrollbar{height:9px;width:9px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+.tag-cloud{display:flex;flex-wrap:wrap;gap:7px}
+.tag-cloud .t{font-family:var(--mono);border-radius:20px;padding:4px 12px;border:1px solid var(--line2);cursor:default}
+.rk-list{display:grid;gap:2px}
+.rk-item{display:grid;grid-template-columns:26px 1fr auto auto;gap:12px;align-items:center;padding:9px 12px;border-radius:8px;font-size:13px}
+.rk-item:hover{background:var(--panel2)}
+.rk-item .pos-n{font-family:var(--mono);color:var(--ink3);font-size:12px}
+.rk-item .nm{font-weight:550;cursor:pointer}
+.rk-item .nm:hover{color:var(--accent)}
+.rk-item .g{font-family:var(--mono);font-weight:650;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body class="locked">
+
+<!-- ============ GATE ============ -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-brand">Vila Galé · Direção de Operações</div>
+    <h1>Análise Semestral de Reputação</h1>
+    <div class="sub">Regiões Lisboa &amp; Ilhas, Norte &amp; Centro — tratadas como uma região única.</div>
+    <div class="rng">Carregue os 6 ficheiros ReviewPro do semestre. O painel é 100% local — nada sai do seu browser.</div>
+
+    <div id="drop">
+      <div class="big">Arraste os ficheiros para aqui</div>
+      <div class="sm">ou clique para escolher · .xlsx · pode selecionar todos de uma vez</div>
+      <input type="file" id="fin" multiple accept=".xlsx" style="display:none">
+    </div>
+
+    <div class="filelist" id="flist"></div>
+    <div class="gate-err" id="gerr"></div>
+
+    <div class="gate-actions">
+      <button class="btn btn-primary" id="go" disabled>Gerar análise</button>
+      <button class="btn btn-ghost" id="demo" style="display:none">Limpar</button>
+      <span class="mini dim3" id="gstatus"></span>
+    </div>
+    <div class="gate-note">
+      Ficheiros esperados (a ordem/nome não importam — são reconhecidos pelo conteúdo):
+      <b>Painel</b>, <b>Resultados&nbsp;Todas&nbsp;as&nbsp;Fontes</b>, <b>Concorrência</b>,
+      <b>Gerenciamento&nbsp;de&nbsp;Respostas</b>, <b>Semântica&nbsp;Resultados</b> e <b>Semântica&nbsp;Menções</b> (o ficheiro grande).
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <header class="top">
+    <div class="top-in">
+      <span class="brand">VG · Reputação</span>
+      <span class="ttl">Análise Semestral — Lisboa, Ilhas, Norte &amp; Centro</span>
+      <span class="rng mono" id="hdrRange"></span>
+      <span class="reload" id="reload">↻ Novos ficheiros</span>
+    </div>
+  </header>
+  <nav class="tabs"><div class="tabs-in" id="tabbar"></div></nav>
+  <main>
+    <section class="view on" id="v-regiao"></section>
+    <section class="view" id="v-ranking"></section>
+    <section class="view" id="v-unidade"></section>
+    <section class="view" id="v-semantica"></section>
+    <section class="view" id="v-concorrencia"></section>
+    <section class="view" id="v-respostas"></section>
+    <section class="view" id="v-mercados"></section>
+  </main>
+  <footer>
+    <span id="footL"></span>
+    <span id="footR">Gerado localmente · dados ReviewPro / Shiji · confidencial</span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   VG REPUTAÇÃO — MOTOR DE ANÁLISE SEMESTRAL
+   Parsers espelham os layouts ReviewPro/Shiji exportados.
+   ============================================================ */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const norm=s=>(s==null?'':String(s)).trim();
+const key=s=>norm(s).toLowerCase().replace(/\s+/g,' ');
+const numPct=v=>{ if(v==null||v==='-'||v==='')return null; const n=parseFloat(String(v).replace('%','').replace(',','.')); return isNaN(n)?null:n; };
+const numChg=v=>{ if(v==null||v==='-'||v==='')return null; const n=parseFloat(String(v).replace('+','').replace(',','.')); return isNaN(n)?null:n; };
+const numRaw=v=>{ if(v==null||v==='-'||v==='')return null; const n=parseFloat(String(v).replace(/,/g,'')); return isNaN(n)?null:n; };
+const fmt=(n,d=1)=>n==null?'—':n.toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtInt=n=>n==null?'—':Math.round(n).toLocaleString('pt-PT');
+const pct=(n,d=1)=>n==null?'—':fmt(n,d)+'%';
+const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+
+/* ---- classifier: identify each file by sheet fingerprint ---- */
+function classify(wb){
+  const sn=wb.SheetNames.map(x=>x.toLowerCase());
+  const has=n=>sn.includes(n);
+  if(has('mentions')) return 'mentions';
+  if(has('indexes evolution')||has('my establishments')) return 'painel';
+  if(has('recommended')&&has('departments')) return 'resultados';
+  if(has('index')&&has('sources')&&has('departments')) return 'concorrencia';
+  if(has('by hotels')) return 'respostas';
+  if(has('categories')&&has('summary')) return 'semantica';
+  return null;
+}
+const FILELABEL={painel:'Painel · Evolução',resultados:'Resultados · Todas as Fontes',concorrencia:'Concorrência · Compset',respostas:'Gerenciamento de Respostas',semantica:'Semântica · Resultados',mentions:'Semântica · Menções (detalhe)'};
+const NEEDED=['painel','resultados','concorrencia','respostas','semantica','mentions'];
+
+function sheetRows(wb,name){
+  const ws=wb.Sheets[wb.SheetNames.find(s=>s.toLowerCase()===name.toLowerCase())];
+  if(!ws)return[];
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:null});
+}
+// footer / non-data row detector (ReviewPro exports repeat title + copyright blocks)
+function isFooter(nm){ const s=norm(nm).toLowerCase();
+  return !s || s.startsWith('reviews /') || s.startsWith('semantic') || s.startsWith('confidential')
+    || s.startsWith('generated by') || s.startsWith('shiji') || s.startsWith('date range')
+    || s.startsWith('previous date') || s.startsWith('group:') || s.startsWith('view:'); }
+// find the header row index containing a given cell text in col A-ish
+function findHeader(rows,tokens){
+  for(let i=0;i<rows.length;i++){
+    const line=(rows[i]||[]).map(c=>norm(c).toLowerCase());
+    if(tokens.every(t=>line.some(c=>c.includes(t)))) return i;
+  }
+  return -1;
+}
+
+/* =================== PARSERS =================== */
+const DATA={ range:'',prevRange:'',region:{},hotels:{}, order:[], generatedBy:'' };
+function H(name){ const k=key(name); if(!DATA.hotels[k]){ DATA.hotels[k]={name:norm(name),key:k}; DATA.order.push(k);} return DATA.hotels[k]; }
+
+function parsePainel(wb){
+  const sum=sheetRows(wb,'Summary');
+  // date ranges
+  for(const r of sum){ const a=norm(r&&r[0]);
+    if(a.startsWith('Date Range:')) DATA.range=a.replace('Date Range:','').trim();
+    if(a.startsWith('Previous Date Range:')) DATA.prevRange=a.replace('Previous Date Range:','').trim();
+    if(a.startsWith('Generated by')) DATA.generatedBy=a; }
+  const hi=findHeader(sum,['group','gri','reviews','response ratio']);
+  if(hi>=0){ const hdr=sum[hi]; const row=sum[hi+1]||[];
+    const idx=n=>hdr.findIndex(c=>norm(c).toLowerCase()===n);
+    DATA.region.gri=numPct(row[1]); DATA.region.griChg=numChg(row[2]);
+    DATA.region.reviews=numRaw(row[4]); DATA.region.reviewsChg=numChg(row[5]);
+    DATA.region.sem=numPct(row[6]); DATA.region.semChg=numChg(row[7]);
+    DATA.region.resp=numPct(row[8]); DATA.region.respChg=numChg(row[9]);
+  }
+  // Indexes Evolution (daily)
+  const ev=sheetRows(wb,'Indexes Evolution');
+  const eh=findHeader(ev,['date','gri','reviews','cleanliness']);
+  DATA.region.evolution=[];
+  if(eh>=0){ const H0=ev[eh].map(c=>norm(c).toLowerCase());
+    const di=H0.indexOf('date');
+    for(let i=eh+1;i<ev.length;i++){ const r=ev[i]; if(!r)continue;
+      const d=norm(r[di]); if(!/^\d{4}-\d{2}-\d{2}/.test(d))continue;
+      DATA.region.evolution.push({date:d, gri:numPct(r[1]), reviews:numRaw(r[4]), mentions:numPct(r[6]), clean:numPct(r[8]), loc:numPct(r[10])});
+    }
+  }
+  // My Establishments -> gri per hotel + trending
+  const est=sheetRows(wb,'My Establishments');
+  const ehi=findHeader(est,['hotel','gri','trending up']);
+  if(ehi>=0){ let started=false; for(let i=ehi+1;i<est.length;i++){ const r=est[i]; if(!r)continue;
+    const nm=norm(r[1]); if(isFooter(nm)){ if(started)break; else continue; }
+    started=true;
+    const h=H(nm); h.gri=numPct(r[2]); h.griChg=numChg(r[3]); h.trendUp=norm(r[4]); h.trendDown=norm(r[5]);
+  }}
+}
+
+function parseResultados(wb){
+  // Summary: gri, reviews, mentions%, goal per hotel
+  const s=sheetRows(wb,'Summary');
+  const hi=findHeader(s,['hotel','index','reviews','mentions','goal']);
+  if(hi>=0){ let started=false; for(let i=hi+1;i<s.length;i++){ const r=s[i]; if(!r)continue;
+    const nm=norm(r[1]); if(isFooter(nm)){ if(started)break; else continue; }
+    if(nm.toLowerCase().startsWith('regiões'))continue;
+    started=true;
+    const h=H(nm); h.gri=h.gri??numPct(r[2]); h.griChg=h.griChg??numChg(r[3]);
+    h.reviews=numRaw(r[4]); h.reviewsChg=numChg(r[5]); h.semantic=numPct(r[6]); h.semanticChg=numChg(r[7]);
+    h.goal=numPct(r[8]);
+  }}
+  // Departments: per hotel department index
+  const d=sheetRows(wb,'Departments');
+  const dh=findHeader(d,['hotel','department','index','reviews','mentions']);
+  DATA.region.departments=[];
+  if(dh>=0){ let cur=null;
+    for(let i=dh+1;i<d.length;i++){ const r=d[i]; if(!r)continue;
+      const nm=norm(r[1]); const dep=norm(r[2]); if(!nm||!dep)continue;
+      const rec={dep, index:numPct(r[3]), chg:numChg(r[4]), reviews:numRaw(r[5]), mentions:numPct(r[7])};
+      if(nm.toLowerCase().startsWith('regiões')){ DATA.region.departments.push(rec); }
+      else { const h=H(nm); (h.departments=h.departments||[]).push(rec); }
+    }}
+  // Sources per hotel (+ region) with pos/neu/neg
+  const so=sheetRows(wb,'Sources');
+  const sh=findHeader(so,['hotel','source','index','positive','negative']);
+  DATA.region.sources=[];
+  if(sh>=0){ for(let i=sh+1;i<so.length;i++){ const r=so[i]; if(!r)continue;
+    const nm=norm(r[1]); const src=norm(r[2]); if(!nm||!src)continue;
+    const rec={src,index:numPct(r[3]),chg:numChg(r[4]),reviews:numRaw(r[6]),pos:numPct(r[8]),neu:numPct(r[9]),neg:numPct(r[10]),mentions:numPct(r[11])};
+    if(nm.toLowerCase().startsWith('regiões')) DATA.region.sources.push(rec);
+    else { const h=H(nm); (h.sources=h.sources||[]).push(rec); }
+  }}
+}
+
+function parseConcorrencia(wb){
+  const idx=sheetRows(wb,'Index');
+  const hi=findHeader(idx,['hotel','gri','compset','ranking','cqi']);
+  if(hi>=0){ let started=false; for(let i=hi+1;i<idx.length;i++){ const r=idx[i]; if(!r)continue;
+    const nm=norm(r[1]); if(isFooter(nm)){ if(started)break; else continue; }
+    started=true;
+    if(nm.toLowerCase().startsWith('regiões')){ if(DATA.region.cqi==null){DATA.region.cqi=numPct(r[12]); DATA.region.cqiChg=numChg(r[13]);} continue; }
+    const h=H(nm);
+    h.compGri=numPct(r[2]); h.compGriChg=numChg(r[3]);
+    h.compset=numPct(r[4]); h.compsetChg=numChg(r[5]);
+    h.rankGri=norm(r[6]);
+    h.compReviews=numRaw(r[7]);
+    h.rankReviews=norm(r[11]);
+    h.cqi=numPct(r[12]); h.cqiChg=numChg(r[13]);
+  }}
+  // Departments (competitive per department, grouped by hotel)
+  const dep=sheetRows(wb,'Departments');
+  const dh=findHeader(dep,['hotel','gri','compset','ranking','cqi']);
+  if(dh>=0){ let cur=null;
+    for(let i=dh+1;i<dep.length;i++){ const r=dep[i]; if(!r)continue;
+      const nm=norm(r[1]); if(!nm)continue;
+      const isHotel=nm.toLowerCase().startsWith('vila');
+      if(isHotel){ cur=H(nm); cur.compDepts=cur.compDepts||[]; }
+      else if(cur){ // department row (name in col B is dept)
+        cur.compDepts.push({dep:nm, gri:numPct(r[2]), compset:numPct(r[4]), rank:norm(r[6]), cqi:numPct(r[12]), cqiChg:numChg(r[13])});
+      }
+    }}
+}
+
+function parseRespostas(wb){
+  const s=sheetRows(wb,'Summary');
+  const hi=findHeader(s,['hotel','responded','respondable','response ratio']);
+  if(hi>=0){ let started=false; for(let i=hi+1;i<s.length;i++){ const r=s[i]; if(!r)continue;
+    const nm=norm(r[1]); if(isFooter(nm)){ if(started)break; else continue; }
+    const dist=norm(r[2]).toLowerCase(); if(dist&&dist!=='all')continue; // ignore Positive/Neutral/Negative sub-blocks
+    const respd=numRaw(r[3]),able=numRaw(r[4]),ratio=numPct(r[5]),chg=numChg(r[6]),avg=numRaw(r[8]),avgChg=numChg(r[9]);
+    started=true;
+    if(nm.toLowerCase().startsWith('regiões')){ if(DATA.region.respRatio==null){DATA.region.respRatio=ratio; DATA.region.respChg=chg; DATA.region.respAvg=avg; DATA.region.respAvgChg=avgChg; DATA.region.responded=respd; DATA.region.respondable=able;} continue; }
+    const h=H(nm); h.respd=respd; h.able=able; h.respRatio=ratio; h.respRatioChg=chg; h.respAvg=avg; h.respAvgChg=avgChg;
+  }}
+}
+
+function parseSemantica(wb){
+  const sm=sheetRows(wb,'Summary');
+  // top block totals
+  const th=findHeader(sm,['total mentions']);
+  DATA.region.sem={};
+  if(th>=0){ for(let i=th;i<Math.min(th+8,sm.length);i++){ const r=sm[i]; if(!r)continue;
+    const lab=norm(r[0]).toLowerCase();
+    if(lab==='total mentions'){DATA.region.sem.total=numRaw(r[1]);DATA.region.sem.totalPrev=numRaw(r[2]);}
+    if(lab==='positive volume'){DATA.region.sem.pos=numRaw(r[1]);}
+    if(lab.startsWith('positive (%)')){DATA.region.sem.posPct=numPct(r[1]);DATA.region.sem.posPctChg=numChg(r[3]);}
+    if(lab==='negative volume'){DATA.region.sem.neg=numRaw(r[1]);}
+    if(lab.startsWith('negative (%)')){DATA.region.sem.negPct=numPct(r[1]);}
+  }}
+  // per-establishment summary
+  const eh=findHeader(sm,['product','mentions','positive','negative']);
+  DATA.region.semByHotel=[];
+  if(eh>=0){ let started=false; for(let i=eh+1;i<sm.length;i++){ const r=sm[i]; if(!r)continue;
+    const nm=norm(r[2]); if(isFooter(nm)){ if(started)break; else continue; }
+    if(nm.toLowerCase().startsWith('regiões'))continue;
+    started=true;
+    const rec={mentions:numRaw(r[3]),posPct:numPct(r[6]),posChg:numChg(r[7]),negPct:numPct(r[8])};
+    const h=H(nm); h.sem=rec; DATA.region.semByHotel.push({name:nm,...rec});
+  }}
+  // categories (region-wide)
+  const cat=sheetRows(wb,'Categories');
+  const ch=findHeader(cat,['categories','mentions','positive','negative']);
+  DATA.region.categories=[];
+  if(ch>=0){ for(let i=ch+1;i<cat.length;i++){ const r=cat[i]; if(!r)continue;
+    const nm=norm(r[0]); if(!nm||nm.toLowerCase().startsWith('all categ'))continue;
+    DATA.region.categories.push({cat:nm,mentions:numRaw(r[2]),mchg:numRaw(r[3]),posPct:numPct(r[5]),posChg:numChg(r[6]),negPct:numPct(r[8])});
+  }}
+  // languages, countries, triptype (region)
+  const grab=(sheet,label)=>{ const rows=sheetRows(wb,sheet); const h=findHeader(rows,[label.toLowerCase(),'mentions','positive']);
+    const out=[]; if(h>=0){ for(let i=h+1;i<rows.length;i++){ const r=rows[i]; if(!r)continue; const nm=norm(r[0]); if(!nm)continue;
+      out.push({name:nm,mentions:numRaw(r[1]),posPct:numPct(r[5]!=null?r[5]:r[4])}); }} return out; };
+  DATA.region.langs=grab('Languages','languages');
+  DATA.region.countries=grab('Countries-Areas','countries');
+}
+
+/* -------- MENTIONS: the big detailed file -------- */
+function parseMentions(wb){
+  const rows=sheetRows(wb,'Mentions');
+  const hi=findHeader(rows,['establishment','sentiment','subconcept','category','mention']);
+  if(hi<0)return;
+  const hdr=rows[hi].map(c=>norm(c).toLowerCase());
+  const ci=n=>hdr.indexOf(n);
+  const I={est:ci('establishment'),sent:ci('sentiment'),sub:ci('subconcept'),cat:ci('category'),
+    kw:ci('keyword'),src:ci('source'),lang:ci('language'),ctry:ci('country'),
+    men:ci('mention'),rid:ci('mention id'),rating:ci('review rating'),date:ci('date')};
+  for(const h of Object.values(DATA.hotels)){ h.m={pos:0,neg:0,total:0,negSub:{},posSub:{},negCat:{},posCat:{},negVerb:[],posVerb:[],reviewSet:new Set()}; }
+  let count=0;
+  for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; if(!r)continue;
+    const est=norm(r[I.est]); if(!est)continue;
+    const h=DATA.hotels[key(est)]; if(!h)continue; if(!h.m)h.m={pos:0,neg:0,total:0,negSub:{},posSub:{},negCat:{},posCat:{},negVerb:[],posVerb:[],reviewSet:new Set()};
+    const sent=norm(r[I.sent]); const sub=norm(r[I.sub]).toLowerCase(); const catg=norm(r[I.cat]);
+    const m=h.m; m.total++; count++;
+    if(I.rid>=0){ const rid=norm(r[I.rid]); if(rid)m.reviewSet.add(rid); }
+    const neg=sent==='Negative';
+    if(neg)m.neg++; else if(sent==='Positive')m.pos++;
+    if(sub){ const bucket=neg?m.negSub:m.posSub; bucket[sub]=(bucket[sub]||0)+1; }
+    if(catg){ const bk=neg?m.negCat:m.posCat; bk[catg]=(bk[catg]||0)+1; }
+    // collect a few verbatims (longest, distinct)
+    const men=norm(r[I.men]);
+    if(men&&men.length>25){
+      const store=neg?m.negVerb:m.posVerb;
+      if(store.length<40){ store.push({txt:men,cat:catg,sub:sub,src:norm(r[I.src]),lang:norm(r[I.lang]),rating:norm(r[I.rating]),date:norm(r[I.date])}); }
+    }
+  }
+  // finalize verbatims: keep top 6 longest distinct per polarity
+  for(const h of Object.values(DATA.hotels)){ if(!h.m)continue;
+    const uniq=a=>{ const seen=new Set(),out=[]; for(const v of a.sort((x,y)=>y.txt.length-x.txt.length)){ const s=v.txt.slice(0,40); if(seen.has(s))continue; seen.add(s); out.push(v); if(out.length>=6)break;} return out; };
+    h.m.negVerb=uniq(h.m.negVerb); h.m.posVerb=uniq(h.m.posVerb);
+    h.m.reviews=h.m.reviewSet.size; delete h.m.reviewSet;
+  }
+  DATA.region.mentionCount=count;
+}
+
+/* =================== INGEST / GATE =================== */
+const found={}; // type -> {file, wb}
+const drop=$('#drop'),fin=$('#fin'),flist=$('#flist'),go=$('#go'),gerr=$('#gerr'),gstatus=$('#gstatus');
+
+function renderFileList(){
+  flist.innerHTML='';
+  for(const t of NEEDED){
+    const ok=!!found[t];
+    const row=document.createElement('div');
+    row.className='frow '+(ok?'ok':'miss');
+    row.innerHTML=`<span class="dot"></span><span class="nm">${FILELABEL[t]}</span>
+      <span class="tag">${t}</span><span class="st">${ok?'✓ pronto':'em falta'}</span>`;
+    flist.appendChild(row);
+  }
+  const n=Object.keys(found).length;
+  go.disabled=!found.painel||!found.resultados; // minimum to render something
+  gstatus.textContent=n?`${n}/6 ficheiros reconhecidos`:'';
+}
+renderFileList();
+
+async function handleFiles(files){
+  gerr.style.display='none';
+  for(const f of files){
+    if(!f.name.toLowerCase().endsWith('.xlsx'))continue;
+    try{
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const t=classify(wb);
+      if(t){ found[t]={file:f,wb}; }
+      else { gerr.textContent='Ficheiro não reconhecido: '+f.name; gerr.style.display='block'; }
+    }catch(e){ gerr.textContent='Erro a ler '+f.name+': '+e.message; gerr.style.display='block'; }
+  }
+  renderFileList();
+}
+drop.addEventListener('click',()=>fin.click());
+fin.addEventListener('change',e=>handleFiles([...e.target.files]));
+;['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+;['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>handleFiles([...e.dataTransfer.files]));
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('drop',e=>e.preventDefault());
+
+go.addEventListener('click',()=>{
+  go.disabled=true; go.textContent='A processar…';
+  setTimeout(()=>{
+    try{
+      if(found.painel)parsePainel(found.painel.wb);
+      if(found.resultados)parseResultados(found.resultados.wb);
+      if(found.concorrencia)parseConcorrencia(found.concorrencia.wb);
+      if(found.respostas)parseRespostas(found.respostas.wb);
+      if(found.semantica)parseSemantica(found.semantica.wb);
+      if(found.mentions)parseMentions(found.mentions.wb);
+      launch();
+    }catch(e){ console.error(e); go.disabled=false; go.textContent='Gerar análise';
+      gerr.textContent='Erro no processamento: '+e.message; gerr.style.display='block'; }
+  },60);
+});
+$('#reload').addEventListener('click',()=>location.reload());
+
+/* =================== TABS =================== */
+const TABS=[
+  {id:'regiao',label:'Visão Regional'},
+  {id:'ranking',label:'Ranking de Unidades'},
+  {id:'unidade',label:'Análise por Unidade'},
+  {id:'semantica',label:'Semântica'},
+  {id:'concorrencia',label:'Concorrência'},
+  {id:'respostas',label:'Respostas'},
+  {id:'mercados',label:'Mercados & Idiomas'},
+];
+let charts=[];
+function killCharts(){ charts.forEach(c=>{try{c.destroy()}catch(e){}}); charts=[]; }
+
+function launch(){
+  document.body.classList.remove('locked');
+  $('#gate').style.display='none';
+  $('#app').style.display='block';
+  $('#hdrRange').textContent=DATA.range||'';
+  $('#footL').textContent=(DATA.generatedBy||'')+ (DATA.region.mentionCount?`  ·  ${fmtInt(DATA.region.mentionCount)} menções analisadas`:'');
+  // build tabs
+  const tb=$('#tabbar'); tb.innerHTML='';
+  TABS.forEach((t,i)=>{ const b=document.createElement('button'); b.className='tab'+(i===0?' on':''); b.textContent=t.label; b.dataset.id=t.id;
+    b.onclick=()=>switchTab(t.id); tb.appendChild(b); });
+  renderAll();
+  window.scrollTo(0,0);
+}
+function switchTab(id){
+  $$('.tab').forEach(t=>t.classList.toggle('on',t.dataset.id===id));
+  $$('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* helper builders */
+function chgPill(v,invert=false){ if(v==null)return '<span class="pill flat">—</span>';
+  const up=invert?v<0:v>0; const down=invert?v>0:v<0;
+  const cls=up?'up':down?'down':'flat'; const sign=v>0?'+':''; return `<span class="pill ${cls}">${sign}${fmt(v,1)}</span>`; }
+function chgTxt(v,invert=false){ if(v==null)return '<span class="flat">—</span>';
+  const up=invert?v<0:v>0,down=invert?v>0:v<0; const cls=up?'up':down?'down':'flat'; const s=v>0?'+':''; return `<span class="${cls}">${s}${fmt(v,1)}</span>`; }
+function sentBar(pos,neg){ pos=pos||0;neg=neg||0;const neu=Math.max(0,100-pos-neg);
+  return `<div class="sent-bar"><i style="width:${pos}%;background:var(--pos)"></i><i style="width:${neu}%;background:var(--neu)"></i><i style="width:${neg}%;background:var(--neg)"></i></div>`; }
+function griColor(g){ if(g==null)return 'var(--ink3)'; if(g>=90)return 'var(--pos)'; if(g>=85)return '#8bd450'; if(g>=80)return 'var(--neu)'; return 'var(--neg)'; }
+function hotelsArr(){ return DATA.order.map(k=>DATA.hotels[k]); }
+
+function renderAll(){ killCharts(); renderRegiao(); renderRanking(); renderUnidade(); renderSemantica(); renderConcorrencia(); renderRespostas(); renderMercados(); }
+
+/* =================== VIEW: REGIÃO =================== */
+function renderRegiao(){
+  const R=DATA.region, el=$('#v-regiao');
+  const kpis=[
+    {lab:'GRI™ Regional',val:pct(R.gri),chg:R.griChg,inv:false},
+    {lab:'Reviews (semestre)',val:fmtInt(R.reviews),chg:R.reviewsChg,raw:true},
+    {lab:'Análise Semântica',val:pct(R.sem||R.sem&&R.sem.posPct),chg:R.semChg},
+    {lab:'Rácio de Resposta',val:pct(R.respRatio!=null?R.respRatio:R.resp),chg:R.respChg},
+    {lab:'CQI™ (vs compset)',val:pct(R.cqi),chg:R.cqiChg},
+    {lab:'Tempo médio resposta',val:R.respAvg!=null?fmt(R.respAvg,1)+' d':'—',chg:R.respAvgChg,inv:true},
+  ];
+  let kh='';
+  for(const k of kpis){ kh+=`<div class="kpi"><div class="lab">${k.lab}</div>
+    <div class="val">${k.val}</div>
+    <div class="chg">${k.raw?chgTxt(k.chg):(k.chg!=null?chgTxt(k.chg,k.inv)+' <span class="dim3">pts vs H homólogo</span>':'<span class="dim3">—</span>')}</div></div>`; }
+
+  // sentiment donut data
+  const sem=R.sem||{};
+  el.innerHTML=`
+    <div class="eyebrow">Semestre · ${DATA.range||''} · vs ${DATA.prevRange||'período homólogo'}</div>
+    <h2 class="sec-h">Visão Regional Consolidada</h2>
+    <p class="sec-sub">${hotelsArr().length} unidades tratadas como uma região única. Variações comparam com o mesmo semestre do ano anterior.</p>
+    <div class="grid kpis" style="margin-bottom:20px">${kh}</div>
+
+    <div class="two" style="margin-bottom:14px">
+      <div class="card"><div class="split-h"><h3>Evolução do GRI™ ao longo do semestre</h3><span class="mini">acumulado diário</span></div>
+        <div class="chart-box"><canvas id="cEvo"></canvas></div></div>
+      <div class="card"><div class="split-h"><h3>Sentimento das menções</h3><span class="mini">${fmtInt(sem.total)} menções</span></div>
+        <div class="chart-box"><canvas id="cSent"></canvas></div>
+        <div class="legend" style="margin-top:12px;justify-content:center">
+          <span><i style="background:var(--pos)"></i>Positivo ${pct(sem.posPct)}</span>
+          <span><i style="background:var(--neg)"></i>Negativo ${pct(sem.negPct)}</span></div>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card"><div class="split-h"><h3>Índice por departamento</h3><span class="mini">GRI regional</span></div>
+        <div id="regDepts" class="rowbars"></div></div>
+      <div class="card"><div class="split-h"><h3>Reviews por fonte</h3><span class="mini">volume + sentimento</span></div>
+        <div id="regSrc" class="rowbars"></div></div>
+    </div>
+  `;
+
+  // evolution chart
+  const ev=(R.evolution||[]).filter(e=>e.gri!=null);
+  if(ev.length){ const ctx=$('#cEvo');
+    charts.push(new Chart(ctx,{type:'line',data:{labels:ev.map(e=>e.date.slice(5)),
+      datasets:[{label:'GRI™',data:ev.map(e=>e.gri),borderColor:'#4c9df0',backgroundColor:'rgba(76,157,240,.12)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+      {label:'Limpeza',data:ev.map(e=>e.clean),borderColor:'#3fb950',borderWidth:1.3,pointRadius:0,tension:.3,fill:false},
+      {label:'Localização',data:ev.map(e=>e.loc),borderColor:'#c9a227',borderWidth:1.3,pointRadius:0,tension:.3,fill:false,hidden:true}]},
+      options:baseLine(80,96)}));
+  }
+  // sentiment donut
+  if(sem.posPct!=null){ charts.push(new Chart($('#cSent'),{type:'doughnut',
+    data:{labels:['Positivo','Negativo'],datasets:[{data:[sem.posPct,sem.negPct],backgroundColor:['#3fb950','#e5534b'],borderColor:'#161d27',borderWidth:3}]},
+    options:{cutout:'68%',plugins:{legend:{display:false}},maintainAspectRatio:false}}));
+  }
+  // dept rowbars
+  const deps=(R.departments||[]).filter(d=>d.dep!=='GRI'&&d.index!=null).sort((a,b)=>b.index-a.index);
+  $('#regDepts').innerHTML=deps.map(d=>rowbar(d.dep,d.index,griColor(d.index),`${pct(d.index)}`)).join('')||'<div class="empty">Sem dados</div>';
+  // sources rowbars (by reviews)
+  const srcs=(R.sources||[]).filter(s=>s.src!=='GRI'&&s.reviews>0).sort((a,b)=>b.reviews-a.reviews).slice(0,8);
+  const maxR=Math.max(...srcs.map(s=>s.reviews),1);
+  $('#regSrc').innerHTML=srcs.map(s=>`<div class="rowbar"><span class="lb">${s.src}</span>
+    <div class="tk">${miniSent(s.pos,s.neu,s.neg)}</div>
+    <span class="vv">${fmtInt(s.reviews)}</span></div>`).join('')||'<div class="empty">Sem dados</div>';
+}
+function rowbar(label,val,color,vtext,max=100){ const w=Math.max(0,Math.min(100,(val/max)*100));
+  return `<div class="rowbar"><span class="lb">${cap(label)}</span><div class="tk"><span style="width:${w}%;background:${color}"></span></div><span class="vv">${vtext}</span></div>`; }
+function miniSent(pos,neu,neg){ pos=pos||0;neu=neu||0;neg=neg||0; return `<span style="width:${pos}%;background:var(--pos);float:left;height:100%"></span><span style="width:${neu}%;background:var(--neu);float:left;height:100%"></span><span style="width:${neg}%;background:var(--neg);float:left;height:100%"></span>`; }
+function baseLine(min,max){ return {maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{labels:{color:'#9fb0c3',font:{size:11},boxWidth:12,usePointStyle:true},position:'top'},
+    tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y,1)+'%'}}},
+  scales:{x:{ticks:{color:'#6b7d92',maxTicksLimit:8,font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+    y:{min,max,ticks:{color:'#6b7d92',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}}}; }
+
+/* =================== VIEW: RANKING =================== */
+let rankSort={col:'gri',dir:-1};
+function renderRanking(){
+  const el=$('#v-ranking');
+  el.innerHTML=`
+    <div class="eyebrow">Comparação entre unidades</div>
+    <h2 class="sec-h">Ranking de Unidades</h2>
+    <p class="sec-sub">Ordenável por qualquer métrica. Clique numa unidade para abrir a análise detalhada. Objetivo (Goal) a verde/vermelho conforme atingido.</p>
+    <div class="tbl-wrap"><table id="rankTbl"><thead><tr>
+      <th class="sortable" data-c="name">Unidade <span class="arr">↕</span></th>
+      <th class="sortable" data-c="gri">GRI™ <span class="arr">↕</span></th>
+      <th class="sortable" data-c="griChg">Δ GRI <span class="arr">↕</span></th>
+      <th class="sortable" data-c="goal">Objetivo <span class="arr">↕</span></th>
+      <th class="sortable" data-c="reviews">Reviews <span class="arr">↕</span></th>
+      <th class="sortable" data-c="semPos">Sent.+ <span class="arr">↕</span></th>
+      <th class="sortable" data-c="cqi">CQI™ <span class="arr">↕</span></th>
+      <th class="sortable" data-c="rank">Rank compset <span class="arr">↕</span></th>
+      <th class="sortable" data-c="resp">Resp. <span class="arr">↕</span></th>
+    </tr></thead><tbody id="rankBody"></tbody></table></div>
+    <div class="two" style="margin-top:16px">
+      <div class="card"><div class="split-h"><h3>Maiores subidas</h3><span class="mini">Δ GRI vs homólogo</span></div><div id="trendUp" class="rk-list"></div></div>
+      <div class="card"><div class="split-h"><h3>Maiores descidas</h3><span class="mini">Δ GRI vs homólogo</span></div><div id="trendDown" class="rk-list"></div></div>
+    </div>`;
+  $$('#rankTbl th.sortable').forEach(th=>th.onclick=()=>{
+    const c=th.dataset.c; rankSort.dir=(rankSort.col===c)?-rankSort.dir:(c==='name'?1:-1); rankSort.col=c; drawRank();
+  });
+  drawRank();
+  // trends
+  const arr=hotelsArr().filter(h=>h.griChg!=null);
+  const up=[...arr].sort((a,b)=>b.griChg-a.griChg).slice(0,5);
+  const dn=[...arr].sort((a,b)=>a.griChg-b.griChg).slice(0,5);
+  const rk=(list,cls)=>list.map((h,i)=>`<div class="rk-item"><span class="pos-n">${i+1}</span>
+    <span class="nm" onclick="openUnit('${h.key}')">${h.name}</span>
+    <span class="g" style="color:${griColor(h.gri)}">${pct(h.gri)}</span>
+    ${chgPill(h.griChg)}</div>`).join('');
+  $('#trendUp').innerHTML=rk(up); $('#trendDown').innerHTML=rk(dn);
+}
+function rankVal(h,c){ switch(c){
+  case 'name':return h.name.toLowerCase();
+  case 'gri':return h.gri??-1; case 'griChg':return h.griChg??-999;
+  case 'goal':return (h.goal!=null&&h.gri!=null)?(h.gri-h.goal):-999;
+  case 'reviews':return h.reviews??h.compReviews??-1;
+  case 'semPos':return h.sem?h.sem.posPct:-1;
+  case 'cqi':return h.cqi??-1;
+  case 'rank':return parseRank(h.rankGri);
+  case 'resp':return h.respRatio??-1; } return 0; }
+function parseRank(s){ if(!s)return 999; const m=String(s).match(/(\d+)\s*of\s*(\d+)/); return m?parseInt(m[1]):999; }
+function drawRank(){
+  const arr=hotelsArr().sort((a,b)=>{ const x=rankVal(a,rankSort.col),y=rankVal(b,rankSort.col);
+    if(typeof x==='string')return rankSort.dir*x.localeCompare(y); return rankSort.dir*((x>y?1:x<y?-1:0)); });
+  $('#rankBody').innerHTML=arr.map(h=>{
+    let goalCell='<span class="dim3">—</span>';
+    if(h.goal!=null&&h.gri!=null){ const met=h.gri>=h.goal; goalCell=`<span class="${met?'up':'down'}">${pct(h.goal)}</span>`; }
+    const rk=h.rankGri||'—';
+    return `<tr onclick="openUnit('${h.key}')">
+      <td>${h.name}</td>
+      <td class="gri-cell" style="color:${griColor(h.gri)}">${pct(h.gri)}</td>
+      <td>${chgTxt(h.griChg)}</td>
+      <td>${goalCell}</td>
+      <td>${fmtInt(h.reviews??h.compReviews)}</td>
+      <td>${h.sem?pct(h.sem.posPct):'—'}</td>
+      <td>${pct(h.cqi)}</td>
+      <td><span class="rank">${rk}</span></td>
+      <td>${pct(h.respRatio)}</td></tr>`;
+  }).join('');
+}
+
+/* =================== VIEW: UNIDADE (deep dive) =================== */
+let curUnit=null;
+function renderUnidade(){
+  const el=$('#v-unidade');
+  const opts=hotelsArr().sort((a,b)=>(b.gri??0)-(a.gri??0)).map(h=>`<option value="${h.key}">${h.name} · ${pct(h.gri)}</option>`).join('');
+  el.innerHTML=`
+    <div class="eyebrow">Diagnóstico profundo</div>
+    <div class="unit-head">
+      <select class="usel" id="uSel">${opts}</select>
+      <div class="unit-nav"><button id="uPrev">‹</button><button id="uNext">›</button></div>
+      <span class="mini dim" id="uPos"></span>
+    </div>
+    <div id="uBody"></div>`;
+  $('#uSel').onchange=e=>{curUnit=e.target.value;drawUnit();};
+  $('#uPrev').onclick=()=>stepUnit(-1); $('#uNext').onclick=()=>stepUnit(1);
+  curUnit=curUnit||hotelsArr().sort((a,b)=>(b.gri??0)-(a.gri??0))[0].key;
+  $('#uSel').value=curUnit; drawUnit();
+}
+function stepUnit(d){ const ks=[...$('#uSel').options].map(o=>o.value); let i=ks.indexOf(curUnit); i=(i+d+ks.length)%ks.length; curUnit=ks[i]; $('#uSel').value=curUnit; drawUnit(); }
+window.openUnit=function(k){ curUnit=k; switchTab('unidade'); const sel=$('#uSel'); if(sel){sel.value=k;} drawUnit(); };
+
+function topN(obj,n){ return Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]).slice(0,n); }
+function drawUnit(){
+  const h=DATA.hotels[curUnit]; if(!h)return;
+  const ks=[...$('#uSel').options].map(o=>o.value); $('#uPos').textContent=`${ks.indexOf(curUnit)+1} de ${ks.length}`;
+  const m=h.m||{}; const sem=h.sem||{};
+  const R=DATA.region;
+  const goalGap=(h.goal!=null&&h.gri!=null)?(h.gri-h.goal):null;
+
+  // --- header badges ---
+  let badges=`<span class="badge ${h.gri>=90?'good':h.gri>=85?'':'bad'}"><b>GRI ${pct(h.gri)}</b> ${h.griChg!=null?(h.griChg>0?'▲':h.griChg<0?'▼':'')+fmt(Math.abs(h.griChg),1):''}</span>`;
+  if(h.goal!=null)badges+=`<span class="badge ${goalGap>=0?'good':'bad'}">Objetivo ${pct(h.goal)} · ${goalGap>=0?'atingido':fmt(goalGap,1)+' pts'}</span>`;
+  if(h.rankGri)badges+=`<span class="badge">Compset ${h.rankGri}</span>`;
+  if(h.cqi!=null)badges+=`<span class="badge ${h.cqi>=100?'good':h.cqi>=97?'':'warn'}">CQI ${pct(h.cqi)}</span>`;
+  badges+=`<span class="badge">${fmtInt(h.reviews??h.compReviews)} reviews</span>`;
+  if(m.total)badges+=`<span class="badge">${fmtInt(m.total)} menções</span>`;
+
+  // --- narrative insights ---
+  const ins=buildInsights(h,R);
+
+  // --- departments vs region ---
+  const depsRegion={}; (R.departments||[]).forEach(d=>depsRegion[d.dep]=d.index);
+  const deps=(h.departments||[]).filter(d=>d.dep!=='GRI'&&d.index!=null).sort((a,b)=>a.index-b.index);
+
+  // --- negative subconcepts ---
+  const negSub=topN(m.negSub,12), posSub=topN(m.posSub,8);
+  const totNegSub=Object.values(m.negSub||{}).reduce((a,b)=>a+b,0)||1;
+
+  $('#uBody').innerHTML=`
+    <div class="badge-row">${badges}</div>
+
+    <div class="two" style="margin:16px 0">
+      <div>
+        ${ins.map(i=>`<div class="insight ${i.cls}"><span class="k">${i.k}</span>${i.t}</div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="split-h"><h3>Índice por departamento</h3><span class="mini">unidade vs região</span></div>
+        <div class="chart-box"><canvas id="uDept"></canvas></div>
+      </div>
+    </div>
+
+    <div class="three" style="margin-bottom:16px">
+      <div class="card">
+        <div class="split-h"><h3>Sentimento</h3><span class="mini">${fmtInt(m.total||sem.mentions)} menções</span></div>
+        <div style="display:flex;align-items:center;gap:14px;margin:8px 0 14px">
+          <div style="font-size:34px;font-weight:700;color:var(--pos)">${pct(sem.posPct!=null?sem.posPct:(m.pos&&m.total?100*m.pos/(m.pos+m.neg):null))}</div>
+          <div class="mini">positivo${sem.posChg!=null?`<br><span class="${sem.posChg>0?'up':'down'}">${sem.posChg>0?'+':''}${fmt(sem.posChg,1)} pts</span>`:''}</div>
+        </div>
+        ${sentBar(sem.posPct!=null?sem.posPct:(m.total?100*m.pos/m.total:0), sem.negPct!=null?sem.negPct:(m.total?100*m.neg/m.total:0))}
+        <div class="mini" style="margin-top:12px">Menções positivas: <b style="color:var(--pos)">${fmtInt(m.pos)}</b> · negativas: <b style="color:var(--neg)">${fmtInt(m.neg)}</b></div>
+      </div>
+      <div class="card">
+        <div class="split-h"><h3>Pontos fortes</h3><span class="mini">subconceitos +</span></div>
+        <div class="tag-cloud">${posSub.map(([s,c])=>`<span class="t" style="border-color:#1d3a24;background:var(--posbg);color:var(--pos)">${cap(s)} <b>${c}</b></span>`).join('')||'<span class="mini dim3">Sem dados</span>'}</div>
+      </div>
+      <div class="card">
+        <div class="split-h"><h3>Fontes</h3><span class="mini">GRI por canal</span></div>
+        <div id="uSrc" class="rowbars"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="split-h"><h3>Onde estão as reclamações</h3><span class="mini">${fmtInt(totNegSub)} menções negativas · top subconceitos</span></div>
+      <div class="subgrid">
+        ${negSub.map(([s,c])=>{ const p=100*c/totNegSub; return `<div class="subcard">
+          <div class="top"><span class="nm">${cap(s)}</span><span class="ct">${c}</span></div>
+          <div class="meter"><span style="width:${Math.min(100,p*3)}%;background:var(--neg)"></span></div>
+          <div class="mini dim3" style="margin-top:6px">${fmt(p,1)}% das menções −</div></div>`; }).join('')||'<div class="empty">Carregue o ficheiro de Menções para o detalhe.</div>'}
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card"><div class="split-h"><h3>Vozes dos hóspedes — a melhorar</h3><span class="mini">verbatims −</span></div>
+        ${(m.negVerb||[]).map(v=>verbatim(v,false)).join('')||'<div class="empty">Sem verbatims.</div>'}</div>
+      <div class="card"><div class="split-h"><h3>Vozes dos hóspedes — a valorizar</h3><span class="mini">verbatims +</span></div>
+        ${(m.posVerb||[]).map(v=>verbatim(v,true)).join('')||'<div class="empty">Sem verbatims.</div>'}</div>
+    </div>
+  `;
+
+  // dept chart unit vs region
+  if(deps.length){ charts.push(new Chart($('#uDept'),{type:'bar',
+    data:{labels:deps.map(d=>d.dep),datasets:[
+      {label:h.name,data:deps.map(d=>d.index),backgroundColor:deps.map(d=>griColor(d.index)),borderRadius:4},
+      {label:'Região',data:deps.map(d=>depsRegion[d.dep]??null),type:'line',borderColor:'#9fb0c3',borderWidth:1.5,borderDash:[4,3],pointRadius:2,pointBackgroundColor:'#9fb0c3'}
+    ]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9fb0c3',font:{size:11},boxWidth:12,usePointStyle:true}},
+      tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.x,1)+'%'}}},
+      scales:{x:{min:70,max:100,ticks:{color:'#6b7d92',callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},
+        y:{ticks:{color:'#9fb0c3',font:{size:11}},grid:{display:false}}}}}));
+  }
+  // sources rowbars
+  const srcs=(h.sources||[]).filter(s=>s.src!=='GRI'&&s.reviews>0).sort((a,b)=>b.reviews-a.reviews).slice(0,7);
+  $('#uSrc').innerHTML=srcs.map(s=>rowbar(s.src,s.index,griColor(s.index),`${pct(s.index)} · ${fmtInt(s.reviews)}`)).join('')||'<div class="empty">Sem dados</div>';
+}
+function verbatim(v,pos){ return `<div class="verbatim ${pos?'pos':''}"><span class="txt">"${escapeHtml(v.txt)}"</span>
+  <div class="meta">${v.cat?`<span>${v.cat}</span>`:''}${v.src?`<span>${v.src}</span>`:''}${v.lang?`<span>${v.lang}</span>`:''}${v.rating?`<span>${v.rating}</span>`:''}${v.date?`<span>${v.date}</span>`:''}</div></div>`; }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function buildInsights(h,R){
+  const out=[]; const m=h.m||{}; const sem=h.sem||{};
+  // GRI position vs region
+  if(h.gri!=null&&R.gri!=null){ const d=h.gri-R.gri;
+    out.push({k:'Posição regional',cls:d>=0?'pos':'neg',
+      t:`GRI de <b>${pct(h.gri)}</b>, ${d>=0?`<b>${fmt(d,1)} pts acima</b>`:`<b>${fmt(Math.abs(d),1)} pts abaixo</b>`} da média regional (${pct(R.gri)}).${h.griChg!=null?` No semestre ${h.griChg>0?`subiu ${fmt(h.griChg,1)} pts`:h.griChg<0?`caiu ${fmt(Math.abs(h.griChg),1)} pts`:'manteve-se'} vs homólogo.`:''}`});
+  }
+  // goal
+  if(h.goal!=null&&h.gri!=null){ const g=h.gri-h.goal;
+    out.push({k:'Objetivo',cls:g>=0?'pos':'neg',
+      t:g>=0?`Objetivo de ${pct(h.goal)} <b>atingido</b> (+${fmt(g,1)} pts de margem).`:`<b>${fmt(Math.abs(g),1)} pts abaixo</b> do objetivo de ${pct(h.goal)} — a recuperar.`});
+  }
+  // compset
+  if(h.rankGri||h.compset!=null){ const vs=(h.compGri!=null&&h.compset!=null)?h.compGri-h.compset:null;
+    out.push({k:'Concorrência',cls:vs!=null?(vs>=0?'pos':'neg'):'acc',
+      t:`${h.rankGri?`Posição <b>${h.rankGri}</b> no compset.`:''} ${vs!=null?(vs>=0?`Acima do compset em <b>${fmt(vs,1)} pts</b>.`:`<b>${fmt(Math.abs(vs),1)} pts abaixo</b> do compset (${pct(h.compset)}).`):''} ${h.cqi!=null?`CQI ${pct(h.cqi)}${h.cqiChg!=null?` (${h.cqiChg>0?'+':''}${fmt(h.cqiChg,1)})`:''}.`:''}`});
+  }
+  // weakest department
+  const deps=(h.departments||[]).filter(d=>d.dep!=='GRI'&&d.index!=null).sort((a,b)=>a.index-b.index);
+  if(deps.length){ const w=deps[0],s=deps[deps.length-1];
+    out.push({k:'Departamentos',cls:'neu',
+      t:`Departamento mais crítico: <b>${w.dep}</b> (${pct(w.index)}${w.chg!=null?`, ${w.chg>0?'+':''}${fmt(w.chg,1)}`:''}). Mais forte: <b>${s.dep}</b> (${pct(s.index)}).`});
+  }
+  // top negative driver from mentions
+  const negSub=topN(m.negSub,3);
+  if(negSub.length){ out.push({k:'Principal foco de melhoria',cls:'neg',
+    t:`Reclamações concentram-se em <b>${negSub.map(([s,c])=>`${cap(s)} (${c})`).join(', ')}</b>. São os subconceitos negativos mais mencionados no semestre.`});
+  }
+  // response performance
+  if(h.respRatio!=null){ out.push({k:'Gestão de respostas',cls:h.respRatio>=98?'pos':h.respRatio>=90?'neu':'neg',
+    t:`Rácio de resposta <b>${pct(h.respRatio)}</b>${h.respRatioChg!=null?` (${h.respRatioChg>0?'+':''}${fmt(h.respRatioChg,1)} pts)`:''}${h.respAvg!=null?`, tempo médio ${fmt(h.respAvg,1)} dias`:''}.`});
+  }
+  return out;
+}
+
+/* =================== VIEW: SEMÂNTICA =================== */
+function renderSemantica(){
+  const R=DATA.region, el=$('#v-semantica');
+  const cats=(R.categories||[]).filter(c=>c.mentions>0).sort((a,b)=>b.mentions-a.mentions);
+  const sem=R.sem||{};
+  el.innerHTML=`
+    <div class="eyebrow">Análise semântica regional</div>
+    <h2 class="sec-h">Categorias & Sentimento</h2>
+    <p class="sec-sub">${fmtInt(sem.total)} menções no semestre (${sem.totalPrev?`vs ${fmtInt(sem.totalPrev)} homólogo, +${fmtInt(sem.total-sem.totalPrev)}`:''}). Categorias ordenadas por volume; barra mostra positivo vs negativo.</p>
+    <div class="grid kpis" style="margin-bottom:18px">
+      <div class="kpi"><div class="lab">Menções totais</div><div class="val">${fmtInt(sem.total)}</div><div class="chg">${sem.totalPrev?chgTxt(sem.total-sem.totalPrev):''} <span class="dim3">vs homólogo</span></div></div>
+      <div class="kpi"><div class="lab">Sentimento positivo</div><div class="val" style="color:var(--pos)">${pct(sem.posPct)}</div><div class="chg">${chgTxt(sem.posPctChg)} <span class="dim3">pts</span></div></div>
+      <div class="kpi"><div class="lab">Volume positivo</div><div class="val">${fmtInt(sem.pos)}</div></div>
+      <div class="kpi"><div class="lab">Volume negativo</div><div class="val" style="color:var(--neg)">${fmtInt(sem.neg)}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="split-h"><h3>Categorias por volume e sentimento</h3><div class="legend"><span><i style="background:var(--pos)"></i>Positivo</span><span><i style="background:var(--neg)"></i>Negativo</span></div></div>
+      <div class="tbl-wrap" style="border:none"><table><thead><tr><th>Categoria</th><th>Menções</th><th>Δ</th><th>Sentimento</th><th>Positivo</th></tr></thead><tbody>
+      ${cats.map(c=>`<tr class="norow"><td>${c.cat}</td><td>${fmtInt(c.mentions)}</td><td>${chgTxt(c.mchg)}</td>
+        <td style="text-align:left">${sentBar(c.posPct,c.negPct)}</td>
+        <td style="color:${c.posPct>=60?'var(--pos)':c.posPct>=45?'var(--neu)':'var(--neg)'}">${pct(c.posPct)} ${c.posChg!=null?`<span class="mini ${c.posChg>0?'up':'down'}">${c.posChg>0?'+':''}${fmt(c.posChg,1)}</span>`:''}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>
+    <div class="two">
+      <div class="card"><div class="split-h"><h3>Unidades por sentimento positivo</h3><span class="mini">menções +</span></div><div id="semHotels" class="rowbars"></div></div>
+      <div class="card"><div class="split-h"><h3>Categorias mais negativas</h3><span class="mini">% negativo</span></div><div id="semNeg" class="rowbars"></div></div>
+    </div>`;
+  const sbh=(R.semByHotel||[]).filter(x=>x.posPct!=null).sort((a,b)=>b.posPct-a.posPct);
+  $('#semHotels').innerHTML=sbh.map(x=>rowbar(x.name.replace('Vila Gale ','').replace('Vila Galé ',''),x.posPct,x.posPct>=60?'var(--pos)':x.posPct>=50?'var(--neu)':'var(--neg)',`${pct(x.posPct)}`)).join('');
+  const neg=[...cats].filter(c=>c.mentions>=50).sort((a,b)=>(100-a.posPct)-(100-b.posPct));
+  $('#semNeg').innerHTML=neg.slice(0,10).map(c=>rowbar(c.cat,100-c.posPct,'var(--neg)',`${pct(100-c.posPct)}`)).join('');
+}
+
+/* =================== VIEW: CONCORRÊNCIA =================== */
+function renderConcorrencia(){
+  const el=$('#v-concorrencia');
+  const arr=hotelsArr().filter(h=>h.compset!=null||h.rankGri);
+  el.innerHTML=`
+    <div class="eyebrow">Posição competitiva · compset · CQI™</div>
+    <h2 class="sec-h">Concorrência</h2>
+    <p class="sec-sub">GRI da unidade vs média do compset. CQI™ >100% = acima do compset. Ranking indica posição no conjunto competitivo local.</p>
+    <div class="card" style="margin-bottom:16px">
+      <div class="split-h"><h3>Unidade vs compset — GRI</h3><span class="mini">ordenado por diferença</span></div>
+      <div class="chart-box tall"><canvas id="cComp"></canvas></div>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Unidade</th><th>GRI™</th><th>Compset</th><th>Diferença</th><th>Rank GRI</th><th>CQI™</th><th>Δ CQI</th><th>Rank reviews</th>
+    </tr></thead><tbody>
+    ${[...arr].sort((a,b)=>((b.compGri??0)-(b.compset??0))-((a.compGri??0)-(a.compset??0))).map(h=>{
+      const diff=(h.compGri!=null&&h.compset!=null)?h.compGri-h.compset:null;
+      return `<tr onclick="openUnit('${h.key}')"><td>${h.name}</td>
+        <td class="gri-cell" style="color:${griColor(h.compGri??h.gri)}">${pct(h.compGri??h.gri)}</td>
+        <td>${pct(h.compset)}</td>
+        <td>${diff!=null?`<span class="${diff>=0?'up':'down'}">${diff>0?'+':''}${fmt(diff,1)}</span>`:'—'}</td>
+        <td><span class="rank">${h.rankGri||'—'}</span></td>
+        <td style="color:${h.cqi>=100?'var(--pos)':h.cqi>=97?'var(--ink)':'var(--neu)'}">${pct(h.cqi)}</td>
+        <td>${chgTxt(h.cqiChg)}</td>
+        <td><span class="rank">${h.rankReviews||'—'}</span></td></tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+  const sorted=[...arr].filter(h=>h.compGri!=null&&h.compset!=null).sort((a,b)=>(b.compGri-b.compset)-(a.compGri-a.compset));
+  charts.push(new Chart($('#cComp'),{type:'bar',
+    data:{labels:sorted.map(h=>h.name.replace('Vila Gale ','').replace('Vila Galé ','')),
+      datasets:[{label:'Unidade',data:sorted.map(h=>h.compGri),backgroundColor:sorted.map(h=>h.compGri>=h.compset?'#3fb950':'#e5534b'),borderRadius:3},
+        {label:'Compset',data:sorted.map(h=>h.compset),type:'line',borderColor:'#c9a227',borderWidth:1.8,pointRadius:3,pointBackgroundColor:'#c9a227'}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9fb0c3',boxWidth:12,usePointStyle:true,font:{size:11}}},
+      tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y,1)+'%'}}},
+      scales:{x:{ticks:{color:'#6b7d92',font:{size:9},maxRotation:60,minRotation:45},grid:{display:false}},
+        y:{min:78,max:98,ticks:{color:'#6b7d92',callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}}}}));
+}
+
+/* =================== VIEW: RESPOSTAS =================== */
+function renderRespostas(){
+  const R=DATA.region, el=$('#v-respostas');
+  const arr=hotelsArr().filter(h=>h.respRatio!=null).sort((a,b)=>b.respRatio-a.respRatio);
+  el.innerHTML=`
+    <div class="eyebrow">Gestão de respostas · sem Expedia</div>
+    <h2 class="sec-h">Respostas a Reviews</h2>
+    <p class="sec-sub">Rácio de resposta e tempo médio por unidade. Região: <b>${pct(R.respRatio)}</b> de rácio, ${R.respAvg!=null?fmt(R.respAvg,1)+' dias':'—'} de tempo médio.</p>
+    <div class="grid kpis" style="margin-bottom:18px">
+      <div class="kpi"><div class="lab">Rácio regional</div><div class="val">${pct(R.respRatio)}</div><div class="chg">${chgTxt(R.respChg)} <span class="dim3">pts</span></div></div>
+      <div class="kpi"><div class="lab">Respondidas</div><div class="val">${fmtInt(R.responded)}</div><div class="chg dim3">de ${fmtInt(R.respondable)}</div></div>
+      <div class="kpi"><div class="lab">Tempo médio</div><div class="val">${R.respAvg!=null?fmt(R.respAvg,1):'—'}<small>dias</small></div><div class="chg">${chgTxt(R.respAvgChg,true)} <span class="dim3">dias</span></div></div>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Unidade</th><th>Respondidas</th><th>Responsáveis</th><th>Rácio</th><th>Δ Rácio</th><th>Tempo médio</th><th>Δ Tempo</th></tr></thead><tbody>
+    ${arr.map(h=>`<tr onclick="openUnit('${h.key}')"><td>${h.name}</td>
+      <td>${fmtInt(h.respd)}</td><td>${fmtInt(h.able)}</td>
+      <td style="color:${h.respRatio>=98?'var(--pos)':h.respRatio>=90?'var(--neu)':'var(--neg)'}">${pct(h.respRatio)}</td>
+      <td>${chgTxt(h.respRatioChg)}</td>
+      <td>${h.respAvg!=null?fmt(h.respAvg,1)+' d':'—'}</td>
+      <td>${chgTxt(h.respAvgChg,true)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+/* =================== VIEW: MERCADOS =================== */
+function renderMercados(){
+  const R=DATA.region, el=$('#v-mercados');
+  const langs=(R.langs||[]).filter(l=>l.mentions>0).slice(0,12);
+  const ctry=(R.countries||[]).filter(c=>c.mentions>0).slice(0,14);
+  el.innerHTML=`
+    <div class="eyebrow">Origem dos hóspedes</div>
+    <h2 class="sec-h">Mercados & Idiomas</h2>
+    <p class="sec-sub">Distribuição de menções por idioma e país de origem, com sentimento positivo associado.</p>
+    <div class="two">
+      <div class="card"><div class="split-h"><h3>Idiomas</h3><span class="mini">menções · % positivo</span></div>
+        <div class="chart-box tall"><canvas id="cLang"></canvas></div></div>
+      <div class="card"><div class="split-h"><h3>Países / Áreas</h3><span class="mini">menções · % positivo</span></div>
+        <div id="ctryList" class="rowbars"></div></div>
+    </div>`;
+  charts.push(new Chart($('#cLang'),{type:'bar',
+    data:{labels:langs.map(l=>l.name),datasets:[{label:'Menções',data:langs.map(l=>l.mentions),
+      backgroundColor:langs.map(l=>l.posPct!=null?(l.posPct>=60?'#3fb950':l.posPct>=50?'#d8a642':'#e5534b'):'#4c9df0'),borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>{const l=langs[c.dataIndex];return `${fmtInt(l.mentions)} menções · ${pct(l.posPct)} +`;}}}},
+      scales:{x:{ticks:{color:'#6b7d92',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},
+        y:{ticks:{color:'#9fb0c3',font:{size:11}},grid:{display:false}}}}}));
+  const maxC=Math.max(...ctry.map(c=>c.mentions),1);
+  $('#ctryList').innerHTML=ctry.map(c=>`<div class="rowbar"><span class="lb">${c.name}</span>
+    <div class="tk"><span style="width:${100*c.mentions/maxC}%;background:${c.posPct>=60?'var(--pos)':c.posPct>=50?'var(--neu)':'var(--neg)'}"></span></div>
+    <span class="vv">${fmtInt(c.mentions)}</span></div>`).join('');
+}
+
+</script>
+</body>
+</html>
