@@ -250,7 +250,7 @@
 
   window.VG=window.VG||{};
   window.VG.actions={
-    ensureLoaded,ensureAssignees,all,findForSource,findById,stats,watch,statusMeta,isOverdue,canManage,
+    ensureLoaded,ensureAssignees,all,assignees:()=>assignees.slice(),findForSource,findById,stats,watch,statusMeta,isOverdue,canManage,
     openForPriority,openById,openBoard,closeBoard,closeEditor,saveEditor,renderBoard
   };
   window.opsActionsOpen=()=>openBoard();

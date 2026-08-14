@@ -1,12 +1,12 @@
 // ==========================================================
-// VG DASHBOARD v18 — PWA / MOBILE
+// VG DASHBOARD v27 — PWA / MOBILE
 // Navegação móvel, instalação PWA e cache da aplicação estática.
 // Não guarda respostas da API/Netlify no service worker.
 // ==========================================================
 (function(){
   'use strict';
-  if(window.__VG_MOBILE_PWA_V17__) return;
-  window.__VG_MOBILE_PWA_V17__=true;
+  if(window.__VG_MOBILE_PWA_V27__) return;
+  window.__VG_MOBILE_PWA_V27__=true;
 
   const MOBILE='(max-width: 820px)';
   let deferredInstall=null;
@@ -28,7 +28,7 @@
       <button class="vg-mnav-btn" data-view="resumo" type="button"><span class="vg-mnav-icon">⬛</span><span>Central</span></button>
       <button class="vg-mnav-btn" data-view="hoteis" type="button"><span class="vg-mnav-icon">🏨</span><span>Hotéis</span></button>
       <button class="vg-mnav-btn" data-action="actions" type="button"><span class="vg-mnav-icon">✓</span><span>Ações</span><span class="vg-mnav-badge" id="vgMobileActionBadge"></span></button>
-      <button class="vg-mnav-btn" data-view="alertas" type="button"><span class="vg-mnav-icon">🔔</span><span>Alertas</span></button>
+      <button class="vg-mnav-btn" data-action="notifications" type="button"><span class="vg-mnav-icon">🔔</span><span>Alertas</span><span class="vg-mnav-badge" id="vgMobileNotificationBadge"></span></button>
       <button class="vg-mnav-btn" data-action="more" type="button"><span class="vg-mnav-icon">•••</span><span>Mais</span></button>`;
     document.body.appendChild(nav);
 
@@ -39,13 +39,20 @@
       <div class="vg-mobile-sheet-head"><div><strong>VG Operations</strong><span id="vgMobileUserLine">Acesso rápido</span></div><button type="button" class="vg-mobile-sheet-close" aria-label="Fechar">✕</button></div>
       <div class="vg-mobile-group-title">Decidir e agir</div>
       <div class="vg-mobile-grid">
+        <button class="vg-mobile-link primary" data-view="hotelperformance" type="button"><i>🏨</i><span>Performance<small>Estado executivo do hotel</small></span></button>
         <button class="vg-mobile-link primary" data-view="fichahotel" type="button"><i>📋</i><span>Ficha do Hotel<small>KPIs e comentários</small></span></button>
         <button class="vg-mobile-link primary" data-view="forecast" type="button"><i>🔭</i><span>Forecast<small>Cenários e risco</small></span></button>
         <button class="vg-mobile-link" data-view="anomalies" type="button"><i>⚠</i><span>Anomalias<small>Desvios automáticos</small></span></button>
+        <button class="vg-mobile-link" data-view="alertas" type="button"><i>🔔</i><span>Alertas detalhados<small>Regras e indicadores</small></span></button>
         <button class="vg-mobile-link" data-action="actions" type="button"><i>✓</i><span>Ações<small>Responsáveis e prazos</small></span></button>
+        <button class="vg-mobile-link primary" data-view="agenda" type="button"><i>📅</i><span>Agenda<small>Eventos e compromissos</small></span></button>
+        <button class="vg-mobile-link primary" data-view="automaticreports" type="button"><i>📄</i><span>Relatórios<small>Hotel, região e consolidado</small></span></button>
+        <button class="vg-mobile-link primary" data-view="documents" type="button"><i>🗂️</i><span>Documentos<small>Relatórios, atas e auditorias</small></span></button>
+        <button class="vg-mobile-link primary" data-view="approvals" type="button"><i>✅</i><span>Aprovações<small>Pedidos e decisões</small></span></button>
       </div>
       <div class="vg-mobile-group-title">Analisar</div>
       <div class="vg-mobile-grid">
+        <button class="vg-mobile-link primary" data-action="assistant" type="button"><i>✦</i><span>Assistente<small>Pergunta aos dados</small></span></button>
         <button class="vg-mobile-link" data-view="revenueint" type="button"><i>🧠</i><span>Revenue<small>Pickup e risco</small></span></button>
         <button class="vg-mobile-link" data-view="benchmark" type="button"><i>◎</i><span>Benchmark<small>Hotel vs pares</small></span></button>
         <button class="vg-mobile-link" data-view="pl" type="button"><i>📊</i><span>P&amp;L<small>Resultado mensal</small></span></button>
@@ -89,6 +96,8 @@
     const view=b.dataset.view,action=b.dataset.action;
     if(view){go(view);return;}
     if(action==='actions'){closeMore();if(typeof window.opsActionsOpen==='function')window.opsActionsOpen();return;}
+    if(action==='notifications'){closeMore();window.VG?.notifications?.open?.();return;}
+    if(action==='assistant'){closeMore();window.VG?.analyticalAssistant?.open?.();return;}
     if(action==='more'){openMore();return;}
     if(action==='sync'){syncNow();return;}
     if(action==='install'){installApp();return;}
@@ -99,7 +108,7 @@
   function updateActive(){
     const v=activeView();lastView=v;
     document.querySelectorAll('#vgMobileNav .vg-mnav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
-    if(!['resumo','hoteis','alertas'].includes(v)){const more=qs('vgMobileNav')?.querySelector('[data-action="more"]');more?.classList.add('active');}
+    if(!['resumo','hoteis'].includes(v)){const more=qs('vgMobileNav')?.querySelector('[data-action="more"]');more?.classList.add('active');}
   }
   function updateUserLine(){const u=authUser();const line=qs('vgMobileUserLine');if(line)line.textContent=u?(u.name||u.user)+(u.hotel?' · '+u.hotel:''):'Acesso rápido';document.querySelectorAll('.vg-mobile-governance').forEach(el=>el.style.display=(u&&(u.role==='direcao'||u.role==='admin'))?'':'none');}
 
@@ -112,8 +121,10 @@
     try{
       if(typeof window.fetchSharedData==='function') await window.fetchSharedData(true);
       if(window.VG?.actions?.ensureLoaded) await window.VG.actions.ensureLoaded(true);
+      if(window.VG?.agenda?.ensureLoaded) await window.VG.agenda.ensureLoaded(true);
+      if(window.VG?.approvals?.ensureLoaded) await window.VG.approvals.ensureLoaded(true);
       const now=new Date();try{localStorage.setItem('vg_mobile_last_sync_v17',now.toISOString());}catch(e){}
-      updateSyncLine();await updateActionBadge();showSync('Dados atualizados · '+now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}));
+      updateSyncLine();await updateActionBadge();try{await window.VG?.notifications?.refresh?.(true);}catch(e){}showSync('Dados atualizados · '+now.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}));
     }catch(e){console.warn('Sincronização mobile falhou',e);showSync('Não foi possível concluir a sincronização.',true);}
   }
 

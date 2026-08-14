@@ -106,8 +106,8 @@ function setView(v) {
   // A página Agenda & Tempo não depende do carregamento do Excel; por isso não deve reservar espaço para o empty state.
   const empty = document.getElementById('emptyState');
   if (empty) {
-    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup') empty.style.display = 'none';
-    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup');
+    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals') empty.style.display = 'none';
+    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals');
   }
   requestAnimationFrame(() => { if(window.VG?.performance?.resizeVisibleCharts) window.VG.performance.resizeVisibleCharts(); else Object.values(charts).forEach(c => c?.resize?.()); });
 }
@@ -1379,11 +1379,13 @@ function refreshAll(){
   if(currentView === 'reputacao') { rtRender(); return; }
   if(currentView === 'vendassv') { svRender(); return; }
   { var _yw=document.getElementById('yearBtnsWrap'); if(_yw) _yw.style.display = (currentView==='compras') ? '' : 'none'; }
-  if(currentView === 'agenda') { if(typeof calInit==='function') calInit(); return; }
+  if(currentView === 'agenda') { if(typeof vgAgendaRefresh==='function') vgAgendaRefresh(false); else if(typeof wxInit==='function') wxInit(); return; }
   if(currentView === 'compras') { if(typeof cdRender==='function') cdRender(); return; }
   if(currentView === 'datacenter') { if(typeof dcRender==='function') dcRender(); if(typeof dcLoadHistory==='function') dcLoadHistory(false); return; }
   if(currentView === 'governance') { if(typeof governanceLoad==='function') governanceLoad(false); return; }
   if(currentView === 'backup') { if(typeof backupRecoveryLoad==='function') backupRecoveryLoad(false); return; }
+  if(currentView === 'documents') { if(typeof documentManagementRender==='function') documentManagementRender(); return; }
+  if(currentView === 'approvals') { if(typeof approvalsRender==='function') approvalsRender(); return; }
   if(currentView === 'hoteis') { if(typeof hoteisInit==='function') hoteisInit(); return; }
   if(currentView === 'ocupacao') { if(typeof occRender==='function') occRender(); return; }
   if(currentView === 'instagram') { if(typeof igRender==='function') igRender(); return; }
@@ -1400,6 +1402,9 @@ function refreshAll(){
   }
   else if(currentView==='kpis'){ buildKPIs('kpiGridDetail'); buildChartsKpis(); buildKpiTable(); }
   else if(currentView==='fichahotel'){ hsRender(); }
+  else if(currentView==='hotelperformance'){ if(typeof hotelPerformanceRender==='function') hotelPerformanceRender(); }
+  else if(currentView==='automaticreports'){ if(typeof automaticReportsRender==='function') automaticReportsRender(); }
+  else if(currentView==='analyticalassistant'){ if(typeof analyticalAssistantRender==='function') analyticalAssistantRender(); }
   else if(currentView==='pl'){ plRender(); }
   else if(currentView==='costanalysis'){ caRender(); }
   else if(currentView==='cua'){ cuaRender(); }

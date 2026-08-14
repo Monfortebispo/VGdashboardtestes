@@ -45,4 +45,8 @@ async function load(force){shell();if(!allowed()){render();return;}if(GOV_LOADED
 function toggle(id){GOV_OPEN=GOV_OPEN===id?'':id;document.querySelectorAll('.gov-detail').forEach(el=>el.classList.toggle('open',el.id==='govDetail-'+GOV_OPEN));}
 function csv(){const rows=filtered();if(!rows.length)return;const cols=['serverTs','user','name','hotel','category','action','resource','key','severity','verified','detail'];const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const text='\ufeff'+[cols.join(';'),...rows.map(r=>cols.map(c=>q(r[c])).join(';'))].join('\n');const blob=new Blob([text],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='VG_Auditoria_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);}
 window.governanceRender=render;window.governanceLoad=load;window.governanceToggle=toggle;window.governanceExportCsv=csv;
+// V19: API de leitura apenas para a Pesquisa Global. Nunca expõe dados a perfis
+// que não tenham acesso à própria página de governação.
+window.vgGovernanceRows=()=>allowed()?JSON.parse(JSON.stringify(GOV_ROWS)):[];
+window.vgGovernanceEnsureLoaded=async function(force){if(!allowed())return[];await load(!!force);return JSON.parse(JSON.stringify(GOV_ROWS));};
 })();
