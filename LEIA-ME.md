@@ -1,83 +1,76 @@
-# VG Dashboard — Segurança e Autenticação v3
+# VG Dashboard — Arquitetura Modular v4
 
-Esta versão parte da Shared Storage v2 e mantém as correções do Core v1.
+Esta versão parte da Secure Auth v3, mantendo o Core v1 e o Shared Storage v2 já validados em utilização real.
+
+## Objetivo desta versão
+
+Reduzir o risco de manutenção do antigo `index.html` monolítico sem alterar o comportamento funcional da dashboard.
+
+O `index.html` tinha aproximadamente 1,32 MB e mais de 21 mil linhas, contendo HTML, CSS e praticamente todo o JavaScript da aplicação no mesmo ficheiro. Na v4, o HTML passa a conter essencialmente a estrutura da interface e as referências aos módulos.
 
 ## O que mudou
 
-### 1. Autenticação passou para o servidor
-- A lista de utilizadores e as passwords deixaram de existir no `index.html`.
-- O login é validado pela função Netlify `dashboard-sessao`.
-- O browser recebe apenas os dados públicos do utilizador e um token de sessão assinado.
-- A sessão tem validade de 12 horas.
+### 1. JavaScript separado por responsabilidade
 
-### 2. Passwords protegidas
-- As passwords são guardadas no Netlify Blob `users` com `scrypt` e salt individual.
-- O endpoint de utilizadores nunca devolve hashes, salts ou passwords ao browser.
-- O formato antigo com `pass` em texto simples é migrado automaticamente no primeiro pedido de login.
-- O `localStorage` antigo de utilizadores é removido pelo frontend.
+O motor foi dividido em:
 
-### 3. Troca obrigatória da password inicial
-- Contas migradas que ainda usem a password inicial histórica são identificadas automaticamente.
-- Após o primeiro login, aparece uma janela obrigatória para definir uma nova password.
-- Regra para novas passwords: mínimo de 8 caracteres, com pelo menos uma letra e um número.
-- Cada utilizador passa a ter um botão `Palavra-passe` para alterar a sua própria credencial.
+- `assets/js/core/` — importação de dados, navegação/KPIs, persistência/partilha e bootstrap;
+- `assets/js/auth/` — autenticação e restauro pós-login;
+- `assets/js/modules/` — Ficha do Hotel, P&L, CUA, custos, reputação, ocupação, Instagram, hotéis, receitas, orçamento, compras, Revenue Intelligence, WhatsApp e restantes domínios;
+- `assets/js/ui/` — componentes/camadas visuais transversais;
+- `assets/js/fixes/` — correções históricas ainda necessárias, agora claramente isoladas.
 
-### 4. Gestão de utilizadores segura
-A Direção continua a gerir utilizadores no Setup, mas:
-- a password atual nunca aparece no formulário;
-- deixar o campo password vazio mantém a credencial existente;
-- uma nova conta exige password temporária;
-- uma password definida/reset pela Direção obriga o utilizador a alterá-la no login seguinte;
-- inativar uma conta invalida as sessões dessa conta;
-- o utilizador principal de recuperação não pode ser inativado nem retirado da Direção.
+### 2. CSS retirado do HTML
 
-### 5. Permissões validadas no servidor
-Todos os Blobs da dashboard passaram a exigir autenticação.
+Todos os blocos `<style>` foram extraídos para `assets/css/`.
 
-- Direção de Operações: leitura e escrita global, Setup e importação/publicação de dados.
-- Diretor / Assistente: leitura global; escrita apenas da Ficha do Hotel associada à conta e presença online.
-- Auditoria: todos podem criar eventos; apenas a Direção consulta a tabela completa.
-- Recursos internos de segurança (`_auth-*`, rate-limit, etc.) nunca são expostos pela API genérica.
+Isto permite alterar, por exemplo, autenticação, compras ou Revenue Intelligence sem procurar regras CSS no meio de milhares de linhas de HTML.
 
-Mesmo que alguém altere manualmente o HTML ou o `sessionStorage`, a função Netlify volta a verificar o utilizador real e as permissões antes de aceitar uma gravação.
+### 3. Biblioteca offline separada
 
-### 6. Página de carregamento
-- Foi removida a senha fixa que existia no HTML.
-- A página de carregamento é agora acessível apenas a perfis de Direção.
-- A publicação dos dados é novamente validada no servidor.
+O `fflate` embebido continua local e funcional, mas passa a viver em `assets/vendor/fflate.min.js`.
 
-### 7. Proteção contra tentativas de login
-- Limite de tentativas falhadas por utilizador/origem dentro de uma janela temporal.
-- Após várias falhas consecutivas, o login fica temporariamente bloqueado para essa combinação.
+Chart.js e XLSX mantêm nesta versão o mesmo carregamento externo que já existia, para não introduzir outra variável durante a modularização.
 
-### 8. Auditoria mais fiável
-- O servidor passa a preencher a identidade do utilizador do registo de auditoria.
-- O browser não consegue publicar um evento fazendo-se passar por outro utilizador.
+### 4. Código funcional preservado
 
-## Primeira publicação desta versão
+Nesta fase não foram reescritas fórmulas, autenticação, permissões, Blobs ou cálculos. A separação foi feita preservando o código original da v3.
 
-1. Substituir no repositório os ficheiros desta versão.
-2. Aguardar o deploy Netlify concluir com sucesso.
-3. Abrir a dashboard e voltar a iniciar sessão (as sessões antigas v5 não são reutilizadas).
-4. No primeiro login, a função migra automaticamente o Blob antigo de utilizadores para hashes seguros.
-5. Quem ainda tiver a password inicial será obrigado a criar uma nova.
+A função `netlify/functions/dashboard-sessao.js` é exatamente a mesma da Secure Auth v3 já testada.
 
-Não é necessário criar variáveis de ambiente ou instalar novos serviços. O segredo usado para assinar as sessões é gerado pela função e guardado num Blob interno que não é acessível pela API pública.
+### 5. Pequena correção estrutural
+
+Foi corrigida uma marca HTML antiga que interrompia a palavra `letter-spacing` no seletor de Região do modal WhatsApp. Não altera lógica de negócio.
+
+## Resultado estrutural
+
+- `index.html`: de mais de 21.000 linhas para menos de 2.000 linhas;
+- 0 blocos JavaScript inline com lógica da aplicação;
+- 0 blocos `<style>` inline;
+- módulos funcionais identificáveis por nome;
+- patches antigos isolados na pasta `fixes`;
+- função Netlify e modelo de segurança preservados.
+
+Ver `ARCHITECTURE.md` para o mapa completo dos ficheiros e regras para futuras alterações.
+
+## Publicação
+
+Substituir o conteúdo do repositório pela estrutura completa desta versão. É essencial publicar também a pasta `assets/`; não basta substituir apenas o `index.html`.
+
+Não é necessário alterar variáveis, Blobs, utilizadores ou configurações no Netlify.
 
 ## Validação efetuada
 
-- Sintaxe de todos os blocos JavaScript do `index.html`.
-- Sintaxe da função Netlify.
-- Login sem token / com token.
-- Leitura autenticada de dados.
-- Bloqueio de recursos internos.
-- Passwords nunca devolvidas ao frontend.
-- Alteração de password e invalidação do token anterior.
-- Diretor impedido de gerir utilizadores.
-- Diretor impedido de publicar dados globais.
-- Diretor autorizado a gravar apenas a Ficha do seu próprio hotel.
-- Direção autorizada a publicar dados globais.
-- Inativação de utilizador invalida a sessão existente.
-- Migração de registos antigos com password em texto simples.
-- Rate-limit de tentativas de login.
-- Identidade de auditoria imposta pelo servidor.
+- todos os ficheiros JavaScript passam `node --check`;
+- a função Netlify passa validação de sintaxe;
+- todos os 45 recursos locais referidos pelo HTML existem;
+- não ficaram blocos JavaScript funcionais inline;
+- não ficaram blocos `<style>`;
+- CSS extraído comparado integralmente com o CSS da v3;
+- JavaScript reconstruído módulo a módulo comparado integralmente com o JavaScript da v3;
+- função Netlify comparada por hash com a v3 e mantida sem alterações;
+- ordem de carregamento dos módulos preservada.
+
+## Nota
+
+Esta é deliberadamente uma modularização conservadora. A dashboard ainda usa várias funções e variáveis globais porque convertê-las todas de uma vez para módulos ES/arquitetura de classes aumentaria desnecessariamente o risco de regressões. A v4 cria a base para fazer essa evolução de forma gradual.
