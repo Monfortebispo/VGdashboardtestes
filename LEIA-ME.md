@@ -1,81 +1,83 @@
-# VG Dashboard — Shared Storage v2
+# VG Dashboard — Segurança e Autenticação v3
 
-Data: 14/08/2026
+Esta versão parte da Shared Storage v2 e mantém as correções do Core v1.
 
-Esta versão parte da **Core v1** e acrescenta a migração dos dados operacionais que ainda estavam apenas no navegador para o armazenamento partilhado já existente em **Netlify Blobs**.
+## O que mudou
 
-## O que passa a ser partilhado
+### 1. Autenticação passou para o servidor
+- A lista de utilizadores e as passwords deixaram de existir no `index.html`.
+- O login é validado pela função Netlify `dashboard-sessao`.
+- O browser recebe apenas os dados públicos do utilizador e um token de sessão assinado.
+- A sessão tem validade de 12 horas.
 
-### Regiões
-- Recurso Blob: `settings` + chave `regions`.
-- O mapeamento de hotéis por região deixa de depender do computador onde foi alterado.
-- Guardar ou repor regiões no Setup publica a alteração para todos.
+### 2. Passwords protegidas
+- As passwords são guardadas no Netlify Blob `users` com `scrypt` e salt individual.
+- O endpoint de utilizadores nunca devolve hashes, salts ou passwords ao browser.
+- O formato antigo com `pass` em texto simples é migrado automaticamente no primeiro pedido de login.
+- O `localStorage` antigo de utilizadores é removido pelo frontend.
 
-### Revenue Intelligence — Eventos
-- Recurso Blob: `settings` + chave `revenue-events`.
-- O mapa manual de eventos deixa de estar apenas no `localStorage`.
-- Quando um utilizador guarda os eventos, os restantes recebem a mesma informação na próxima sincronização/carregamento.
+### 3. Troca obrigatória da password inicial
+- Contas migradas que ainda usem a password inicial histórica são identificadas automaticamente.
+- Após o primeiro login, aparece uma janela obrigatória para definir uma nova password.
+- Regra para novas passwords: mínimo de 8 caracteres, com pelo menos uma letra e um número.
+- Cada utilizador passa a ter um botão `Palavra-passe` para alterar a sua própria credencial.
 
-### Ficha do Hotel
-- Recurso Blob: `hotelsheet` + chave do hotel.
-- Cada hotel é guardado num Blob próprio para evitar um ficheiro único demasiado grande e reduzir conflitos entre hotéis.
-- Passam a ser partilhados:
-  - diretor associado à ficha;
-  - comentários por hotel/mês;
-  - campos manuais;
-  - histórico usado pela ficha e pelos relatórios.
-- Os comentários/campos são separados pelo **ano atual**, evitando que Janeiro de 2027 reutilize os valores de Janeiro de 2026.
+### 4. Gestão de utilizadores segura
+A Direção continua a gerir utilizadores no Setup, mas:
+- a password atual nunca aparece no formulário;
+- deixar o campo password vazio mantém a credencial existente;
+- uma nova conta exige password temporária;
+- uma password definida/reset pela Direção obriga o utilizador a alterá-la no login seguinte;
+- inativar uma conta invalida as sessões dessa conta;
+- o utilizador principal de recuperação não pode ser inativado nem retirado da Direção.
 
-## Migração automática do localStorage
+### 5. Permissões validadas no servidor
+Todos os Blobs da dashboard passaram a exigir autenticação.
 
-Na primeira execução desta versão:
+- Direção de Operações: leitura e escrita global, Setup e importação/publicação de dados.
+- Diretor / Assistente: leitura global; escrita apenas da Ficha do Hotel associada à conta e presença online.
+- Auditoria: todos podem criar eventos; apenas a Direção consulta a tabela completa.
+- Recursos internos de segurança (`_auth-*`, rate-limit, etc.) nunca são expostos pela API genérica.
 
-1. A dashboard procura as antigas chaves `vg_regioes_custom`, `vg_ri_events` e `vg_hs_*`.
-2. Lê primeiro o que já existe no servidor.
-3. Dados antigos locais só preenchem campos que ainda não existem no servidor — não substituem informação já partilhada.
-4. A dashboard publica os dados migrados nos Blobs.
-5. As chaves locais antigas só são apagadas depois de a gravação no servidor ser confirmada.
-6. Se um valor local antigo for diferente de um valor que já existe no servidor, o servidor continua a ser a fonte oficial, mas o valor local é preservado para revisão — não é apagado silenciosamente.
-7. Todas as Fichas antigas encontradas no browser são migradas automaticamente; não é necessário abrir hotel a hotel.
+Mesmo que alguém altere manualmente o HTML ou o `sessionStorage`, a função Netlify volta a verificar o utilizador real e as permissões antes de aceitar uma gravação.
 
-## Proteção contra edições concorrentes na Ficha do Hotel
+### 6. Página de carregamento
+- Foi removida a senha fixa que existia no HTML.
+- A página de carregamento é agora acessível apenas a perfis de Direção.
+- A publicação dos dados é novamente validada no servidor.
 
-Ao guardar uma alteração, a dashboard volta a ler a versão mais recente do Blob desse hotel e aplica apenas os campos alterados localmente antes de publicar. Isto reduz o risco de uma edição num comentário apagar outra alteração feita entretanto noutro campo do mesmo hotel.
+### 7. Proteção contra tentativas de login
+- Limite de tentativas falhadas por utilizador/origem dentro de uma janela temporal.
+- Após várias falhas consecutivas, o login fica temporariamente bloqueado para essa combinação.
 
-Ao abrir novamente uma Ficha, a versão do servidor é atualizada periodicamente (janela de 30 segundos). A sincronização manual geral força também a atualização das regiões e dos eventos de Revenue Intelligence.
+### 8. Auditoria mais fiável
+- O servidor passa a preencher a identidade do utilizador do registo de auditoria.
+- O browser não consegue publicar um evento fazendo-se passar por outro utilizador.
 
-## O que continua local de propósito
+## Primeira publicação desta versão
 
-Preferências pessoais/de interface continuam no navegador, por exemplo:
-- tema/aparência;
-- seleção de KPIs visíveis;
-- último hotel usado em widgets locais;
-- caches locais que já têm cópia no servidor (utilizadores, auditoria e alguns snapshots).
+1. Substituir no repositório os ficheiros desta versão.
+2. Aguardar o deploy Netlify concluir com sucesso.
+3. Abrir a dashboard e voltar a iniciar sessão (as sessões antigas v5 não são reutilizadas).
+4. No primeiro login, a função migra automaticamente o Blob antigo de utilizadores para hashes seguros.
+5. Quem ainda tiver a password inicial será obrigado a criar uma nova.
 
-Estes itens não são dados operacionais que precisem de ser iguais para todos.
+Não é necessário criar variáveis de ambiente ou instalar novos serviços. O segredo usado para assinar as sessões é gerado pela função e guardado num Blob interno que não é acessível pela API pública.
 
-## Segurança
+## Validação efetuada
 
-Esta versão **não altera ainda a autenticação**. A função `dashboard-sessao` continua com o modelo de acesso anterior. A fase seguinte deverá tratar autenticação/permissões no servidor e palavras-passe.
-
-## Testes executados
-
-- Sintaxe dos 18 blocos JavaScript do `index.html`: OK.
-- Sintaxe de `netlify/functions/dashboard-sessao.js`: OK.
-- Migração automática de regiões: OK.
-- Migração automática de eventos RI: OK.
-- Migração automática de Fichas de vários hotéis: OK.
-- Preservação de dados já existentes no servidor: OK.
-- Merge de uma edição local com uma alteração mais recente feita por outro utilizador: OK.
-- Separação dos comentários da Ficha por ano (2026/2027): OK.
-
-## Publicação
-
-Pode ser publicado no GitHub/Netlify como o projeto anterior. A estrutura continua:
-
-- `index.html`
-- `netlify.toml`
-- `netlify/functions/dashboard-sessao.js`
-- `netlify/functions/package.json`
-
-Não são necessárias novas variáveis de ambiente para esta alteração.
+- Sintaxe de todos os blocos JavaScript do `index.html`.
+- Sintaxe da função Netlify.
+- Login sem token / com token.
+- Leitura autenticada de dados.
+- Bloqueio de recursos internos.
+- Passwords nunca devolvidas ao frontend.
+- Alteração de password e invalidação do token anterior.
+- Diretor impedido de gerir utilizadores.
+- Diretor impedido de publicar dados globais.
+- Diretor autorizado a gravar apenas a Ficha do seu próprio hotel.
+- Direção autorizada a publicar dados globais.
+- Inativação de utilizador invalida a sessão existente.
+- Migração de registos antigos com password em texto simples.
+- Rate-limit de tentativas de login.
+- Identidade de auditoria imposta pelo servidor.
