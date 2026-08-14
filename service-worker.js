@@ -1,0 +1,145 @@
+// VG Operations v18 — service worker
+// Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
+const CACHE_NAME = 'vg-operations-shell-v18';
+const STATIC_ASSETS = [
+  "/assets/css/actions-management.css",
+  "/assets/css/audit-governance.css",
+  "/assets/css/backup-recovery.css",
+  "/assets/css/anomaly-detection.css",
+  "/assets/css/auth.css",
+  "/assets/css/base.css",
+  "/assets/css/benchmarking.css",
+  "/assets/css/chart-actions.css",
+  "/assets/css/compras.css",
+  "/assets/css/cost-detail.css",
+  "/assets/css/data-center.css",
+  "/assets/css/forecast-scenarios.css",
+  "/assets/css/forecast-state.css",
+  "/assets/css/logo-fix.css",
+  "/assets/css/mobile-pwa.css",
+  "/assets/css/navigation-shell.css",
+  "/assets/css/operations-center.css",
+  "/assets/css/revenue-intelligence-ask.css",
+  "/assets/css/revenue-intelligence-secondary.css",
+  "/assets/css/revenue-intelligence.css",
+  "/assets/css/targets-rules.css",
+  "/assets/css/theme.css",
+  "/assets/css/whatsapp.css",
+  "/assets/icons/vg-ops-180.png",
+  "/assets/icons/vg-ops-192.png",
+  "/assets/icons/vg-ops-512.png",
+  "/assets/js/auth/auth-client.js",
+  "/assets/js/auth/restore-after-auth.js",
+  "/assets/js/core/00-runtime.js",
+  "/assets/js/core/01-data-import.js",
+  "/assets/js/core/02-navigation-kpis.js",
+  "/assets/js/core/03-persistence-sharing.js",
+  "/assets/js/core/04-bootstrap.js",
+  "/assets/js/core/05-performance.js",
+  "/assets/js/core/compat-stubs.js",
+  "/assets/js/modules/actions-management.js",
+  "/assets/js/modules/audit-governance.js",
+  "/assets/js/modules/backup-recovery.js",
+  "/assets/js/modules/agenda-tempo.js",
+  "/assets/js/modules/analysis-tools.js",
+  "/assets/js/modules/anomaly-detection.js",
+  "/assets/js/modules/benchmarking.js",
+  "/assets/js/modules/compras.js",
+  "/assets/js/modules/cost-analysis.js",
+  "/assets/js/modules/custo-atividade.js",
+  "/assets/js/modules/data-center.js",
+  "/assets/js/modules/ficha-hotel.js",
+  "/assets/js/modules/forecast-scenarios.js",
+  "/assets/js/modules/hoteis.js",
+  "/assets/js/modules/instagram.js",
+  "/assets/js/modules/ocupacao.js",
+  "/assets/js/modules/orcamento.js",
+  "/assets/js/modules/pdf-export.js",
+  "/assets/js/modules/pl-usali.js",
+  "/assets/js/modules/receitas-detalhe.js",
+  "/assets/js/modules/reputacao.js",
+  "/assets/js/modules/revenue-intelligence.js",
+  "/assets/js/modules/targets-rules.js",
+  "/assets/js/modules/whatsapp.js",
+  "/assets/js/ui/cdn-healthcheck.js",
+  "/assets/js/ui/chart-actions.js",
+  "/assets/js/ui/context-panel.js",
+  "/assets/js/ui/forecast-state.js",
+  "/assets/js/ui/mobile-pwa.js",
+  "/assets/js/ui/navigation-shell.js",
+  "/assets/js/ui/operational-tools.js",
+  "/assets/js/ui/operations-center.js",
+  "/assets/vendor/fflate.min.js",
+  "/index.html",
+  "/manifest.webmanifest"
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil((async()=>{
+    const cache=await caches.open(CACHE_NAME);
+    // v18: pré-cache concorrente em pequenos lotes; evita dezenas de pedidos sequenciais.
+    const batchSize=8;
+    for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
+      const batch=STATIC_ASSETS.slice(i,i+batchSize);
+      await Promise.allSettled(batch.map(url=>cache.add(new Request(url,{cache:'reload'})).catch(e=>{console.warn('[VG SW] precache falhou',url);throw e;})));
+    }
+    await self.skipWaiting();
+  })());
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k.startsWith('vg-operations-shell-') && k!==CACHE_NAME).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type==='SKIP_WAITING') self.skipWaiting();
+});
+
+function isSensitive(req,url) {
+  if (req.method!=='GET') return true;
+  if (url.pathname.startsWith('/.netlify/')) return true;
+  if (url.pathname.startsWith('/netlify/functions/')) return true;
+  return false;
+}
+
+self.addEventListener('fetch', event => {
+  const req=event.request;
+  const url=new URL(req.url);
+  if (isSensitive(req,url)) return; // network-only: nunca cachear dados empresariais/API
+
+  if (req.mode==='navigate') {
+    event.respondWith((async()=>{
+      try {
+        const fresh=await fetch(req);
+        if (fresh && fresh.ok && url.origin===self.location.origin) {
+          const cache=await caches.open(CACHE_NAME);
+          await cache.put('/index.html', fresh.clone());
+        }
+        return fresh;
+      } catch (e) {
+        return (await caches.match('/index.html')) || (await caches.match('/'));
+      }
+    })());
+    return;
+  }
+
+  if (url.origin===self.location.origin) {
+    event.respondWith((async()=>{
+      const cached=await caches.match(req, {ignoreSearch:true});
+      if (cached) {
+        event.waitUntil(fetch(req).then(async fresh=>{if(fresh&&fresh.ok){const c=await caches.open(CACHE_NAME);await c.put(req,fresh.clone());}}).catch(()=>{}));
+        return cached;
+      }
+      try {
+        const fresh=await fetch(req);
+        if (fresh && fresh.ok) { const c=await caches.open(CACHE_NAME); await c.put(req,fresh.clone()); }
+        return fresh;
+      } catch (e) { return Response.error(); }
+    })());
+  }
+  // Recursos CDN são network-only. A app abre offline, mas gráficos/Excel podem ficar indisponíveis.
+});

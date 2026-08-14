@@ -1,0 +1,43 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const cp=require('child_process');
+const {ROOT}=require('./helpers/browser-sandbox');
+
+const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+const manifest=JSON.parse(fs.readFileSync(path.join(ROOT,'manifest.webmanifest'),'utf8'));
+const sw=fs.readFileSync(path.join(ROOT,'service-worker.js'),'utf8');
+const css=fs.readFileSync(path.join(ROOT,'assets/css/mobile-pwa.css'),'utf8');
+const js=fs.readFileSync(path.join(ROOT,'assets/js/ui/mobile-pwa.js'),'utf8');
+cp.execFileSync(process.execPath,['--check',path.join(ROOT,'service-worker.js')],{stdio:'pipe'});
+
+assert(html.includes('rel="manifest" href="manifest.webmanifest"'),'manifest deve estar ligado ao HTML');
+assert(html.includes('assets/css/mobile-pwa.css'),'CSS mobile v15 deve estar ligado ao HTML');
+assert(html.includes('assets/js/ui/mobile-pwa.js'),'JS mobile v15 deve estar ligado ao HTML');
+assert(html.includes('name="theme-color"'),'theme-color PWA deve existir');
+assert.strictEqual(manifest.name,'VG Operations');
+assert.strictEqual(manifest.display,'standalone');
+assert(manifest.start_url.includes('#resumo'),'PWA deve abrir na Central');
+assert(Array.isArray(manifest.icons)&&manifest.icons.some(i=>i.sizes==='512x512'),'manifest deve ter ícone 512');
+for(const icon of manifest.icons){const p=path.join(ROOT,icon.src.replace(/^\//,''));assert(fs.existsSync(p),`ícone em falta: ${icon.src}`);}
+assert(css.includes('@media (max-width:820px)'),'CSS deve abranger telemóveis e tablets até 820px');
+assert(css.includes('#vgMobileNav')&&css.includes('#vgMobileMore'),'CSS deve definir navegação e bottom sheet');
+assert(js.includes("data-view=\"resumo\"")&&js.includes("data-view=\"hoteis\"")&&js.includes("data-action=\"actions\"")&&js.includes("data-view=\"alertas\"")&&js.includes("data-action=\"more\""),'bottom nav deve conter os cinco acessos móveis');
+assert(js.includes("serviceWorker.register('/service-worker.js'"),'cliente deve registar service worker');
+assert(sw.includes("url.pathname.startsWith('/.netlify/')"),'service worker deve excluir Netlify API');
+assert(sw.includes("url.pathname.startsWith('/netlify/functions/')"),'service worker deve excluir functions publicadas');
+assert(sw.includes("if (req.method!=='GET') return true"),'service worker não pode cachear writes');
+assert(!/dashboard-sessao|auth-login|resource=users/.test((sw.match(/const STATIC_ASSETS = ([\s\S]*?);\n\nself.addEventListener/)||[])[1]||''),'precache não pode conter endpoints sensíveis');
+assert(sw.includes("caches.match('/index.html')"),'navegação offline deve ter fallback para app shell');
+assert(!/localStorage\.setItem\([^,]+,(?:\s*)JSON\.stringify\((?:RAW|STORE|PURCHASES|users)/i.test(js),'camada PWA não deve copiar datasets para cache local');
+const staticMatch=sw.match(/const STATIC_ASSETS = (\[[\s\S]*?\]);/);
+assert(staticMatch,'service worker deve expor lista de app shell');
+const staticAssets=JSON.parse(staticMatch[1]);
+const localRefs=[...html.matchAll(/(?:src|href)=[\"']([^\"']+)[\"']/gi)].map(m=>m[1].split(/[?#]/)[0]).filter(r=>r&&!/^(?:https?:|data:|mailto:|#|\/\/)/i.test(r)&&!r.startsWith('/.netlify/')).map(r=>'/'+r.replace(/^\//,''));
+const missingFromShell=[...new Set(localRefs)].filter(r=>!staticAssets.includes(r));
+assert.deepStrictEqual(missingFromShell,[],`app shell offline incompleta: ${missingFromShell.join(', ')}`);
+assert(sw.includes('vg-operations-shell-v18'),'service worker v18 deve usar cache versionada');
+assert(sw.includes('/assets/js/modules/audit-governance.js')&&sw.includes('/assets/css/audit-governance.css'),'PWA deve pré-cachear a interface estática de governação');
+assert(sw.includes('/assets/js/modules/backup-recovery.js')&&sw.includes('/assets/css/backup-recovery.css'),'PWA deve pré-cachear a interface estática de Backup & Recuperação');
+assert(js.includes('data-view=\"governance\"')||js.includes('data-view="governance"'),'menu mobile deve expor Auditoria à Direção');
+console.log('✓ PWA/mobile: manifest, navegação, instalação e cache segura');

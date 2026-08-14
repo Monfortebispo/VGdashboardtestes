@@ -1,0 +1,13 @@
+{
+  "name": "vg-dashboard-operacoes",
+  "version": "18.0.0",
+  "private": true,
+  "description": "VG Dashboard Operações — Performance v18: arranque progressivo, XLSX lazy, renderização por vista, lifecycle de gráficos e PWA otimizada",
+  "scripts": {
+    "test": "node tests/run-tests.js",
+    "validate": "node tests/run-tests.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
