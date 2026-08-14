@@ -137,7 +137,7 @@
   async function openFor(opts={}){await ensureLoaded(false);state.hotel=opts.hotel||'';state.linkType=opts.linkType||'all';state.query=opts.query||'';if(typeof window.setView==='function')window.setView('documents');setTimeout(render,0);}
   function all(){return state.rows.slice();}
   function searchItems(){return state.rows.map(r=>({id:r.id,title:r.title||r.fileName,hotel:r.hotel,subtitle:[CATEGORIES[r.category],r.fileName,r.linkLabel].filter(Boolean).join(' · '),keywords:[r.tags,r.description,r.fileName,LINK_TYPES[r.linkType]].filter(Boolean).join(' ')}));}
-  async function renderPage(){await ensureLoaded(false);render();}
+  async function renderPage(){render();await ensureLoaded(false);render();}
   window.VG.documents={version:26,state,ensureLoaded,render:renderPage,all,searchItems,openFor,categories:CATEGORIES,maxFileBytes:MAX_FILE_BYTES};
   window.documentManagementRender=renderPage;window.documentManagementOpen=openFor;
 })();

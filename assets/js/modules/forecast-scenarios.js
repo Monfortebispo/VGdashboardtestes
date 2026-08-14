@@ -208,7 +208,7 @@
     root.innerHTML=`
       <div class="fs-head">
         <div><div class="fs-eyebrow">Forecast & Cenários · V12</div><h2>Projetar o fecho antes de decidir</h2><p>Ocupação projetada pelo ritmo dos snapshots; Receita e GOP estimados a partir das referências identificadas abaixo.</p></div>
-        <div class="fs-controls"><label>Hotel<select onchange="forecastSelectHotel(this.value)">${hotels.map(h=>`<option value="${esc(h)}" ${h===selectedHotel?'selected':''}>${esc(h)}</option>`).join('')}</select></label><label>Mês<select onchange="forecastSelectMonth(this.value)">${months.map(m=>`<option value="${m}" ${m===selectedMonth?'selected':''}>${MONTHS[m]}</option>`).join('')}</select></label><button class="fs-btn" onclick="forecastRender()">Atualizar</button></div>
+        <div class="fs-controls"><label>Hotel<select onchange="forecastSelectHotel(this.value)">${hotels.map(h=>`<option value="${esc(h)}" ${h===selectedHotel?'selected':''}>${esc(h)}</option>`).join('')}</select></label><label>Mês<select onchange="forecastSelectMonth(this.value)">${months.map(m=>`<option value="${m}" ${m===selectedMonth?'selected':''}>${MONTHS[m]}</option>`).join('')}</select></label><button class="fs-btn" onclick="forecastRender()">Atualizar</button><button class="fs-btn" onclick="scenarioCompareFromForecast()">Guardar / comparar</button></div>
       </div>
       ${base.available?renderBaseSummary(base):`<div class="fs-empty prominent"><strong>Não é possível projetar ${esc(selectedHotel)} · ${MONTHS[selectedMonth]}.</strong><span>${esc(base.reason||'Faltam dados.')}</span></div>`}
       <div class="fs-layout">
@@ -247,9 +247,10 @@
   function preset(name){adjustments={...(PRESETS[name]||PRESETS.base)};render();}
   function selectHotel(h){selectedHotel=String(h||'');adjustments={...DEFAULT_ADJ};render();}
   function selectMonth(m){selectedMonth=clamp(Number(m)||1,1,12);adjustments={...DEFAULT_ADJ};render();}
+  function getState(){return {hotel:selectedHotel,month:selectedMonth,adjustments:{...adjustments}};}
 
   window.VG=window.VG||{};
-  window.VG.forecast={buildBase,calculateScenario,portfolioForecast,revenueProjection,referenceEconomics,forecastInfo,confidence,presets:PRESETS,render};
+  window.VG.forecast={buildBase,calculateScenario,portfolioForecast,revenueProjection,referenceEconomics,forecastInfo,confidence,presets:PRESETS,render,getState};
   window.forecastRender=render;
   window.forecastSetAdjust=setAdjust;
   window.forecastPreset=preset;

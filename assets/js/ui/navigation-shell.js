@@ -4,24 +4,36 @@
   if(window.__VG_NAV_SHELL__) return;
   window.__VG_NAV_SHELL__ = true;
   var modules = [
-    ['resumo','◆','Visão Executiva','Operação'],
-    ['ocupacao','▥','Ocupação','Revenue'],
-    ['revenueint','◈','Revenue Intelligence','Revenue'],
-    ['forecast','◫','Forecast & Cenários','Planeamento'],
-    ['custos','↘','Custos','Financeiro'],
-    ['costanalysis','⌁','Análise de Custos','Financeiro'],
-    ['cua','⚡','Custo / Actividade','Financeiro'],
-    ['compras','▤','Compras & Artigos','Financeiro'],
-    ['pl','▦','P&L USALI','Financeiro'],
-    ['sazonalidade','◌','Sazonalidade','Revenue'],
-    ['orcamento','▣','Orçamento','Planeamento'],
-    ['benchmark','◎','Benchmarking','Planeamento'],
-    ['anomalies','⚠','Deteção de Anomalias','Planeamento'],
-    ['alertas','!','Alertas','Planeamento'],
+    ['resumo','◆','Visão Executiva','Início'],
+    ['hotel360','◉','Hotel 360º','Hotéis'],
+    ['fichahotel','📋','Ficha do Hotel','Hotéis'],
+    ['agenda','📅','Agenda Operacional','Gestão'],
+    ['approvals','✓','Aprovações','Gestão'],
+    ['receitas','↗','Receitas','Análise'],
+    ['custos','↘','Custos','Análise'],
+    ['pl','▦','P&L USALI','Análise'],
+    ['revenuehub','◈','Revenue & Forecast','Análise'],
+    ['compras','▤','Compras & Artigos','Análise'],
+    ['benchmark','◎','Benchmarking','Análise'],
+    ['anomalies','⚠','Deteção de Anomalias','Análise'],
+    ['ocupacao','▥','Ocupação','Análise avançada'],
+    ['costanalysis','⌁','Análise de Custos','Análise avançada'],
+    ['cua','⚡','Custo / Actividade','Análise avançada'],
+    ['compare','⚖','Comparar Hotéis','Análise avançada'],
+    ['ranking','🏆','Ranking Composto','Análise avançada'],
+    ['sazonalidade','◌','Sazonalidade','Análise avançada'],
+    ['simulador','🎛','Simulador','Análise avançada'],
+    ['orcamento','▣','Orçamento','Análise avançada'],
+    ['reputacao','★','Reputação','Qualidade'],
+    ['instagram','▣','Instagram','Qualidade'],
+    ['documents','🗂','Gestão de Documentos','Suporte'],
+    ['automaticreports','📄','Relatórios Automáticos','Suporte'],
     ['datacenter','▥','Centro de Dados','Governação'],
+    ['governance','🛡','Auditoria & Governação','Governação'],
+    ['backup','💾','Backup & Recuperação','Governação'],
     ['upload','⇧','Carregar Docs','Admin']
   ];
-  var quick = ['resumo','ocupacao','custos','cua','sazonalidade','orcamento'];
+  var quick = ['resumo','hotel360','fichahotel','revenuehub','compras','agenda'];
   var idx = 0, results = modules.slice();
   function q(s,r){return (r||document).querySelector(s)}
   function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}

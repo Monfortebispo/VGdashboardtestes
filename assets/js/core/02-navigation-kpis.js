@@ -106,8 +106,8 @@ function setView(v) {
   // A página Agenda & Tempo não depende do carregamento do Excel; por isso não deve reservar espaço para o empty state.
   const empty = document.getElementById('emptyState');
   if (empty) {
-    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals') empty.style.display = 'none';
-    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals');
+    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare') empty.style.display = 'none';
+    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare');
   }
   requestAnimationFrame(() => { if(window.VG?.performance?.resizeVisibleCharts) window.VG.performance.resizeVisibleCharts(); else Object.values(charts).forEach(c => c?.resize?.()); });
 }
@@ -1386,6 +1386,7 @@ function refreshAll(){
   if(currentView === 'backup') { if(typeof backupRecoveryLoad==='function') backupRecoveryLoad(false); return; }
   if(currentView === 'documents') { if(typeof documentManagementRender==='function') documentManagementRender(); return; }
   if(currentView === 'approvals') { if(typeof approvalsRender==='function') approvalsRender(); return; }
+  if(currentView === 'scenariocompare') { if(typeof scenarioComparisonRender==='function') scenarioComparisonRender(); return; }
   if(currentView === 'hoteis') { if(typeof hoteisInit==='function') hoteisInit(); return; }
   if(currentView === 'ocupacao') { if(typeof occRender==='function') occRender(); return; }
   if(currentView === 'instagram') { if(typeof igRender==='function') igRender(); return; }

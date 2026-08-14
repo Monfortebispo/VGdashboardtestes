@@ -8,10 +8,10 @@
   if(window.VG.search?.version>=19) return;
 
   const state={open:false,filter:'all',query:'',items:[],results:[],selected:0,builtAt:0,hydrating:false,hydrated:false,governanceHydrated:false};
-  const FILTERS=[['all','Tudo'],['hotel','Hotéis'],['kpi','KPIs'],['action','Ações'],['agenda','Agenda'],['signal','Alertas'],['purchase','Compras'],['comment','Comentários'],['document','Documentos'],['approval','Aprovações'],['data','Dados']];
-  const ICON={assistant:'✦',report:'📄',performance:'◉',hotel:'🏨',kpi:'◫',action:'✓',event:'📅',alert:'🔔',anomaly:'⚠',target:'🎯',article:'🧾',supplier:'🚚',comment:'💬',data:'🗄️',governance:'🛡️',document:'🗂️',approval:'✅'};
-  const KIND={assistant:'Assistente Analítico',report:'Relatório',performance:'Performance',hotel:'Hotel',kpi:'KPI',action:'Ação',event:'Agenda',alert:'Alerta',anomaly:'Anomalia',target:'Meta',article:'Artigo',supplier:'Fornecedor',comment:'Comentário',data:'Dados',governance:'Auditoria',document:'Documento',approval:'Aprovação'};
-  const GROUP={assistant:'hotel',report:'hotel',performance:'hotel',hotel:'hotel',kpi:'kpi',action:'action',event:'agenda',alert:'signal',anomaly:'signal',target:'kpi',article:'purchase',supplier:'purchase',comment:'comment',data:'data',governance:'data',document:'document',approval:'approval'};
+  const FILTERS=[['all','Tudo'],['hotel','Hotéis'],['kpi','KPIs'],['action','Ações'],['agenda','Agenda'],['signal','Alertas'],['purchase','Compras'],['comment','Comentários'],['document','Documentos'],['approval','Aprovações'],['scenario','Cenários'],['data','Dados']];
+  const ICON={assistant:'✦',report:'📄',performance:'◉',hotel:'🏨',kpi:'◫',action:'✓',event:'📅',alert:'🔔',anomaly:'⚠',target:'🎯',article:'🧾',supplier:'🚚',comment:'💬',data:'🗄️',governance:'🛡️',document:'🗂️',approval:'✅',scenario:'⚖️'};
+  const KIND={assistant:'Assistente Analítico',report:'Relatório',performance:'Performance',hotel:'Hotel',kpi:'KPI',action:'Ação',event:'Agenda',alert:'Alerta',anomaly:'Anomalia',target:'Meta',article:'Artigo',supplier:'Fornecedor',comment:'Comentário',data:'Dados',governance:'Auditoria',document:'Documento',approval:'Aprovação',scenario:'Cenário'};
+  const GROUP={assistant:'hotel',report:'hotel',performance:'hotel',hotel:'hotel',kpi:'kpi',action:'action',event:'agenda',alert:'signal',anomaly:'signal',target:'kpi',article:'purchase',supplier:'purchase',comment:'comment',data:'data',governance:'data',document:'document',approval:'approval',scenario:'scenario'};
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const currentUser=()=>{try{return typeof window.vgAuthCurrent==='function'?window.vgAuthCurrent():null;}catch(e){return null;}};
@@ -46,6 +46,7 @@
       if(it.type==='governance'&&isDirection()){window.setView?.('governance');return;}
       if(it.type==='document'){window.VG?.documents?.openFor?.({hotel:it.hotel,query:it.title});return;}
       if(it.type==='approval'){window.VG?.approvals?.openById?.(it.id);return;}
+      if(it.type==='scenario'){window.VG?.scenarioComparison?.openFor?.({hotel:it.hotel,month:it.month});return;}
     }catch(e){console.warn('Pesquisa global: navegação falhou',e);}
   }
 
@@ -114,20 +115,24 @@
     try{for(const r of window.VG?.approvals?.searchItems?.()||[]){add(arr,{type:'approval',id:r.id,title:r.title||'Pedido de aprovação',subtitle:r.subtitle||'',hotel:r.hotel||'',value:r.value||'',keywords:r.keywords||''});}}catch(e){}
   }
 
+  function buildScenarios(arr){
+    try{for(const r of window.VG?.scenarioComparison?.searchItems?.()||[]){add(arr,{type:'scenario',id:r.id,title:r.title||'Cenário',subtitle:r.subtitle||'',hotel:r.hotel||'',month:r.month||null,value:r.value||'Cenário',keywords:r.keywords||''});}}catch(e){}
+  }
+
   function buildDataHistory(arr){
     try{for(const r of window.vgDataCenterHistory?.()||[]){add(arr,{type:'data',title:r.sourceName||r.fileName||r.source||'Carregamento',subtitle:[r.fileName,r.scope,r.summary,r.name||r.user].filter(Boolean).join(' · '),hotel:r.hotel||'',value:r.createdAt?new Date(r.createdAt).toLocaleDateString('pt-PT'):'',keywords:[r.source,r.action,r.status,r.warnings].flat().filter(Boolean).join(' ')});}}catch(e){}
     if(isDirection())try{for(const r of window.vgGovernanceRows?.()||[]){add(arr,{type:'governance',title:r.action||'Alteração',subtitle:[r.name||r.user,r.hotel,r.detail,r.resource].filter(Boolean).join(' · '),hotel:r.hotel||'',value:r.serverTs?new Date(r.serverTs).toLocaleDateString('pt-PT'):'',keywords:[r.category,r.resource,r.key,r.detail].filter(Boolean).join(' ')});}}catch(e){}
   }
 
   function buildIndex(){
-    const arr=[];buildHotelsAndKpis(arr);buildActions(arr);buildAgenda(arr);buildSignals(arr);buildTargets(arr);buildPurchases(arr);buildComments(arr);buildDocuments(arr);buildApprovals(arr);buildDataHistory(arr);state.items=arr;state.builtAt=Date.now();return arr;
+    const arr=[];buildHotelsAndKpis(arr);buildActions(arr);buildAgenda(arr);buildSignals(arr);buildTargets(arr);buildPurchases(arr);buildComments(arr);buildDocuments(arr);buildApprovals(arr);buildScenarios(arr);buildDataHistory(arr);state.items=arr;state.builtAt=Date.now();return arr;
   }
 
   function score(item,q){
     if(!q)return 0;const words=q.split(' ').filter(Boolean);let s=0;
     if(item.search===q)s+=180;if(norm(item.title)===q)s+=170;if(norm(item.title).startsWith(q))s+=95;if(item.search.startsWith(q))s+=55;
     for(const w of words){if(!item.search.includes(w))return -1;if(norm(item.title).includes(w))s+=28;else s+=12;if(norm(item.hotel)===w)s+=30;}
-    const priority={assistant:10,report:9,action:8,event:7,alert:8,anomaly:8,performance:9,hotel:6,kpi:5,target:4,comment:3,article:2,supplier:2,data:1,governance:1,document:6,approval:8};return s+(priority[item.type]||0);
+    const priority={assistant:10,report:9,action:8,event:7,alert:8,anomaly:8,performance:9,hotel:6,kpi:5,target:4,comment:3,article:2,supplier:2,data:1,governance:1,document:6,approval:8,scenario:9};return s+(priority[item.type]||0);
   }
   function run(q){
     state.query=String(q??'');const nq=norm(state.query);let rows=state.items;

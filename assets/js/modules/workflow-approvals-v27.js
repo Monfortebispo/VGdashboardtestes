@@ -245,7 +245,7 @@
   async function openFor(opts={}){await ensureLoaded(false);state.hotel=opts.hotel||'';state.status=opts.status||'all';state.type=opts.type||'all';state.query=opts.query||'';window.setView?.('approvals');setTimeout(render,0);}
   function all(){return state.rows.slice();}
   function searchItems(){return state.rows.map(r=>({id:r.id,title:r.title,hotel:r.hotel,subtitle:[STATUS[r.status],TYPES[r.type],r.requesterName,r.approverName].filter(Boolean).join(' · '),value:STATUS[r.status]||r.status,keywords:[r.description,r.linkLabel,r.decisionNote,PRIORITY[r.priority]].filter(Boolean).join(' ')}));}
-  async function renderPage(){await ensureLoaded(false);render();}
+  async function renderPage(){render();await ensureLoaded(false);render();}
   function pendingForCurrentUser(){const u=currentUser();return state.rows.filter(r=>r.status==='pending'&&isDirection()&&(!r.approverUser||norm(r.approverUser)===norm(u?.user)));}
 
   window.VG.approvals={version:27,state,ensureLoaded,render:renderPage,all,stats,openById,openFor,searchItems,pendingForCurrentUser,TYPES,PRIORITY,STATUS,canDecide};
