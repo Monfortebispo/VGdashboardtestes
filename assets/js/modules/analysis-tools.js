@@ -163,11 +163,11 @@ function cmpRender() {
     { l:'Occupancy '+YR_CUR,       fA:()=>fmt(occ(hA,YR_CUR)||0,1)+'%', fB:()=>fmt(occ(hB,YR_CUR)||0,1)+'%', higherBetter:true, getV:h=>occ(h,YR_CUR)||0 },
     { l:'ADR '+YR_CUR,             fA:()=>'€'+fmt(adr(hA,YR_CUR)||0,2), fB:()=>'€'+fmt(adr(hB,YR_CUR)||0,2), higherBetter:true, getV:h=>adr(h,YR_CUR)||0 },
     { l:'RevPAR '+YR_CUR,          fA:()=>'€'+fmt(revpar(hA,YR_CUR)||0,2), fB:()=>'€'+fmt(revpar(hB,YR_CUR)||0,2), higherBetter:true, getV:h=>revpar(h,YR_CUR)||0 },
-    { l:'Custos Totais',        fA:()=>fmtV(n(RAW.hotels_costs[hA]?.TOTAIS?.[YR_CUR])), fB:()=>fmtV(n(RAW.hotels_costs[hB]?.TOTAIS?.[YR_CUR])), higherBetter:false, getV:h=>n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]) },
+    { l:'Custos Totais',        fA:()=>fmtV(totalCosts(hA,YR_CUR)), fB:()=>fmtV(totalCosts(hB,YR_CUR)), higherBetter:false, getV:h=>totalCosts(h,YR_CUR) },
     { l:'Custo Pessoal %',      fA:()=>{ const r=n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_CUR]),p=n(RAW.hotels_costs[hA]?.PESSOAL?.[YR_CUR]); return r>0?fmt(p/r*100,1)+'%':'—'; }, fB:()=>{ const r=n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_CUR]),p=n(RAW.hotels_costs[hB]?.PESSOAL?.[YR_CUR]); return r>0?fmt(p/r*100,1)+'%':'—'; }, higherBetter:false, getV:h=>{ const r=n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]),p=n(RAW.hotels_costs[h]?.PESSOAL?.[YR_CUR]); return r>0?p/r*100:0; } },
     { l:'Energia %',            fA:()=>{ const r=n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_CUR]),e=n(RAW.hotels_costs[hA]?.ENERGIA?.[YR_CUR]); return r>0?fmt(e/r*100,1)+'%':'—'; }, fB:()=>{ const r=n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_CUR]),e=n(RAW.hotels_costs[hB]?.ENERGIA?.[YR_CUR]); return r>0?fmt(e/r*100,1)+'%':'—'; }, higherBetter:false, getV:h=>{ const r=n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]),e=n(RAW.hotels_costs[h]?.ENERGIA?.[YR_CUR]); return r>0?e/r*100:0; } },
     { l:'Manutenção %',         fA:()=>{ const r=n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_CUR]),m=n(RAW.hotels_costs[hA]?.MANUTENÇÃO?.[YR_CUR]); return r>0?fmt(m/r*100,1)+'%':'—'; }, fB:()=>{ const r=n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_CUR]),m=n(RAW.hotels_costs[hB]?.MANUTENÇÃO?.[YR_CUR]); return r>0?fmt(m/r*100,1)+'%':'—'; }, higherBetter:false, getV:h=>{ const r=n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]),m=n(RAW.hotels_costs[h]?.MANUTENÇÃO?.[YR_CUR]); return r>0?m/r*100:0; } },
-    { l:'Custo / Dormida',      fA:()=>{ const c=n(RAW.hotels_costs[hA]?.TOTAIS?.[YR_CUR]),d=n(RAW.hotels_ops[hA]?.Dormidas?.[YR_CUR]); return d>0?'€'+fmt(c/d,2):'—'; }, fB:()=>{ const c=n(RAW.hotels_costs[hB]?.TOTAIS?.[YR_CUR]),d=n(RAW.hotels_ops[hB]?.Dormidas?.[YR_CUR]); return d>0?'€'+fmt(c/d,2):'—'; }, higherBetter:false, getV:h=>{ const c=n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]),d=n(RAW.hotels_ops[h]?.Dormidas?.[YR_CUR]); return d>0?c/d:0; } },
+    { l:'Custo / Dormida',      fA:()=>{ const c=totalCosts(hA,YR_CUR),d=n(RAW.hotels_ops[hA]?.Dormidas?.[YR_CUR]); return d>0?'€'+fmt(c/d,2):'—'; }, fB:()=>{ const c=totalCosts(hB,YR_CUR),d=n(RAW.hotels_ops[hB]?.Dormidas?.[YR_CUR]); return d>0?'€'+fmt(c/d,2):'—'; }, higherBetter:false, getV:h=>{ const c=totalCosts(h,YR_CUR),d=n(RAW.hotels_ops[h]?.Dormidas?.[YR_CUR]); return d>0?c/d:0; } },
     { l:'Dormidas',             fA:()=>fmt(n(RAW.hotels_ops[hA]?.Dormidas?.[YR_CUR])), fB:()=>fmt(n(RAW.hotels_ops[hB]?.Dormidas?.[YR_CUR])), higherBetter:true, getV:h=>n(RAW.hotels_ops[h]?.Dormidas?.[YR_CUR]) },
     { l:'GRI™ Reputação',       fA:()=>REP_STORE?.[hA]?.gri!=null?fmt(REP_STORE[hA].gri,1):'—', fB:()=>REP_STORE?.[hB]?.gri!=null?fmt(REP_STORE[hB].gri,1):'—', higherBetter:true, getV:h=>REP_STORE?.[h]?.gri||0 },
   ];
@@ -210,7 +210,7 @@ function rankRender() {
   const rows = hotels.map(h => {
     const r26 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]);
     if (!r26) return null;
-    const c26  = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]);
+    const c26  = totalCosts(h,YR_CUR);
     const gopP = gopPct(h,YR_CUR) ?? 0;
     const occV = occ(h,YR_CUR)||0;
     const adrV = adr(h,YR_CUR)||0;
@@ -416,7 +416,7 @@ function simLoad() {
   const aloj26 = n(RAW.hotels_ops[h]?.['Receita Alojamento']?.[YR_CUR]);
   const ab26   = n(RAW.hotels_ops[h]?.['Receita FB']?.[YR_CUR]);
   const div26  = n(RAW.hotels_rev?.[h]?.['DIVERSOS']?.[YR_CUR]);
-  const ctot26 = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]);
+  const ctot26 = totalCosts(h,YR_CUR);
   const pes26  = n(RAW.hotels_costs[h]?.PESSOAL?.[YR_CUR]);
   const ene26  = n(RAW.hotels_costs[h]?.ENERGIA?.[YR_CUR]);
   const man26  = n(RAW.hotels_costs[h]?.MANUTENÇÃO?.[YR_CUR]);
@@ -599,8 +599,8 @@ function plExportCSV() {
   hotels.forEach(h => {
     const r25 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_PREV]);
     const r26 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]);
-    const c25 = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_PREV]);
-    const c26 = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]);
+    const c25 = totalCosts(h,YR_PREV);
+    const c26 = totalCosts(h,YR_CUR);
     const g25 = gop(h,YR_PREV), g26 = gop(h,YR_CUR);
     const gp25 = gopPct(h,YR_PREV), gp26 = gopPct(h,YR_CUR);
     const o26 = occ(h,YR_CUR)||0, a26 = adr(h,YR_CUR)||0, rp26 = revpar(h,YR_CUR)||0;

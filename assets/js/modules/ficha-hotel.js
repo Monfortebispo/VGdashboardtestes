@@ -21,7 +21,7 @@ const HS_ROWS = [
   {id:'custos_bebidas', label:'CUSTO BEBIDAS', type:'eur', cost:true, getter:(h,y)=>n(RAW.hotels_costs[h]?.BEBIDAS?.[y])},
   {id:'custo_direto_ab', label:'CUSTO DIRETO A&B', type:'pct', cost:true, getter:(h,y)=>ratioAB(h,y), ytdGetter:(h,y,m)=>hsYtdRatioAB(h,y,m)},
   {id:'outros_custos_operacionais', label:'OUTROS CUSTOS OPERACIONAIS', type:'eur', cost:true, getter:(h,y)=>{
-    const total = n(RAW.hotels_costs[h]?.TOTAIS?.[y]);
+    const total = totalCosts(h,y);
     const manut = n(RAW.hotels_costs[h]?.['MANUTENÇÃO']?.[y]);
     const pess  = n(RAW.hotels_costs[h]?.PESSOAL?.[y]);
     const ener  = n(RAW.hotels_costs[h]?.ENERGIA?.[y]);

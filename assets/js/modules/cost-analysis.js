@@ -211,8 +211,8 @@ function caRenderHotel() {
   const r25 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_PREV]);
   const r26 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]);
   const rv = caVarPct(r25, r26);
-  const c25T = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_PREV]);
-  const c26T = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]);
+  const c25T = totalCosts(h,YR_PREV);
+  const c26T = totalCosts(h,YR_CUR);
   const gop25 = gop(h,YR_PREV), gop26 = gop(h,YR_CUR);
 
   // Summary bar
@@ -283,7 +283,7 @@ function caRenderEff() {
   const data = hotels.map(h => {
     const r26 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]);
     if (!r26) return null;
-    const c26 = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]);
+    const c26 = totalCosts(h,YR_CUR);
     const gopP = gopPct(h,YR_CUR) ?? 0;
     const costP = r26>0?c26/r26*100:0;
     const pesP  = r26>0?n(RAW.hotels_costs[h]?.PESSOAL?.[YR_CUR])/r26*100:0;

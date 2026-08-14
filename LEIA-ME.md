@@ -1,76 +1,118 @@
-# VG Dashboard — Arquitetura Modular v4
+# VG Dashboard — Gestão de Ações v8
 
-Esta versão parte da Secure Auth v3, mantendo o Core v1 e o Shared Storage v2 já validados em utilização real.
-
-## Objetivo desta versão
-
-Reduzir o risco de manutenção do antigo `index.html` monolítico sem alterar o comportamento funcional da dashboard.
-
-O `index.html` tinha aproximadamente 1,32 MB e mais de 21 mil linhas, contendo HTML, CSS e praticamente todo o JavaScript da aplicação no mesmo ficheiro. Na v4, o HTML passa a conter essencialmente a estrutura da interface e as referências aos módulos.
+A v8 parte da Central de Operações v7 e fecha o ciclo entre identificar uma prioridade e acompanhar a respetiva resolução.
 
 ## O que mudou
 
-### 1. JavaScript separado por responsabilidade
+### 1. Prioridade → ação
 
-O motor foi dividido em:
+Cada prioridade da Central de Operações passa a poder ter uma ação associada. A ação guarda:
 
-- `assets/js/core/` — importação de dados, navegação/KPIs, persistência/partilha e bootstrap;
-- `assets/js/auth/` — autenticação e restauro pós-login;
-- `assets/js/modules/` — Ficha do Hotel, P&L, CUA, custos, reputação, ocupação, Instagram, hotéis, receitas, orçamento, compras, Revenue Intelligence, WhatsApp e restantes domínios;
-- `assets/js/ui/` — componentes/camadas visuais transversais;
-- `assets/js/fixes/` — correções históricas ainda necessárias, agora claramente isoladas.
+- hotel e prioridade de origem;
+- responsável;
+- prazo;
+- estado;
+- comentários/atualizações;
+- histórico cronológico;
+- utilizador que criou/alterou;
+- data de criação, atualização e resolução.
 
-### 2. CSS retirado do HTML
+Estados disponíveis:
 
-Todos os blocos `<style>` foram extraídos para `assets/css/`.
+- `Em análise`;
+- `Em curso`;
+- `A aguardar`;
+- `Resolvido`.
 
-Isto permite alterar, por exemplo, autenticação, compras ou Revenue Intelligence sem procurar regras CSS no meio de milhares de linhas de HTML.
+### 2. Indicadores de execução no Resumo
 
-### 3. Biblioteca offline separada
+A Central mostra agora também:
 
-O `fflate` embebido continua local e funcional, mas passa a viver em `assets/vendor/fflate.min.js`.
+- Ações abertas;
+- Sem responsável;
+- Fora do prazo;
+- Em curso;
+- Resolvidas nos últimos 7 dias.
 
-Chart.js e XLSX mantêm nesta versão o mesmo carregamento externo que já existia, para não introduzir outra variável durante a modularização.
+Estes indicadores respeitam os hotéis ativos no filtro. Ao contrário da prioridade automática, as ações abertas permanecem visíveis mesmo quando foram criadas noutro período, para não se perder acompanhamento ao mudar o mês selecionado.
 
-### 4. Código funcional preservado
+### 3. Acompanhamento de ações
 
-Nesta fase não foram reescritas fórmulas, autenticação, permissões, Blobs ou cálculos. A separação foi feita preservando o código original da v3.
+No lado direito do Resumo existe uma lista das ações abertas mais urgentes. A ordenação coloca primeiro as ações fora do prazo, depois as que têm prazo mais próximo.
 
-A função `netlify/functions/dashboard-sessao.js` é exatamente a mesma da Secure Auth v3 já testada.
+O botão `Ações` abre o quadro completo, com filtros por:
 
-### 5. Pequena correção estrutural
+- estado;
+- hotel;
+- pesquisa por hotel, responsável ou assunto.
 
-Foi corrigida uma marca HTML antiga que interrompia a palavra `letter-spacing` no seletor de Região do modal WhatsApp. Não altera lógica de negócio.
+### 4. Histórico partilhado
 
-## Resultado estrutural
+Cada ação tem um histórico imutável de utilização normal. O servidor acrescenta automaticamente:
 
-- `index.html`: de mais de 21.000 linhas para menos de 2.000 linhas;
-- 0 blocos JavaScript inline com lógica da aplicação;
-- 0 blocos `<style>` inline;
-- módulos funcionais identificáveis por nome;
-- patches antigos isolados na pasta `fixes`;
-- função Netlify e modelo de segurança preservados.
+- criação;
+- alteração de responsável;
+- alteração de prazo;
+- alteração de estado;
+- comentários.
 
-Ver `ARCHITECTURE.md` para o mapa completo dos ficheiros e regras para futuras alterações.
+A identidade usada no histórico vem da sessão autenticada no servidor, e não do texto enviado pelo browser.
 
-## Publicação
+### 5. Netlify Blobs por ação
 
-Substituir o conteúdo do repositório pela estrutura completa desta versão. É essencial publicar também a pasta `assets/`; não basta substituir apenas o `index.html`.
+Cada ação é guardada num Blob individual com prefixo `ops-action/`. Isto evita que duas alterações a ações diferentes tenham de regravar um único ficheiro global.
 
-Não é necessário alterar variáveis, Blobs, utilizadores ou configurações no Netlify.
+A listagem agregada é feita pelo endpoint autenticado `ops-actions`.
 
-## Validação efetuada
+### 6. Permissões
 
-- todos os ficheiros JavaScript passam `node --check`;
-- a função Netlify passa validação de sintaxe;
-- todos os 45 recursos locais referidos pelo HTML existem;
-- não ficaram blocos JavaScript funcionais inline;
-- não ficaram blocos `<style>`;
-- CSS extraído comparado integralmente com o CSS da v3;
-- JavaScript reconstruído módulo a módulo comparado integralmente com o JavaScript da v3;
-- função Netlify comparada por hash com a v3 e mantida sem alterações;
-- ordem de carregamento dos módulos preservada.
+- Direção: cria e altera ações de qualquer hotel.
+- Diretor: cria e altera ações do hotel associado à sua conta.
+- Responsável atribuído: pode atualizar a ação que lhe foi atribuída, mesmo quando a ação pertence a outra unidade.
+- Todos os utilizadores autenticados podem consultar as ações, tal como já podem consultar a informação global da dashboard.
 
-## Nota
+Um Diretor só pode atribuir uma nova ação a si próprio ou a utilizadores associados ao mesmo hotel. A Direção pode atribuir a qualquer utilizador ativo.
 
-Esta é deliberadamente uma modularização conservadora. A dashboard ainda usa várias funções e variáveis globais porque convertê-las todas de uma vez para módulos ES/arquitetura de classes aumentaria desnecessariamente o risco de regressões. A v4 cria a base para fazer essa evolução de forma gradual.
+### 7. Proteção contra alterações concorrentes
+
+Ao abrir uma ação, a dashboard memoriza a versão consultada. Se outra pessoa alterar a ação antes da gravação, o servidor rejeita a versão antiga em vez de substituir silenciosamente a informação mais recente.
+
+A ação deve então ser reaberta para carregar a versão atual.
+
+## Novos ficheiros
+
+```text
+assets/js/modules/actions-management.js
+assets/css/actions-management.css
+tests/actions-management.test.js
+```
+
+A função abaixo também foi atualizada:
+
+```text
+netlify/functions/dashboard-sessao.js
+```
+
+Por isso, não publicar apenas o `index.html`.
+
+## Testes automáticos
+
+Executar:
+
+```bash
+npm test
+```
+
+Validação final da v8:
+
+- 8/8 suites passaram;
+- gestão de ações testada;
+- ações fora do prazo e sem responsável testadas;
+- ligação entre prioridade e ação testada;
+- permissões de Direção/Diretor testadas;
+- atualização por responsável atribuído testada;
+- conflito de edições simultâneas testado;
+- acesso direto aos Blobs de ação bloqueado;
+- autenticação, P&L, KPIs, Revenue Intelligence e estrutura continuam protegidos.
+
+Ver também `ARCHITECTURE.md` e `VALIDATION_V8.txt`.

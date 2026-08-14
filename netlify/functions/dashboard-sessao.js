@@ -18,6 +18,8 @@ const SESSION_TTL_SECONDS = 12 * 60 * 60;
 const USER_CACHE_MS = 30 * 1000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 8;
+const ACTION_PREFIX = "ops-action/";
+const ACTION_STATUSES = new Set(["open", "progress", "waiting", "resolved"]);
 
 const HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -33,6 +35,7 @@ function ok(body) { return response(200, body); }
 function badRequest(msg) { return response(400, { error: msg }); }
 function unauthorized(msg = "Sessão inválida ou expirada.") { return response(401, { error: msg }); }
 function forbidden(msg = "Sem permissões para esta operação.") { return response(403, { error: msg }); }
+function conflict(msg, extra = {}) { return response(409, Object.assign({ error: msg }, extra)); }
 function tooMany(msg) { return response(429, { error: msg }); }
 function tooLarge(msg) { return response(413, { error: msg }); }
 function serverError(err) {
@@ -54,6 +57,38 @@ function blobKeyFor(resource, key) {
 function isDirection(user) { return !!user && (user.role === "direcao" || user.role === "admin"); }
 function norm(s) { return String(s || "").trim().toUpperCase(); }
 function safeUserName(s) { return String(s || "").trim().toLowerCase().replace(/[^a-z0-9_.-]/g, ""); }
+
+function cleanText(v, max = 500) { return String(v == null ? "" : v).trim().slice(0, max); }
+function validDateOnly(v) { return !v || /^\d{4}-\d{2}-\d{2}$/.test(String(v)); }
+function actionBlobKey(id) { return ACTION_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function canManageHotel(user, hotel) {
+  if (isDirection(user)) return true;
+  return !!user && norm(hotel) === norm(user.hotel);
+}
+function canManageAction(user, action) {
+  if (!user || !action) return false;
+  return canManageHotel(user, action.hotel) || safeUserName(action.ownerUser) === safeUserName(user.user);
+}
+function minimalAssignee(rec) {
+  return { user: rec.user, name: rec.name, role: rec.role, hotel: rec.hotel || "*", active: rec.active !== false };
+}
+async function listOperationalActions(store) {
+  const listing = await store.list({ prefix: ACTION_PREFIX });
+  const blobs = (listing && Array.isArray(listing.blobs)) ? listing.blobs : [];
+  const rows = await Promise.all(blobs.map(async (entry) => {
+    try { return await store.get(entry.key, { type: "json" }); } catch (e) { return null; }
+  }));
+  return rows.filter(x => x && x.id).sort((a,b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+}
+function actionHistoryEntry(user, type, detail, extra = {}) {
+  return Object.assign({
+    ts: new Date().toISOString(),
+    type,
+    detail: cleanText(detail, 1200),
+    user: user.user,
+    name: user.name
+  }, extra);
+}
 
 // Contas base. Só existem hashes/salts no código; a password inicial não existe em texto simples no frontend nem aqui.
 const SEED_USERS = {"mpatricio":{"user":"mpatricio","name":"Manuel Patricio","role":"diretor","hotel":"COLLECTION SINTRA","active":true,"passwordSalt":"rue71A9TbKfAVJM8yklg2g==","passwordHash":"cfK90l2uusBrPqUUsr7rag5Ct8PWU36MuRs1Wtz53hN62E9vd3aPy7ZU0Fy0bZgp6vU5x4VMVv1P4rf0Dac/iA==","mustChangePassword":true},"bpinto":{"user":"bpinto","name":"Belmiro Pinto","role":"direcao","hotel":"*","active":true,"passwordSalt":"cbrVaKSQ6fHyjp+af+41gw==","passwordHash":"5JBQE0l1n91eIFda9KdAFHoLpuQW9sEZpKZtw13EDA73N5LqW6DAk+nTHnDLklegGUR34/XAiMk/68QdycR6Bw==","mustChangePassword":true},"pmonforte":{"user":"pmonforte","name":"Pedro Monforte","role":"direcao","hotel":"*","active":true,"passwordSalt":"bYTuPcibtI6achrn1HNOKw==","passwordHash":"2L9b1kXSCy8t6nTPNL78gR4zQYSYShokui18QpyOBkshcXZ6QI4LGjDVNp4yysPOfEZDbIlK7oXRFLKp6O7mcw==","mustChangePassword":true},"calves":{"user":"calves","name":"Carlos Alves","role":"direcao","hotel":"*","active":true,"passwordSalt":"tD4e4KAZXOjnLEGbN9+oWw==","passwordHash":"QNyXBnJS8n5UvpjCTWjR1WB8Uq4hMl+UEiaoWEfisjp9PDkbi2hX1WRQtr+LJ3ToM2PwOhsDVJiZh89NnMPFKA==","mustChangePassword":true},"vparente":{"user":"vparente","name":"Vasco Parente","role":"direcao","hotel":"*","active":true,"passwordSalt":"02yKWqaBpX3rJ+WAkNlJgg==","passwordHash":"NLvQSoC2TYeYPwQwnLq945wdfCpAild1+1h//hCEYB8OaHfrjlkdVnDYeDNOZRHpg89XlyhtnAhKlkWvxULsVg==","mustChangePassword":true},"rribeiro":{"user":"rribeiro","name":"Rosario Ribeiro","role":"direcao","hotel":"*","active":true,"passwordSalt":"EA0GRwkqlC6kI7fgfvRcyA==","passwordHash":"+5ur6lIKmHgrDibqiaThT1qdklqKG1Qdd4PlUY4W7ga8sKamdov2ZvaTGjuGeDJVZYgVpeCql/K+u5cg2MswJg==","mustChangePassword":true},"nribeiro":{"user":"nribeiro","name":"Nelson Ribeiro","role":"direcao","hotel":"*","active":true,"passwordSalt":"lJHFEKP4Cw7B+SspJktF6g==","passwordHash":"9uyyzlkBh/LNcMNN3j90qqLNvcKv1esiNBAxrSeyPTb6PS+dP+GbZLZTVf2lyNOM+HGvmPhzFYec3ZvUIdjzgA==","mustChangePassword":true},"jmeireles":{"user":"jmeireles","name":"João Meireles","role":"direcao","hotel":"*","active":true,"passwordSalt":"BkCEpw0Y/3YZxwEqHAlTDQ==","passwordHash":"K+IaKRluihV5bx2Q6tB3XVHEypg9LfJNu+Bng4LTaLSWZF2/g7HeRT5JvsysCW+f0qFFT0udc+MA77Cff5iRww==","mustChangePassword":true},"sribeiro":{"user":"sribeiro","name":"Sofia Ribeiro","role":"diretor","hotel":"AMPALIUS","active":true,"passwordSalt":"HB/uGXMhuG5p70AXawMhkA==","passwordHash":"faXXpGuBmuHbD6o5ZtujCQ42m4OBkFraMxoD2Tw7D0NPdHoh1+bqR6xaOqKmuiZb00G2hxhz+CGxWaApvRQxKQ==","mustChangePassword":true},"arodrigues":{"user":"arodrigues","name":"Alexandre Rodrigues","role":"diretor","hotel":"MARINA","active":true,"passwordSalt":"w9s4/7WjwhFTwJFdH8CrDw==","passwordHash":"vD4bqAYG7B+hWIE5c5G5uJIgS8GhFlVtYq8FrVEI6rj+zHKqITsS2ssjfjyWCgkRdEXmxVCnz+w4rWKgPQV0iw==","mustChangePassword":true},"efigueiredo":{"user":"efigueiredo","name":"Élia Figueiredo","role":"diretor","hotel":"TAVIRA","active":true,"passwordSalt":"kLSICjfCMgxedvnC7NdT3A==","passwordHash":"VBCxcsxO7All8PbKq5gukoKZrbUZT8SLhmFIEFl4eIqjQzWI73Q+dEOTXKkSnm2xPxbu0k88v2G8X2nF9pOxbA==","mustChangePassword":true},"lmarreiros":{"user":"lmarreiros","name":"Luis Marreiros","role":"diretor","hotel":"ALBACORA","active":true,"passwordSalt":"FBdYS0vX+DxDOam+YUnTiQ==","passwordHash":"+d4tiYr2U80AfV5GgGkqunnsm1uBYu4He/vA8pUJvgatNLX3DisZQF0v8b23sMPfdhqsPkrlq37FgfmjRJn2Yw==","mustChangePassword":true},"jpferreira":{"user":"jpferreira","name":"José Pedro Ferreira","role":"diretor","hotel":"CERRO ALAGOA","active":true,"passwordSalt":"+0oKp58xnTf9s7NbXt/OHQ==","passwordHash":"3piKlzJNPHAwnzMWcKtX+/0Tg3erDHo8l9VM8dGapfoBPKM8eEbZYiI0hY716mAJSI6WFtd838sNeWLzcA7x0g==","mustChangePassword":true},"vcosta":{"user":"vcosta","name":"Valter Costa","role":"diretor","hotel":"ATLANTICO","active":true,"passwordSalt":"7wQM+jycNbiGPtgJOGXKyw==","passwordHash":"OuyIxJWs56ZYuLh+pPRsqWdswUfkRLlnhJrX7NcFwkMsj7/SzrZIt7bzSLWqwrhdCn0vleCZXQjuj/RAdbO8Fg==","mustChangePassword":true},"lsantos_praia":{"user":"lsantos_praia","name":"Luísa Santos","role":"diretor","hotel":"COLLECTION PRAIA","active":true,"passwordSalt":"u06vrfzYG54qly+h/pd6Mg==","passwordHash":"rksMD+Zi2kZjnmBecGrs3ItbLG9ulFDmX9b98NLNAJhnW34nccC4c+iEtGt8DkzX02fBvOQAkGbO2okUuwlpOQ==","mustChangePassword":true},"bsa":{"user":"bsa","name":"Bruno Sá","role":"diretor","hotel":"NAUTICO","active":true,"passwordSalt":"gnb0o5hXJd9ZW1mvgeHBww==","passwordHash":"SGzSCkcrDKIh0KoO8O1whMrW2Im8wFs8i9/lZiSWF5bexT1zxcVdexZ4ZgtMJ0pm3+jX60YyaFgP+4EJoTJxfA==","mustChangePassword":true},"eteixeira":{"user":"eteixeira","name":"Eugénia Teixeira","role":"diretor","hotel":"PORTO","active":true,"passwordSalt":"EP8KDZMP+8zO6Jk5sgPYNg==","passwordHash":"fpgtJnLDLHY3g/yGdvG89at4kqbWJX22VOAxHeP0K9KzUklgZvh+61HO6g3g4PjXQDqwkq4EHQw5qobUQxl4Nw==","mustChangePassword":true},"mferreira":{"user":"mferreira","name":"Marco Ferreira","role":"diretor","hotel":"ERICEIRA","active":true,"passwordSalt":"FpVhSZ0E56OnCMJ3uBY+Xw==","passwordHash":"H0ed548tsTSs4gMd7Rj+QIkuQuorZnmuqqIybgJWskUJBS5FskghnFArAm/8Sn1ZKbj/ROxH0jXogF21dQOkVA==","mustChangePassword":true},"rcerqueira":{"user":"rcerqueira","name":"Rute Cerqueira","role":"diretor","hotel":"CASCAIS","active":true,"passwordSalt":"YSo1bdXYa9pWW4E68CKx2Q==","passwordHash":"KQeQe/GYn9ysEwQt0oNnLrL4gA5vQAAjW3vHXv/D8Zdd1sKC5o/TIHliWcQzkU/Jmlcp5WBeu59V3IpfmCxCJw==","mustChangePassword":true},"jdamiao":{"user":"jdamiao","name":"João Damião","role":"diretor","hotel":"ESTORIL","active":true,"passwordSalt":"OAeZv8olJ+eG0YOF6Cqw7A==","passwordHash":"WFc9CYWNtpI0ZLiw3LpkKwXZllsiSRBINLJ3wLvgeY5IMEFbdJV+grE9SJkcCl0L/P+KzfUKVItgXv6ExCgeeA==","mustChangePassword":true},"rsa":{"user":"rsa","name":"Ricardo Sá","role":"diretor","hotel":"OPERA","active":true,"passwordSalt":"U3I+XsdT1bikrC4t2XN0Uw==","passwordHash":"1txhYA6AZpaSVF8MFwZaqTCGgtV3IYuiLfpeWclnU8roLbEgFRht6x13vun+OoqMTE2gZ4bzlub4iLP+obQ8RQ==","mustChangePassword":true},"nclemente_av":{"user":"nclemente_av","name":"Nuno Clemente","role":"diretor","hotel":"ALENTEJO VINEYARDS","active":true,"passwordSalt":"QBnTa7OWKKmBz76SijqqgQ==","passwordHash":"mSqJsFZ3AqUVdII/UH8MrjHXlg/uKS8R9QTutVeqmvQO3J9ieojtRy+9rna4wOcwApDyPrlOIGYHK3V1pcUVUQ==","mustChangePassword":true},"csousa":{"user":"csousa","name":"Carla de Sousa","role":"diretor","hotel":"SANTA CRUZ","active":true,"passwordSalt":"tTYBJpaIGvRj8LNoZuGOvw==","passwordHash":"kk1v8XafRu+4wo0agqzpE1Fpd4JjCuOYT1ZGTUSgHeKwq8uVszSEs3SzK1ykBkmp2aBzTQNre301rOJRMMAwVw==","mustChangePassword":true},"emontenegro":{"user":"emontenegro","name":"Eduardo Montenegro","role":"diretor","hotel":"LAGOS","active":true,"passwordSalt":"p5pRURIDHjaQ9WpT7TTU3A==","passwordHash":"BYJ9GNzGvilIoama4TiHA9AF/0J97SVoqlSNOVCDK7yXMo1vSAdRZLi7UWdoBEAQK07dpuSz+pStX/6mZ4UVYg==","mustChangePassword":true},"tpires":{"user":"tpires","name":"Tomás Pires","role":"diretor","hotel":"EVORA","active":true,"passwordSalt":"jiByVYOYEnOCbO8YL+OQYA==","passwordHash":"RT3TQEYpzV7+7f84f3tBCAd6GGIDLHbddAIMM5kES5BApxW42c/WF9s24vh+7WtyLTxPwbx3LGC1cgEM70Ek4A==","mustChangePassword":true},"spalhota":{"user":"spalhota","name":"Sara Palhota","role":"diretor","hotel":"COIMBRA","active":true,"passwordSalt":"n+5AhPtFO6KCanyd4IM7SA==","passwordHash":"4n/2IRkgdhYxABf1g2e7v01Z0CdqEi1aMfPZLnlBbKaTPWY+Dhg20BsFY3mN5U4Umh8YR7Dg5154Whn+Zf74Ew==","mustChangePassword":true},"pvalle":{"user":"pvalle","name":"Pedro Valle","role":"diretor","hotel":"COLLECTION SINTRA","active":true,"passwordSalt":"Oq1EBS0UEGcrD3MDce04Bg==","passwordHash":"frsjgPRP1v3yIOeZM2cCjmd1hNoYXFL2S52EpEDNZ8qBQu8Xg8UGh3VTVLdapnv1LImaOWJt/B8BiiqyUF4w6Q==","mustChangePassword":true},"acastro":{"user":"acastro","name":"Alexandre Castro","role":"diretor","hotel":"COLLECTION PALACIO DOS ARCOS","active":true,"passwordSalt":"DKhsmwU1GNtjvy/1bA9nGw==","passwordHash":"Qah8XN3atGfEGaN4G8RnVd4jR465cWx3pOpuq1I4bHTrQKBUmFlNdUGA0tz6jNlnQw6dp5KlQrBpVOIJvF7wzw==","mustChangePassword":true},"pmatos_douro":{"user":"pmatos_douro","name":"Paulo Matos","role":"diretor","hotel":"COLLECTION DOURO","active":true,"passwordSalt":"U6uWuErpdG5gNCkY4GYOsg==","passwordHash":"DBORPPfg1gZQZADug8F433fzUtzcVQrCo5T40xSNORzJrx8efrvY+5BYMIGEoOasoaaEHuLgKAqHBWexpnL25Q==","mustChangePassword":true},"jmartins":{"user":"jmartins","name":"José Martins","role":"diretor","hotel":"COLLECTION BRAGA","active":true,"passwordSalt":"GTRwS2ywgRwTAIjJtJnCWA==","passwordHash":"ivVCFrsqN/Mb5tdabPgpAkoDSuyzqA8FiuCrfPCHCb496v/jEjVORILA36bLLwB5PpHTlJV0wse/hGL2thWPLQ==","mustChangePassword":true},"slourenco":{"user":"slourenco","name":"Sandra Lourenço","role":"diretor","hotel":"COLLECTION SERRA DA ESTRELA","active":true,"passwordSalt":"JeTJXWOu/EGsFhdH+uCyGQ==","passwordHash":"ydoIgwwEDyf4WAcRykCAgUfKCMv6Y47BVgbixcgv/Ji568exMlGBHkEewTgTOWxUfTA/2FiFei6gwgtq3RJBLA==","mustChangePassword":true},"apereirinha":{"user":"apereirinha","name":"André Pereirinha","role":"diretor","hotel":"PORTO RIBEIRA","active":true,"passwordSalt":"SxwvXDq07ZUp8dbWFayARQ==","passwordHash":"cWJjTb1qMJ+Q/JgcpMnUOfI+N1olUesfKOK/IYyVkYcQFbdcgFoQrCqH5ZAbqP7U7tLdjEk0a/EqAP+RbP04SA==","mustChangePassword":true},"npinto_elvas":{"user":"npinto_elvas","name":"Nelson Pinto","role":"diretor","hotel":"COLLECTION ELVAS","active":true,"passwordSalt":"G2ZJpIGo2Tizh48ELe5euw==","passwordHash":"BxDPBYWdBjZwIspB8fK+rfBc0fKYZjpsLVAoKHefkakQGPySigceLO+41HGu6hg27aDdBtLelLrWwjTzxJNvaA==","mustChangePassword":true},"pmatos_dv":{"user":"pmatos_dv","name":"Paulo Matos","role":"diretor","hotel":"DOURO VINEYARDS","active":true,"passwordSalt":"N1tKB+BTqVV+zY7sBtRNCA==","passwordHash":"x0VRTFC61MjTQ6byGft7UVjZTk5EpBSec9A1IUOrDKUZTd0d+7qXAx7c6929wjlp9Xj61ZNpJ8TbD7EHZ2iGkQ==","mustChangePassword":true},"rparada":{"user":"rparada","name":"Rui Parada","role":"diretor","hotel":"COLLECTION ALTER REAL","active":true,"passwordSalt":"qmPkNGBZjLd5ltngNfgI1w==","passwordHash":"lv4T0+WZzNy9NdAR9q+4JmhcxRTZQSU3rtv5lYUBn00CXqlneKcEd5p9frUO5ou28Y8D/2YZ/ojEWiKHTU6tHg==","mustChangePassword":true},"rmartins":{"user":"rmartins","name":"Rita Martins","role":"diretor","hotel":"COLLECTION TOMAR","active":true,"passwordSalt":"NsGM/hn2EoqiUXJIg8Pl8Q==","passwordHash":"+6NLH2UtJlHEL/0COzA09YwwYzbTuzvIcWE2YLLEVEuDeUsAn76Ky33Ek/Cx560JERmpp44b0PcH+PH1ENqDZg==","mustChangePassword":true},"npinto_casas":{"user":"npinto_casas","name":"Nelson Pinto","role":"diretor","hotel":"CASAS DE ELVAS","active":true,"passwordSalt":"UqLmZU0TzjaxGPloWbivFQ==","passwordHash":"Vzkzn2k/Lhe58E9bdolWVD38XXgEevPZOoJOEICrJ6rr6RAcQ+jZk+hkgAIT4mniIi0VYCVjidrg6HkszuVGxg==","mustChangePassword":true},"gnunes":{"user":"gnunes","name":"Gonçalo Nunes","role":"diretor","hotel":"COLLECTION S. MIGUEL","active":true,"passwordSalt":"tpV6KMXFTjv9N2gd/SCf6A==","passwordHash":"v3ScnHtW56E6vQyw9Br/PJGiwTiFqm+DXRV0IttSJZZsS1pdwnzH9rakX/cazlqSZbP27/y1GITE5bwRuoybmA==","mustChangePassword":true},"rteixeira_lima":{"user":"rteixeira_lima","name":"Ricardo Teixeira","role":"diretor","hotel":"COLLECTION PONTE DE LIMA VINEYARDS","active":true,"passwordSalt":"QX9x/En1Y1nwzvvnx7C1yQ==","passwordHash":"/dof+5d5hPV3REh7ARexaKo9JCd/sEZrfab0jYWSbNw8siJzvNlwNrx+a3aicty6+dqNTXdg7kF5aMm5W34WcQ==","mustChangePassword":true},"nclemente_nep":{"user":"nclemente_nep","name":"Nuno Clemente","role":"diretor","hotel":"NEP KIDS","active":true,"passwordSalt":"CBxi2Ptlciw2HjxKjBAmcg==","passwordHash":"O/gRmosI92blXT2xg8rw616B1aSldt5mStf974JAnBVM7as6NV1msGuQvsNR1pswipdkbFCdG+yTLn9NNrFiaQ==","mustChangePassword":true},"nclemente_mv":{"user":"nclemente_mv","name":"Nuno Clemente","role":"diretor","hotel":"COLLECTION MONTE DO VILAR","active":true,"passwordSalt":"4Zep1hEPd2mfCWv6r8MT5g==","passwordHash":"0/cRqnjxS2UVx4ch0WBGf3CZQGRUNlGrus0WAotY6j9AxUZ77U6CRakoCjdIdSMhEwMy1p5+kuOfHOtBB81G5A==","mustChangePassword":true},"noliveira":{"user":"noliveira","name":"Natalia Oliveira","role":"diretor","hotel":"ISLA CANELA","active":true,"passwordSalt":"5LQxksiNDg8kDHCqdQFGkg==","passwordHash":"zmD47SVt+8BPPJVna04YYh8ohBNyg8NhV+wnElAXYaIcTikyX3bN9CXI5K9RUMa8rh/uWF7p/KN/XkL0vBM45w==","mustChangePassword":true},"lsantos_foz":{"user":"lsantos_foz","name":"Leonor Santos","role":"diretor","hotel":"COLLECTION FIGUEIRA DA FOZ","active":true,"passwordSalt":"G0O7m+NqUtiXZJrvYO/n7A==","passwordHash":"gZLFSjX0qNvprt3L+F3n6tcsvWr78151leX/5fCezSXkXpzMP6kjP1Igp5FJYhwhVAe+8dcEYLFySjk3DDNVOQ==","mustChangePassword":true}};
@@ -293,6 +328,96 @@ exports.handler = async (event) => {
     if (!authUser) return unauthorized();
     // Blobs internos nunca são endereçáveis pela API genérica, mesmo por utilizadores autenticados.
     if (resource.startsWith("_")) return forbidden();
+
+    // -------------------- GESTÃO DE AÇÕES OPERACIONAIS (v8) --------------------
+    if (resource === "assignees" && event.httpMethod === "GET") {
+      const users = await loadUsers(store, true);
+      const rows = Object.values(users).filter(u => u && u.active !== false).map(minimalAssignee)
+        .sort((a,b) => String(a.name || "").localeCompare(String(b.name || ""), "pt"));
+      return ok({ data: rows });
+    }
+    if (resource === "ops-actions" && event.httpMethod === "GET") {
+      const rows = await listOperationalActions(store);
+      return ok({ data: rows, total: rows.length, updatedAt: new Date().toISOString() });
+    }
+    if (resource === "ops-action-save" && event.httpMethod === "POST") {
+      if (bodySizeOf(event) > 256 * 1024) return tooLarge("A ação excede o tamanho permitido.");
+      const payload = parseBody(event);
+      if (!payload || typeof payload !== "object") return badRequest("Ação inválida.");
+      const id = cleanText(payload.id, 80).replace(/[^a-zA-Z0-9_.-]/g, "");
+      let existing = id ? await store.get(actionBlobKey(id), { type: "json" }) : null;
+      const hotel = cleanText(payload.hotel || existing?.hotel, 120);
+      if (!hotel) return badRequest("Hotel obrigatório.");
+      if (existing) {
+        if (!canManageAction(authUser, existing)) return forbidden("Não pode alterar esta ação.");
+        if (payload.expectedUpdatedAt && existing.updatedAt && String(payload.expectedUpdatedAt) !== String(existing.updatedAt)) {
+          return conflict("Esta ação foi alterada por outro utilizador. Reabra-a para ver a versão mais recente.", { data: existing });
+        }
+      } else if (!canManageHotel(authUser, hotel)) {
+        return forbidden("Só pode criar ações para o hotel associado à sua conta.");
+      }
+
+      const users = await loadUsers(store, true);
+      const ownerUser = safeUserName(payload.ownerUser !== undefined ? payload.ownerUser : existing?.ownerUser);
+      let ownerName = "";
+      if (ownerUser) {
+        const owner = users[ownerUser];
+        if (!owner || owner.active === false) return badRequest("Responsável inválido ou inativo.");
+        if (!isDirection(authUser) && ownerUser !== authUser.user && norm(owner.hotel) !== norm(hotel)) {
+          return forbidden("Um Diretor só pode atribuir a ação a si próprio ou a alguém do mesmo hotel.");
+        }
+        ownerName = owner.name || ownerUser;
+      }
+      const dueDate = cleanText(payload.dueDate !== undefined ? payload.dueDate : existing?.dueDate, 10);
+      if (!validDateOnly(dueDate)) return badRequest("Prazo inválido.");
+      const status = cleanText(payload.status !== undefined ? payload.status : existing?.status || "open", 20) || "open";
+      if (!ACTION_STATUSES.has(status)) return badRequest("Estado da ação inválido.");
+      const now = new Date().toISOString();
+      const action = existing ? Object.assign({}, existing) : {
+        id: "act_" + Date.now().toString(36) + "_" + crypto.randomBytes(5).toString("hex"),
+        createdAt: now,
+        createdBy: { user: authUser.user, name: authUser.name },
+        history: []
+      };
+      action.hotel = hotel;
+      action.sourceKey = cleanText(payload.sourceKey !== undefined ? payload.sourceKey : action.sourceKey, 600);
+      action.sourceTitle = cleanText(payload.sourceTitle !== undefined ? payload.sourceTitle : action.sourceTitle, 400);
+      action.sourceType = cleanText(payload.sourceType !== undefined ? payload.sourceType : action.sourceType, 80);
+      action.sourceReasons = Array.isArray(payload.sourceReasons) ? payload.sourceReasons.map(x => cleanText(x, 500)).filter(Boolean).slice(0, 10) : (Array.isArray(action.sourceReasons) ? action.sourceReasons : []);
+      action.severity = cleanText(payload.severity !== undefined ? payload.severity : action.severity, 20);
+      const previous = existing ? { ownerUser: existing.ownerUser || "", ownerName: existing.ownerName || "", dueDate: existing.dueDate || "", status: existing.status || "open" } : null;
+      action.ownerUser = ownerUser;
+      action.ownerName = ownerName;
+      action.dueDate = dueDate;
+      action.status = status;
+      action.updatedAt = now;
+      action.updatedBy = { user: authUser.user, name: authUser.name };
+      if (!Array.isArray(action.history)) action.history = [];
+
+      if (!existing) {
+        action.history.push(actionHistoryEntry(authUser, "created", "Ação criada."));
+      } else {
+        const changes = [];
+        if (previous.ownerUser !== ownerUser) changes.push(`Responsável: ${previous.ownerName || "sem responsável"} → ${ownerName || "sem responsável"}`);
+        if (previous.dueDate !== dueDate) changes.push(`Prazo: ${previous.dueDate || "sem prazo"} → ${dueDate || "sem prazo"}`);
+        if (previous.status !== status) changes.push(`Estado: ${previous.status} → ${status}`);
+        if (changes.length) action.history.push(actionHistoryEntry(authUser, "updated", changes.join(" · ")));
+      }
+      const comment = cleanText(payload.comment, 1600);
+      if (comment) action.history.push(actionHistoryEntry(authUser, "comment", comment));
+      action.history = action.history.slice(-150);
+      if (status === "resolved" && previous?.status !== "resolved") {
+        action.resolvedAt = now;
+        action.resolvedBy = { user: authUser.user, name: authUser.name };
+      } else if (status !== "resolved" && existing?.status === "resolved") {
+        action.resolvedAt = null;
+        action.resolvedBy = null;
+      }
+      await store.setJSON(actionBlobKey(action.id), action);
+      return ok({ ok: true, data: action });
+    }
+    if (["assignees","ops-actions","ops-action-save"].includes(resource)) return response(405, { error: "Método não permitido." });
+    if (resource.startsWith("ops-action/")) return forbidden("As ações só podem ser acedidas pelos endpoints próprios.");
 
     // -------------------- PASSWORD DO PRÓPRIO --------------------
     if (event.httpMethod === "POST" && resource === "auth-change-password") {

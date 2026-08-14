@@ -249,10 +249,10 @@ function gopSemSedePct(hotel, year, data=RAW) {
   return rec > 0 && g !== null ? g / rec * 100 : null;
 }
 
-function occ(hotel,year){ const d=RAW.hotels_ops[hotel]; if(!d) return null; const o=n(d.Ocupados[year]),dis=n(d.Disponiveis[year]); return dis>0?o/dis*100:null; }
-function revpar(hotel,year){ const d=RAW.hotels_ops[hotel]; if(!d) return null; const a=n(d['Receita Alojamento'][year]),dis=n(d.Disponiveis[year]); return dis>0?a/dis:null; }
-function adr(hotel,year){ return adrOficial(hotel, year, RAW); }
-function trevpar(hotel,year){ const d=RAW.hotels_ops[hotel]; if(!d) return null; const r=n(d['Receita Total'][year]),dis=n(d.Disponiveis[year]); return dis>0?r/dis:null; }
+function occ(hotel,year,data=RAW){ const d=data?.hotels_ops?.[hotel]; if(!d) return null; const o=n(d.Ocupados?.[year]),dis=n(d.Disponiveis?.[year]); return dis>0?o/dis*100:null; }
+function revpar(hotel,year,data=RAW){ const d=data?.hotels_ops?.[hotel]; if(!d) return null; const a=n(d['Receita Alojamento']?.[year]),dis=n(d.Disponiveis?.[year]); return dis>0?a/dis:null; }
+function adr(hotel,year,data=RAW){ return adrOficial(hotel, year, data); }
+function trevpar(hotel,year,data=RAW){ const d=data?.hotels_ops?.[hotel]; if(!d) return null; const r=n(d['Receita Total']?.[year]),dis=n(d.Disponiveis?.[year]); return dis>0?r/dis:null; }
 function totalCosts(hotel,year,data=RAW){
   const c=data?.hotels_costs?.[hotel];
   if(!c) return 0;
@@ -267,6 +267,25 @@ function totalCosts(hotel,year,data=RAW){
 }
 function costComidas(hotel,year, data=RAW){ return n(data?.hotels_costs?.[hotel]?.COMIDAS?.[year]); }
 function costBebidas(hotel,year, data=RAW){ return n(data?.hotels_costs?.[hotel]?.BEBIDAS?.[year]); }
+
+// API interna canónica de KPIs — novos módulos devem usar esta camada.
+window.VG = window.VG || {};
+window.VG.kpi = Object.assign(window.VG.kpi || {}, {
+  gop,
+  gopPct,
+  gopComSede,
+  gopComSedePct,
+  gopSemSede,
+  gopSemSedePct,
+  adr: adrOficial,
+  adrNet,
+  occupancy: occ,
+  revpar,
+  trevpar,
+  totalCosts,
+  costComidas,
+  costBebidas
+});
 
 // ==========================================================
 // RÁCIOS A&B — regra de exclusão de canais não outlet
@@ -1355,7 +1374,7 @@ function refreshAll(){
   if(!RAW) return;
   buildKPIs('kpiGrid');
   updateContextPanel();
-  if(currentView==='resumo'){ buildChartsResumo(); buildMainTable(); aiRenderGlobalInsights(); }
+  if(currentView==='resumo'){ if(typeof opsCenterRender==='function') opsCenterRender(); buildChartsResumo(); buildMainTable(); aiRenderGlobalInsights(); }
   else if(currentView==='receitas'){ buildChartsReceitas(); buildRevTable(); }
   else if(currentView==='custos'){
     try { buildChartsCustos(); } catch(err) { console.error('Erro nos gráficos de custos', err); }
@@ -1375,6 +1394,7 @@ function refreshAll(){
   else if(currentView==='orcamento'){ orcRender(); }
   else if(currentView==='revenueint'){ riRender(); }
   try { refreshDynamicYearText(); } catch(e){}
+  window.VG?.state?.changed('refresh-all', { view: currentView });
 }
 
 

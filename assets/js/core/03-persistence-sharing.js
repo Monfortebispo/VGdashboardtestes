@@ -120,6 +120,7 @@ function restoreFromSnapshot(snap) {
   try { applyMesSelection(); } catch(e) { console.warn('applyMesSelection:', e); }
   try { if (typeof setView === 'function') setView('resumo'); } catch(e) { console.warn('setView:', e); }
   document.getElementById('globalFilterBar')?.classList.toggle('visible', !!RAW);
+  window.VG?.state?.changed('snapshot-restored');
 }
 
 async function idbSaveAll() {
@@ -225,31 +226,48 @@ function exportSession() {
 }
 
 function importSession(event) {
-  const file = event.target.files[0];
+  const file = event?.target?.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const snap = JSON.parse(e.target.result);
-      restoreFromSnapshot(snap);
-      const meses  = Object.keys(STORE).length;
-      const hoteis = Object.keys(REP_STORE).length;
-      const dt = snap.savedAt ? new Date(snap.savedAt).toLocaleString('pt-PT') : '—';
-      idbSetStatus(`✓ Importado de ficheiro · guardado em ${dt}`);
-      showToast(`✓ Sessão importada — ${meses} meses P&L, ${hoteis} hotéis reputação`);
-    } catch(err) {
-      // Se os dados foram carregados apesar do erro, mostra aviso leve
-      const loaded = Object.keys(STORE).length > 0 || Object.keys(REP_STORE).length > 0;
-      if (loaded) {
-        console.warn('Aviso ao importar (dados carregados):', err);
-        showToast('Dados importados com avisos — verifique se tudo está correcto.');
-      } else {
-        showToast('Erro ao importar JSON: ' + err.message, true);
-      }
+
+  const finishImport = (snap) => {
+    restoreFromSnapshot(snap);
+    const meses  = Object.keys(STORE).length;
+    const hoteis = Object.keys(REP_STORE).length;
+    const dt = snap.savedAt ? new Date(snap.savedAt).toLocaleString('pt-PT') : '—';
+    idbSetStatus(`✓ Importado de ficheiro · guardado em ${dt}`);
+    showToast(`✓ Sessão importada — ${meses} meses P&L, ${hoteis} hotéis reputação`);
+    window.VG?.state?.changed('session-imported', { source: file.name || 'ficheiro' });
+  };
+  const failImport = (err) => {
+    const loaded = Object.keys(STORE).length > 0 || Object.keys(REP_STORE).length > 0;
+    if (loaded) {
+      console.warn('Aviso ao importar (dados carregados):', err);
+      showToast('Dados importados com avisos — verifique se tudo está correcto.');
+    } else {
+      showToast('Erro ao importar sessão: ' + err.message, true);
     }
   };
-  reader.readAsText(file);
-  event.target.value = '';
+
+  const reader = new FileReader();
+  if (String(file.name || '').toLowerCase().endsWith('.zip')) {
+    reader.onload = e => {
+      try {
+        if (!window.fflate || typeof window.fflate.unzipSync !== 'function') throw new Error('Leitor ZIP não carregado.');
+        const files = window.fflate.unzipSync(new Uint8Array(e.target.result));
+        const jsonName = Object.keys(files).find(k => /\.json$/i.test(k));
+        if (!jsonName) throw new Error('O ZIP não contém ficheiro JSON de sessão.');
+        finishImport(JSON.parse(window.fflate.strFromU8(files[jsonName])));
+      } catch(err) { failImport(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload = e => {
+      try { finishImport(JSON.parse(e.target.result)); }
+      catch(err) { failImport(err); }
+    };
+    reader.readAsText(file);
+  }
+  try { event.target.value = ''; } catch(e) {}
 }
 
 // Auto-restauro silencioso ao arrancar
@@ -291,7 +309,6 @@ async function idbAutoRestore() {
 // Os dados de P&L (STORE) e reputação (REP_STORE) são publicados em pedaços — um
 // pedido por mês, um pedido por hotel — para nunca se aproximarem do limite do
 // Netlify (~6MB por pedido), mesmo com 2+ anos de dados acumulados.
-const SHARED_API_URL = '/.netlify/functions/dashboard-sessao';
 let lastSharedMetaSavedAt = null;
 
 function setSharedSyncStatus(text, isWarning) {
@@ -312,7 +329,7 @@ function setSharedSyncStatus(text, isWarning) {
 }
 
 function sharedUrl(resource, key) {
-  let u = SHARED_API_URL + '?resource=' + encodeURIComponent(resource);
+  let u = window.SHARED_API_URL + '?resource=' + encodeURIComponent(resource);
   if (key !== undefined && key !== null) u += '&key=' + encodeURIComponent(key);
   return u;
 }
@@ -338,7 +355,7 @@ function sharedAuthToken(){
 }
 function sharedAuthOptions(url, options){
   const out = Object.assign({}, options || {});
-  if (String(url || '').startsWith(SHARED_API_URL)) {
+  if (String(url || '').startsWith(window.SHARED_API_URL)) {
     const token = sharedAuthToken();
     const headers = Object.assign({}, out.headers || {});
     if (token) headers.Authorization = 'Bearer ' + token;
@@ -397,6 +414,15 @@ async function sharedPost(resource, key, payload) {
     return res.json();
   }, tries);
 }
+
+// API partilhada canónica para novos módulos (v5).
+window.VG = window.VG || {};
+window.VG.shared = Object.assign(window.VG.shared || {}, {
+  endpoint: window.SHARED_API_URL,
+  url: sharedUrl,
+  get: sharedGet,
+  post: sharedPost
+});
 
 
 // ==========================================================

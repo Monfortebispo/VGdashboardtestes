@@ -5,19 +5,19 @@
     --vgc-accent:#00a7b5;
     --vgc-accent2:#7c3aed;
   }
-  body.vg20-safe .vgc-chart-card{
+  body.vg-interface-modern .vgc-chart-card{
     position:relative;
     transition:box-shadow .24s ease, transform .24s ease, border-color .24s ease, background .24s ease;
   }
-  body.vg20-safe .vgc-chart-card:hover{
+  body.vg-interface-modern .vgc-chart-card:hover{
     transform:translateY(-1px);
     box-shadow:0 24px 64px rgba(15,23,42,.12) !important;
     border-color:rgba(0,167,181,.26) !important;
   }
-  body.vg20-safe .vgc-chart-card canvas{
+  body.vg-interface-modern .vgc-chart-card canvas{
     transition:filter .24s ease;
   }
-  body.vg20-safe .vgc-chart-card:hover canvas{
+  body.vg-interface-modern .vgc-chart-card:hover canvas{
     filter:drop-shadow(0 8px 16px rgba(15,23,42,.07));
   }
   .vgc-chart-actions{

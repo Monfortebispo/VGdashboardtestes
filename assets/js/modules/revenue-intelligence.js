@@ -170,9 +170,16 @@ function riRenderSummary(rows, meta){
 }
 
 function riADRPrev(h,m){
-  const y=String(riPrevYear());
-  try{ const ops=STORE?.[Number(m)]?.hotels_ops?.[h]; const direct=ops?.ADR?.[y] ?? ops?.ADR?.[riPrevYear()]; if(Number(direct)>0) return Number(direct); const aloj=Number(ops?.['Receita Alojamento']?.[y] ?? ops?.['Receita Alojamento']?.[riPrevYear()]); const occ=Number(ops?.Ocupados?.[y] ?? ops?.Ocupados?.[riPrevYear()]); if(aloj>0 && occ>0) return aloj/occ; }catch(e){}
-  try{ if(RAW?.hotels_ops?.[h]){ const ops=RAW.hotels_ops[h]; const a=Number(ops.ADR?.[y]??ops.ADR?.[riPrevYear()]); if(a>0) return a; } }catch(e){}
+  const y=riPrevYear();
+  try{
+    const monthly=STORE?.[Number(m)];
+    const a=monthly ? adrOficial(h,y,monthly) : null;
+    if(a!=null && a>0) return a;
+  }catch(e){}
+  try{
+    const a=adrOficial(h,y,RAW);
+    if(a!=null && a>0) return a;
+  }catch(e){}
   return null;
 }
 function riTargetOcc(h,m){
@@ -187,18 +194,15 @@ function riTargetOcc(h,m){
   if(base == null && latest?.data?.[h]?.[Number(py)]) base = latest.data[h][Number(py)][idx];
   if(base != null && isFinite(Number(base))) return Math.max(0, Math.min(100, Number(base) + 2));
 
-  // Fallback P&L/STORE: calcular OCC anterior a partir de ocupados/disponíveis.
+  // Fallback P&L/STORE: usa o KPI canónico de ocupação com a fonte mensal.
   try{
-    const ops = STORE?.[Number(m)]?.hotels_ops?.[h];
-    const oc = Number(ops?.Ocupados?.[py] ?? ops?.Ocupados?.[riPrevYear()]);
-    const di = Number(ops?.Disponiveis?.[py] ?? ops?.Disponiveis?.[riPrevYear()]);
-    if(isFinite(oc) && isFinite(di) && di>0) return Math.max(0, Math.min(100, oc/di*100 + 2));
+    const monthly=STORE?.[Number(m)];
+    const baseOcc=monthly ? occ(h,riPrevYear(),monthly) : null;
+    if(baseOcc!=null && isFinite(baseOcc)) return Math.max(0, Math.min(100, baseOcc + 2));
   }catch(e){}
   try{
-    const ops = RAW?.hotels_ops?.[h];
-    const oc = Number(ops?.Ocupados?.[py] ?? ops?.Ocupados?.[riPrevYear()]);
-    const di = Number(ops?.Disponiveis?.[py] ?? ops?.Disponiveis?.[riPrevYear()]);
-    if(isFinite(oc) && isFinite(di) && di>0) return Math.max(0, Math.min(100, oc/di*100 + 2));
+    const baseOcc=occ(h,riPrevYear(),RAW);
+    if(baseOcc!=null && isFinite(baseOcc)) return Math.max(0, Math.min(100, baseOcc + 2));
   }catch(e){}
   return null;
 }
@@ -683,6 +687,66 @@ function riRenderExtra(){
   try{riBindAskDashboard();}catch(e){}
 }
 
+
+// ==========================================================
+// API de decisão para a Central de Operações v8
+// Expõe apenas um resumo calculado; mantém os detalhes internos do RI encapsulados.
+// ==========================================================
+function riBuildDecisionRows(hotelsFilter){
+  const snaps=riGetSnaps(); if(!snaps.length) return {rows:[],latest:null,prev:null};
+  const latest=snaps[snaps.length-1], prev=snaps[Math.max(0,snaps.length-2)];
+  const allowed=hotelsFilter?.length ? new Set(hotelsFilter) : null;
+  const year=String(riYear()), py=String(riPrevYear()), rows=[];
+  riGetHotels().filter(h=>!allowed || allowed.has(h)).forEach(h=>{
+    const rooms=riGetRooms(h), reg=riRegionOf(h);
+    for(let m=1;m<=12;m++){
+      const idx=m-1;
+      const occNow=latest.data?.[h]?.[year]?.[idx] ?? latest.data?.[h]?.[riYear()]?.[idx];
+      if(occNow==null || !isFinite(Number(occNow))) continue;
+      const occPrev=prev?.data?.[h]?.[year]?.[idx] ?? prev?.data?.[h]?.[riYear()]?.[idx];
+      const occStly=latest.data?.[h]?.[py]?.[idx] ?? latest.data?.[h]?.[riPrevYear()]?.[idx];
+      const delta=(occPrev!=null&&isFinite(Number(occPrev)))?Number(occNow)-Number(occPrev):null;
+      const adr=riADR(h,m), rn=(rooms&&delta!=null)?rooms*riDays(m)*(delta/100):null;
+      const impact=(rn!=null&&adr!=null)?rn*adr:null;
+      rows.push({hotel:h,reg,month:m,monthLabel:RI_MONTHS[idx],rooms,occNow:Number(occNow),occPrev:occPrev!=null?Number(occPrev):null,delta,occStly:occStly!=null?Number(occStly):null,paceDelta:occStly!=null?Number(occNow)-Number(occStly):null,adr,rn,impact});
+    }
+  });
+  return {rows,latest,prev};
+}
+function riDecisionSnapshot(hotelsFilter){
+  const built=riBuildDecisionRows(hotelsFilter);
+  if(!built.latest) return {available:false,totalRisk:0,risks:[],opportunities:[],label:'Sem snapshots RI'};
+  const actionable=riActionableRows(built.rows).filter(r=>r.occNow!=null&&isFinite(r.occNow));
+  const risks=actionable.map(r=>{
+    const rr=riRevenueAtRiskFor(r), urgency=riScoreUrgency(r), forecast=riForecastFor(r).forecast;
+    const gap=rr.gap==null?0:Number(rr.gap||0);
+    const score=(Number(rr.eur||0)/1000)+(urgency*1.35)+(gap*4);
+    const severity=(gap>10||urgency>=70||Number(rr.eur||0)>=50000)?'red':'orange';
+    return {...r,eurRisk:Number(rr.eur||0),rnRisk:Number(rr.rn||0),target:rr.target,forecast,gap,urgency,score,severity,
+      summary:`Forecast ${riPct(forecast)} vs objetivo ${riPct(rr.target)} · gap ${riFmt(gap,1)} pp · ${riMoney(rr.eur)} em risco`,
+      action:riActionRecommendation(r)};
+  }).filter(r=>r.eurRisk>0 || r.urgency>=45).sort((a,b)=>b.score-a.score);
+
+  const opportunities=[];
+  actionable.forEach(r=>{
+    const prevAdr=riADRPrev(r.hotel,r.month);
+    if((r.occNow||0)>=85 && r.adr!=null && prevAdr!=null && r.adr<=prevAdr*1.01){
+      opportunities.push({hotel:r.hotel,month:r.month,score:85+(r.occNow-85),value:riPct(r.occNow),title:`Alta ocupação em ${r.monthLabel}`,
+        sub:`ADR ${riMoney(r.adr)} sem evolução material vs ${riPrevYear()}. Testar subida tarifária e proteger inventário.`});
+    } else if((r.delta||0)>=4 && (r.paceDelta==null || r.paceDelta>=-1)){
+      opportunities.push({hotel:r.hotel,month:r.month,score:65+(r.delta||0),value:`+${riFmt(r.delta,1)} pp`,title:`Pickup positivo em ${r.monthLabel}`,
+        sub:'Procura a acelerar. Rever descontos e proteger ADR antes de continuar a abrir preço.'});
+    }
+  });
+  opportunities.sort((a,b)=>b.score-a.score);
+  const totalRisk=risks.reduce((s,r)=>s+(Number(r.eurRisk)||0),0);
+  const label=built.latest?.label || (built.latest?.loadedAt ? new Date(built.latest.loadedAt).toLocaleDateString('pt-PT') : 'último snapshot');
+  return {available:true,totalRisk,risks:risks.slice(0,12),opportunities:opportunities.slice(0,8),label,latestAt:built.latest?.loadedAt||null};
+}
+window.VG=window.VG||{};
+window.VG.revenue=window.VG.revenue||{};
+window.VG.revenue.getDecisionSnapshot=riDecisionSnapshot;
+
 window.riRender=function(){
   riInitControls();
   const snaps=riGetSnaps(); const empty=document.getElementById('riEmpty'), content=document.getElementById('riContent');
@@ -692,10 +756,13 @@ window.riRender=function(){
   const meta={latestLabel:built.latest?.label||'último snapshot', prevLabel:built.prev?.label||'snapshot anterior'};
   riRenderKpis(rows,meta); riRenderSummary(rows,meta); riRenderPace(); riRenderImpact(rows); riRenderTables(rows); try{riRenderAdvanced();}catch(e){console.error('RI2 render',e);} try{riRenderExtra();}catch(e){console.error('RI3 render',e);}
 };
-const oldSetView = (typeof setView==='function') ? setView : null;
-if(oldSetView && !oldSetView.__riWrapped){
-  window.setView=function(v){ oldSetView(v); if(v==='revenueint') setTimeout(()=>{ try{riRender();}catch(e){console.error('RI render',e);} },30); };
-  window.setView.__riWrapped=true;
-}
+// Atualização orientada a eventos: evita substituir/wrapping de setView.
+let riStateTimer=null;
+window.VG?.events?.on('state:changed',()=>{
+  if(typeof currentView!=='undefined' && currentView==='revenueint'){
+    clearTimeout(riStateTimer);
+    riStateTimer=setTimeout(()=>{ try{riRender();}catch(e){console.error('RI render',e);} },30);
+  }
+});
 document.addEventListener('DOMContentLoaded',()=>{ try{riInitControls(); if(location.hash==='#revenueint') setTimeout(riRender,100);}catch(e){} });
 })();

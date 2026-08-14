@@ -31,7 +31,7 @@
   window.vgAuthCurrent=current;
 
   async function api(resource, method, payload, key){
-    let url = SHARED_API_URL + '?resource=' + encodeURIComponent(resource);
+    let url = window.SHARED_API_URL + '?resource=' + encodeURIComponent(resource);
     if(key!==undefined && key!==null) url += '&key=' + encodeURIComponent(key);
     const headers={'Content-Type':'application/json'};
     const t=token(); if(t) headers.Authorization='Bearer '+t;

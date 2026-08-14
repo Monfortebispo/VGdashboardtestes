@@ -1,7 +1,7 @@
 
-/* V18 — logótipo limpo no cabeçalho. Não mexe em gráficos, filtros, cálculos ou dados. */
+/* Logótipo limpo no cabeçalho; regra exclusivamente visual. */
 .logo-block .logo-mark.vg-official-mark,
-body.vg20-safe .logo-block .logo-mark.vg-official-mark,
+body.vg-interface-modern .logo-block .logo-mark.vg-official-mark,
 body.theme-erp .logo-block .logo-mark.vg-official-mark,
 body.theme-vilagale .logo-block .logo-mark.vg-official-mark{
   width:38px!important;
@@ -23,7 +23,7 @@ body.theme-vilagale .logo-block .logo-mark.vg-official-mark{
   flex:0 0 38px!important;
 }
 .logo-block .logo-mark.vg-official-mark img,
-body.vg20-safe .logo-block .logo-mark.vg-official-mark img,
+body.vg-interface-modern .logo-block .logo-mark.vg-official-mark img,
 body.theme-erp .logo-block .logo-mark.vg-official-mark img,
 body.theme-vilagale .logo-block .logo-mark.vg-official-mark img{
   width:27px!important;
@@ -39,14 +39,14 @@ body.theme-vilagale .logo-block .logo-mark.vg-official-mark img{
   filter:drop-shadow(0 1px 0 rgba(255,255,255,.28))!important;
   pointer-events:none!important;
 }
-body.vg20-safe .logo-block{gap:11px!important;}
+body.vg-interface-modern .logo-block{gap:11px!important;}
 @media (max-width:768px){
   .logo-block .logo-mark.vg-official-mark,
-  body.vg20-safe .logo-block .logo-mark.vg-official-mark{
+  body.vg-interface-modern .logo-block .logo-mark.vg-official-mark{
     width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;flex-basis:34px!important;padding:5px!important;
   }
   .logo-block .logo-mark.vg-official-mark img,
-  body.vg20-safe .logo-block .logo-mark.vg-official-mark img{
+  body.vg-interface-modern .logo-block .logo-mark.vg-official-mark img{
     width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;
   }
 }

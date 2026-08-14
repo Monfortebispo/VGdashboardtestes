@@ -1,8 +1,8 @@
 
 (function(){
   'use strict';
-  if(window.__VG18_SAFE_CHART_ACTIONS__) return;
-  window.__VG18_SAFE_CHART_ACTIONS__ = true;
+  if(window.__VG_CHART_ACTIONS__) return;
+  window.__VG_CHART_ACTIONS__ = true;
 
   var scanTimer = null;
   var currentCanvas = null;

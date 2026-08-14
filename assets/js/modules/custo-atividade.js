@@ -311,7 +311,7 @@ function cuaBuildEvolucao() {
 
   const sorted = [...hotels].sort((a,b) => {
     const getV = (h,y) => {
-      const c=n(RAW.hotels_costs[h]?.TOTAIS?.[y]), o=n(RAW.hotels_ops[h]?.Ocupados?.[y]);
+      const c=totalCosts(h,y), o=n(RAW.hotels_ops[h]?.Ocupados?.[y]);
       return o>0?c/o:null;
     };
     const va = getV(a,YR_CUR), vb = getV(b,YR_CUR);
@@ -641,15 +641,125 @@ function cuaAnswerOndeAtuar(){
   const table=`<div style="overflow:auto;margin-top:12px"><table class="pl-table"><thead><tr><th>#</th><th style="text-align:left">Hotel</th><th>Rubrica</th><th>Impacto</th><th>Problema provável</th><th>Pedido concreto ao hotel</th></tr></thead><tbody>${rows.map((r,i)=>{const prob=r.rub==='COMIDAS'||r.rub==='BEBIDAS'?'preço/capitação/quebras/mix':'escala/contrato/imputação/volume'; const pedido=r.rub==='COMIDAS'||r.rub==='BEBIDAS'?'Enviar top artigos, capitação e justificação de quebras':'Enviar detalhe de faturas/contrato/escala e centro de custo'; return `<tr><td>${i+1}</td><td>${cuaEsc(cuaHotelShort(r.h))}</td><td>${r.rub}</td><td class="pl-cell-bad">${cuaEuro(r.impact,0)}</td><td style="font-size:11px;color:var(--text-2)">${prob}</td><td style="font-size:11px;color:var(--text-2)">${pedido}</td></tr>`}).join('')}</tbody></table></div>`;
   cuaRenderAnswer('Resposta — onde atuar amanhã', intro, table);
 }
-function cuaAnswerArtigos(){
-  const h=cuaFindHotelInQuestion(document.getElementById('cuaPerguntaInput')?.value||'');
-  const hotels=h?[h]:cuaActiveHotelsSafe();
-  const all=cuaDeepArticleRows(hotels,25);
-  if(!all.length){ cuaRenderAnswer('Resposta — artigos com desvio','Não encontrei artigos com sobrecusto comparável no extrato de compras/preços para o filtro atual. Isto pode acontecer se ainda não carregaste o ficheiro de Compras & Artigos nesta sessão, se houver apenas um hotel comparável para os artigos, ou se os preços forem excluídos por unidade/embalagem não comparável. O dashboard continua funcional; para ter detalhe por artigo, confirma que o extrato de compras/preços está carregado no módulo Compras & Artigos.'); return; }
-  const intro=`Os artigos que mais explicam desvios de preço/concentração face à mediana interna são ${all.slice(0,6).map(a=>`<strong>${cuaEsc(cuaHotelShort(a.h))}</strong> · ${cuaEsc(a.nome)} (${cuaEuro(a.sobre,0)})`).join('; ')}. Esta leitura deve ser usada para auditoria de preço contratual, unidade de compra, embalagem, substituições, família/grupo e quantidades lançadas. Não prova por si só desperdício, mas indica onde a validação tem maior retorno financeiro.`;
-  const table=`<div style="overflow:auto;margin-top:12px"><table class="pl-table"><thead><tr><th>#</th><th>Hotel</th><th style="text-align:left">Artigo</th><th>Família</th><th>Grupo</th><th>Preço</th><th>Mediana</th><th>Melhor preço</th><th>Sobrecusto</th><th>Validação</th></tr></thead><tbody>${all.map((a,i)=>`<tr><td>${i+1}</td><td>${cuaEsc(cuaHotelShort(a.h))}</td><td>${cuaEsc(a.nome)}</td><td>${cuaEsc(a.fam)}</td><td>${cuaEsc(a.grp)}</td><td class="pl-cell-bad">${cuaEuro(a.p,2)}</td><td>${cuaEuro(a.med,2)}</td><td>${cuaEuro(a.min,2)} <span style="color:var(--text-3)">${cuaEsc(cuaHotelShort(a.minHotel))}</span></td><td class="pl-cell-bad">${cuaEuro(a.sobre,0)}</td><td style="font-size:11px;color:var(--text-2)">Preço, unidade, fornecedor, embalagem</td></tr>`).join('')}</tbody></table></div>`;
-  cuaRenderAnswer('Resposta — artigos com desvio', intro, table);
+// ==========================================================
+// ARTIGOS COM DESVIO — implementação definitiva consolidada v5
+// Substitui as antigas camadas CUA 4.6/5.0 sem wrappers runtime.
+// ==========================================================
+function cuaArticleGetCD(){
+  try{ if(typeof cdGetData==='function'){ const d=cdGetData(); if(d && d.dic) return d; } }catch(e){}
+  try{ if(typeof CD!=='undefined' && CD && CD.dic) return CD; }catch(e){}
+  try{ if(window.__VG_CUA_TEST_CD && window.__VG_CUA_TEST_CD.dic) return window.__VG_CUA_TEST_CD; }catch(e){}
+  return null;
 }
+function cuaArticleActiveHotelNames(dic){
+  let list=[];
+  try{ if(typeof getActiveHotels==='function') list=getActiveHotels()||[]; }catch(e){}
+  if(!list.length && typeof RAW!=='undefined' && RAW?.hotels_ops) list=Object.keys(RAW.hotels_ops||{});
+  if(!list.length && dic && Array.isArray(dic.hoteis)) list=dic.hoteis.filter(Boolean);
+  const set={}; list.forEach(h=>{ set[String(h).toUpperCase()]=1; });
+  return set;
+}
+function cuaArticleRowsFromCD(cd){
+  const dic=cd.dic||{}, meses=(cd.meta&&cd.meta.meses)||[];
+  const rows=[]; let latestYear=0;
+  for(let i=0;i<meses.length;i++){ const y=Math.floor(Number(meses[i])/100); if(y>latestYear) latestYear=y; }
+  try{ if(typeof YR_CUR!=='undefined' && Number(YR_CUR)) latestYear=Number(YR_CUR); }catch(e){}
+  if(Array.isArray(cd.PM) && cd.PM.length){
+    const map={};
+    for(const r of cd.PM){
+      if(!r || r.length<6) continue;
+      const mes=meses[Number(r[3])];
+      if(latestYear && mes && Math.floor(Number(mes)/100)!==latestYear) continue;
+      const a=Number(r[0]), fo=Number(r[1]), h=Number(r[2]), val=Number(r[4]||0), q=Number(r[5]||0);
+      if(!a || !h || val<=0 || q<=0) continue;
+      const k=a+'|'+fo+'|'+h; if(!map[k]) map[k]=[a,fo,h,0,0];
+      map[k][3]+=val; map[k][4]+=q;
+    }
+    for(const k in map){ if(map[k][4]>0) rows.push(map[k]); }
+    if(rows.length) return {rows,year:latestYear};
+  }
+  if(Array.isArray(cd.P)){
+    for(const r of cd.P){
+      if(!r || r.length<5) continue;
+      const val=Number(r[3]||0), q=Number(r[4]||0);
+      if(Number(r[0]) && Number(r[2]) && val>0 && q>0) rows.push([Number(r[0]),Number(r[1]),Number(r[2]),val,q]);
+    }
+  }
+  return {rows,year:latestYear};
+}
+function cuaCalcArticleDeviations(limit=30){
+  const cd=cuaArticleGetCD();
+  if(!cd || !cd.dic) return {rows:[],reason:'NO_CD'};
+  const dic=cd.dic, HOT=dic.hoteis||[], ART=dic.art||[], FORN=dic.forn||[];
+  const pack=cuaArticleRowsFromCD(cd), priceRows=pack.rows||[];
+  if(!priceRows.length) return {rows:[],reason:'NO_ROWS'};
+  const active=cuaArticleActiveHotelNames(dic), hasActive=Object.keys(active).length>0;
+  const byArtHotel={};
+  for(const r of priceRows){
+    const a=r[0], fo=r[1], h=r[2], val=r[3], q=r[4];
+    if(q<=0 || val<=0) continue;
+    const p=val/q;
+    if(!isFinite(p) || p<=0 || p>5000) continue;
+    const key=a+'|'+h;
+    if(!byArtHotel[key]) byArtHotel[key]={a,h,v:0,q:0,forn:{}};
+    byArtHotel[key].v+=val; byArtHotel[key].q+=q;
+    if(FORN[fo]) byArtHotel[key].forn[FORN[fo]]=1;
+  }
+  const byArt={};
+  Object.keys(byArtHotel).forEach(k=>{
+    const o=byArtHotel[k]; if(o.q<=0) return; const p=o.v/o.q;
+    if(!isFinite(p) || p<=0 || p>2500) return;
+    if(!byArt[o.a]) byArt[o.a]=[];
+    byArt[o.a].push({h:o.h,p,q:o.q,v:o.v,forn:Object.keys(o.forn).slice(0,3).join(', ')});
+  });
+  const bench={};
+  Object.keys(byArt).forEach(a=>{
+    const l=byArt[a].filter(x=>x.q>=1 && x.p>0);
+    if(l.length<2) return;
+    const med=cuaMedian(l.map(x=>x.p));
+    const mn=l.slice().sort((x,y)=>x.p-y.p)[0];
+    if(med && isFinite(med)) bench[a]={med,min:mn.p,minHotel:HOT[mn.h]||'',n:l.length};
+  });
+  const res=[];
+  Object.keys(byArtHotel).forEach(k=>{
+    const o=byArtHotel[k], b=bench[o.a]; if(!b || o.q<=0) return;
+    const hName=HOT[o.h]||'';
+    if(hasActive && !active[String(hName).toUpperCase()]) return;
+    const p=o.v/o.q;
+    if(p<=b.med*1.05 || p>b.med*4) return;
+    const sobre=(p-b.med)*o.q;
+    if(sobre<25) return;
+    res.push({
+      hotel:hName, artigo:ART[o.a]||('Artigo '+o.a), preco:p, mediana:b.med,
+      melhor:b.min, melhorHotel:b.minHotel, qtd:o.q, valor:o.v, sobre,
+      fornecedores:Object.keys(o.forn).slice(0,3).join(', '), comps:b.n
+    });
+  });
+  res.sort((a,b)=>b.sobre-a.sobre);
+  return {rows:res.slice(0,limit||30),total:res.length,counts:{priceRows:priceRows.length,bench:Object.keys(bench).length,year:pack.year}};
+}
+function cuaAnswerArtigos(){
+  const result=cuaCalcArticleDeviations(30);
+  if(!result.rows.length){
+    let msg='Não encontrei artigos com desvio comparável no filtro atual. Diagnóstico: '+(result.reason||'sem resultado')+'. Se o ficheiro de Compras & Artigos estiver carregado, altere o filtro para Portefólio filtrado e confirme que existem pelo menos dois hotéis com o mesmo artigo comprado no período. O dashboard mantém as análises de P&L/rubrica, mas o detalhe por artigo depende do extrato de compras/preços.';
+    if(result.counts) msg+=' Linhas de preço lidas: '+result.counts.priceRows+'; artigos com benchmark: '+result.counts.bench+'.';
+    return cuaRenderAnswer('Resposta — artigos com desvio',msg);
+  }
+  const rows=result.rows;
+  const total=rows.reduce((s,r)=>s+r.sobre,0);
+  const topHotels={};
+  rows.forEach(r=>{ if(!topHotels[r.hotel]) topHotels[r.hotel]={h:r.hotel,n:0,s:0}; topHotels[r.hotel].n++; topHotels[r.hotel].s+=r.sobre; });
+  const ht=Object.keys(topHotels).map(k=>topHotels[k]).sort((a,b)=>b.s-a.s).slice(0,5);
+  const intro='Foram encontrados <strong>'+rows.length+'</strong> artigos com preço médio acima da mediana interna, no período '+cuaEsc(result.counts&&result.counts.year||'atual')+'. O sobrecusto estimado dos artigos listados é <strong style="color:var(--gold)">'+cuaEuro(total,0)+'</strong>. Hotéis com maior exposição: '+ht.map(x=>'<strong>'+cuaEsc(cuaHotelShort(x.h))+'</strong> ('+x.n+' artigos; '+cuaEuro(x.s,0)+')').join('; ')+'. Esta análise compara preços médios do mesmo artigo entre hotéis; deve ser validada contra unidade de medida, embalagem, fornecedor, qualidade e codificação antes de concluir desperdício.';
+  const table='<div style="overflow:auto;margin-top:12px"><table class="pl-table"><thead><tr><th>#</th><th>Hotel</th><th style="text-align:left">Artigo</th><th>Preço médio</th><th>Mediana grupo</th><th>Melhor preço</th><th>Qtd.</th><th>Sobrecusto</th><th>Fornecedor(es)</th><th>Validação</th></tr></thead><tbody>'+
+    rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+cuaEsc(cuaHotelShort(r.hotel))+'</td><td style="text-align:left">'+cuaEsc(r.artigo)+'</td><td class="pl-cell-bad">'+cuaEuro(r.preco,2)+'</td><td>'+cuaEuro(r.mediana,2)+'</td><td>'+cuaEuro(r.melhor,2)+' <span style="color:var(--text-3)">'+cuaEsc(cuaHotelShort(r.melhorHotel))+'</span></td><td>'+Number(r.qtd).toLocaleString('pt-PT',{maximumFractionDigits:1})+'</td><td class="pl-cell-bad">'+cuaEuro(r.sobre,0)+'</td><td style="font-size:11px;color:var(--text-2)">'+cuaEsc(r.fornecedores||'—')+'</td><td style="font-size:11px;color:var(--text-2)">Confirmar fatura, unidade, embalagem, fornecedor e preço contratado.</td></tr>').join('')+
+    '</tbody></table></div>';
+  const extra='<div class="pl-dept-card" style="border-left:3px solid #e05c4e"><div class="pl-dept-name">Leitura operacional</div><p style="font-size:12px;color:var(--text-2);line-height:1.75;margin-top:8px">Prioridade: validar os 10 primeiros artigos. Se o artigo for equivalente, há oportunidade de renegociação ou centralização de preço. Se não for equivalente, deve corrigir a codificação, separar embalagens/formatos ou criar unidade equivalente para evitar falsos desvios.</p></div>';
+  return cuaRenderAnswer('Resposta — artigos com desvio',intro,table,extra);
+}
+window.cuaCalcArticleDeviations=cuaCalcArticleDeviations;
+window.cuaAnswerArtigos=cuaAnswerArtigos;
+
 function cuaPerguntar(forcedQ){
   const q=forcedQ || document.getElementById('cuaPerguntaInput')?.value || '';
   const resp=document.getElementById('cua-pergunta-resp'); if(!resp)return;

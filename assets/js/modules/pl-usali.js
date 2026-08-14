@@ -304,9 +304,9 @@ function plBuildBench() {
   const rows = hotels.map(h => {
     const rec = n(RAW.hotels_ops[h]?.['Receita Total']?.[y]);
     if (!rec) return null;
-    const cost = n(RAW.hotels_costs[h]?.TOTAIS?.[y]);
-    const gopV = rec - cost;
-    const gopP = rec > 0 ? gopV/rec*100 : 0;
+    const cost = totalCosts(h,y);
+    const gopV = gop(h,y);
+    const gopP = gopV!=null && rec > 0 ? gopV/rec*100 : 0;
     const pesP = rec > 0 ? n(RAW.hotels_costs[h]?.PESSOAL?.[y])/rec*100 : 0;
     const fb   = n(RAW.hotels_rev[h]?.ALIMENTACAO?.[y]);
     const fbC  = n(RAW.hotels_costs[h]?.COMIDAS?.[y]) + n(RAW.hotels_costs[h]?.BEBIDAS?.[y]);
@@ -407,8 +407,6 @@ function plBuildFlow() {
     const rec25 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_PREV]);
     const rec26 = n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]);
     if (!rec25 || !rec26) return null;
-    const cost25 = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_PREV]);
-    const cost26 = n(RAW.hotels_costs[h]?.TOTAIS?.[YR_CUR]);
     const gop25v = gop(h,YR_PREV), gop26v = gop(h,YR_CUR);
     const deltaRec = rec26 - rec25, deltaGop = gop26v - gop25v;
     const ft = deltaRec > 0 ? (deltaGop / deltaRec * 100) : null;
