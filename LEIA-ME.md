@@ -1,3 +1,9 @@
+# VG Dashboard v8.1 — correção de deploy
+
+A v8.1 corrige a integração da Gestão de Ações no `index.html`. A primeira v8 continha os ficheiros do módulo, mas faltavam as referências CSS/JS e o markup dos modais; a suite automática detetou a falha e bloqueou corretamente o deploy.
+
+**Validação v8.1: 8/8 suites aprovadas.**
+
 # VG Dashboard — Gestão de Ações v8
 
 A v8 parte da Central de Operações v7 e fecha o ciclo entre identificar uma prioridade e acompanhar a respetiva resolução.
@@ -19,7 +25,7 @@ Cada prioridade da Central de Operações passa a poder ter uma ação associada
 
 Estados disponíveis:
 
-- `Em análise`;
+- `Por iniciar`;
 - `Em curso`;
 - `A aguardar`;
 - `Resolvido`.

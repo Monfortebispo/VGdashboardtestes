@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VG Dashboard · Gestão de Ações v8 · 2026-08-14 -->
+<!-- VG Dashboard · Gestão de Ações v8.1 · 2026-08-14 -->
 
 <html lang="pt">
 <head>
@@ -411,7 +411,7 @@
 </div>
 <!-- RESUMO -->
 <div class="tab-content" id="view-resumo">
-<!-- CENTRAL DE OPERAÇÕES v8 -->
+<!-- CENTRAL DE OPERAÇÕES v8.1 -->
 <section class="ops-center" id="opsCenter">
   <div class="ops-head">
     <div>
@@ -434,7 +434,7 @@
     </div>
     <div class="ops-side">
       <div class="ops-panel">
-        <div class="ops-panel-head"><div class="ops-panel-title">Acompanhamento de ações</div><div class="ops-panel-meta"><button class="ops-open" onclick="opsActionsOpen()">Ver todas →</button></div></div>
+        <div class="ops-panel-head"><div class="ops-panel-title">Ações a acompanhar</div><button class="ops-btn" onclick="opsActionsOpen()">Ver todas</button></div>
         <div id="opsActionWatch"><div class="ops-empty">A carregar ações...</div></div>
       </div>
       <div class="ops-panel">
@@ -448,7 +448,7 @@
     </div>
   </div>
 </section>
-<!-- /CENTRAL DE OPERAÇÕES v8 -->
+<!-- /CENTRAL DE OPERAÇÕES v8.1 -->
 <!-- Filtro de Região -->
 <div class="section-title">KPIs Consolidados
       <button onclick="waShareResumo()" style="margin-left:auto;background:#25D366;color:#fff;border:none;padding:6px 14px;border-radius:8px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:.3px">
@@ -1793,45 +1793,80 @@
 <script src="assets/js/modules/hoteis.js"></script>
 <script src="assets/js/modules/receitas-detalhe.js"></script>
 <script src="assets/js/core/04-bootstrap.js"></script>
-<!-- GESTÃO DE AÇÕES v8 -->
-<div class="ops-action-modal" id="opsActionModal" role="dialog" aria-modal="true" aria-label="Gerir ação operacional">
+<!-- GESTÃO DE AÇÕES v8.1 -->
+<div class="ops-action-modal" id="opsActionModal" role="dialog" aria-modal="true" aria-labelledby="opsActionModalTitle">
   <div class="ops-action-card">
     <div class="ops-action-modal-head">
-      <div><div class="ops-action-modal-title" id="opsActionModalTitle">Gerir ação</div><div class="ops-action-modal-sub">Responsável, prazo, estado e histórico partilhados.</div></div>
-      <button class="ops-action-close" onclick="opsActionClose()" aria-label="Fechar">✕</button>
+      <div><div class="ops-action-modal-title" id="opsActionModalTitle">Gerir ação</div><div class="ops-action-modal-sub">Responsável, prazo, estado, comentário e histórico partilhado.</div></div>
+      <button class="ops-action-close" type="button" onclick="opsActionClose()" aria-label="Fechar">✕</button>
     </div>
     <div class="ops-action-body">
-      <div class="ops-action-source-box"><div class="ops-action-source-hotel" id="opsActionHotel">—</div><div class="ops-action-source-text" id="opsActionSource">—</div></div>
+      <div class="ops-action-source-box">
+        <div class="ops-action-source-hotel" id="opsActionHotel">—</div>
+        <div class="ops-action-source-text" id="opsActionSource">—</div>
+      </div>
       <div class="ops-action-permission" id="opsActionPermission"></div>
       <div class="ops-action-form-grid">
-        <div class="ops-action-field"><label for="opsActionOwner">Responsável</label><select id="opsActionOwner"><option value="">— Sem responsável —</option></select></div>
-        <div class="ops-action-field"><label for="opsActionDue">Prazo</label><input id="opsActionDue" type="date"></div>
-        <div class="ops-action-field"><label for="opsActionStatus">Estado</label><select id="opsActionStatus"><option value="open">Em análise</option><option value="progress">Em curso</option><option value="waiting">A aguardar</option><option value="resolved">Resolvido</option></select></div>
-        <div class="ops-action-field full"><label for="opsActionComment">Comentário / atualização</label><textarea id="opsActionComment" placeholder="Regista a decisão, evolução ou motivo do estado atual..."></textarea></div>
+        <div class="ops-action-field">
+          <label for="opsActionOwner">Responsável</label>
+          <select id="opsActionOwner"><option value="">— Sem responsável —</option></select>
+        </div>
+        <div class="ops-action-field">
+          <label for="opsActionDue">Prazo</label>
+          <input id="opsActionDue" type="date"/>
+        </div>
+        <div class="ops-action-field">
+          <label for="opsActionStatus">Estado</label>
+          <select id="opsActionStatus">
+            <option value="open">Em análise</option>
+            <option value="progress">Em curso</option>
+            <option value="waiting">A aguardar</option>
+            <option value="resolved">Resolvido</option>
+          </select>
+        </div>
+        <div class="ops-action-field full">
+          <label for="opsActionComment">Comentário / atualização</label>
+          <textarea id="opsActionComment" placeholder="Regista a decisão, ação tomada ou ponto de situação..."></textarea>
+        </div>
       </div>
-      <div class="ops-action-footer"><button class="ops-btn" onclick="opsActionClose()">Fechar</button><button class="ops-action-save" id="opsActionSave" onclick="opsActionSave()">Guardar alterações</button></div>
-      <div class="ops-action-history-wrap"><div class="ops-action-history-title">Histórico da ação</div><div class="ops-action-history" id="opsActionHistory"></div></div>
+      <div class="ops-action-history-wrap">
+        <div class="ops-action-history-title">Histórico</div>
+        <div class="ops-action-history" id="opsActionHistory"><div class="ops-action-history-empty">Ainda não existe histórico.</div></div>
+      </div>
+      <div class="ops-action-footer">
+        <button class="ops-btn" type="button" onclick="opsActionClose()">Cancelar</button>
+        <button class="ops-action-save" id="opsActionSave" type="button" onclick="opsActionSave()">Guardar alterações</button>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="ops-action-modal" id="opsActionsModal" role="dialog" aria-modal="true" aria-label="Ações operacionais">
+<div class="ops-action-modal" id="opsActionsModal" role="dialog" aria-modal="true" aria-label="Gestão de ações operacionais">
   <div class="ops-action-card wide">
     <div class="ops-action-modal-head">
-      <div><div class="ops-action-modal-title">Ações operacionais</div><div class="ops-action-modal-sub" id="opsActionsBoardMeta">A carregar...</div></div>
-      <button class="ops-action-close" onclick="opsActionsClose()" aria-label="Fechar">✕</button>
+      <div><div class="ops-action-modal-title">Gestão de Ações</div><div class="ops-action-modal-sub">Acompanhamento transversal das ações geradas a partir da Central de Operações.</div></div>
+      <button class="ops-action-close" type="button" onclick="opsActionsClose()" aria-label="Fechar">✕</button>
     </div>
     <div class="ops-action-body">
       <div class="ops-action-board-tools">
-        <select class="ops-action-filter" id="opsActionsFilterStatus" onchange="opsActionsRenderBoard()"><option value="active">Ações abertas</option><option value="all">Todos os estados</option><option value="open">Em análise</option><option value="progress">Em curso</option><option value="waiting">A aguardar</option><option value="resolved">Resolvidas</option></select>
+        <select class="ops-action-filter" id="opsActionsFilterStatus" onchange="opsActionsRenderBoard()">
+          <option value="active">Ações abertas</option>
+          <option value="all">Todas</option>
+          <option value="open">Em análise</option>
+          <option value="progress">Em curso</option>
+          <option value="waiting">A aguardar</option>
+          <option value="resolved">Resolvidas</option>
+        </select>
         <select class="ops-action-filter" id="opsActionsFilterHotel" onchange="opsActionsRenderBoard()"><option value="">Todos os hotéis</option></select>
-        <input class="ops-action-filter ops-action-search" id="opsActionsSearch" placeholder="Pesquisar hotel, responsável ou ação..." oninput="opsActionsRenderBoard()">
+        <input class="ops-action-filter ops-action-search" id="opsActionsSearch" type="search" placeholder="Pesquisar hotel, responsável ou assunto..." oninput="opsActionsRenderBoard()"/>
       </div>
+      <div class="ops-action-board-meta" id="opsActionsBoardMeta">A carregar...</div>
       <div class="ops-action-board" id="opsActionsBoard"><div class="ops-action-board-empty">A carregar ações...</div></div>
+      <div class="ops-action-footer"><button class="ops-btn" type="button" onclick="opsActionsClose()">Fechar</button></div>
     </div>
   </div>
 </div>
-<!-- /GESTÃO DE AÇÕES v8 -->
+<!-- /GESTÃO DE AÇÕES v8.1 -->
 <!-- WHATSAPP MODAL -->
 <div id="waModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center">
 <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:16px;width:min(560px,95vw);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column">
@@ -1904,7 +1939,6 @@
 <link rel="stylesheet" href="assets/css/whatsapp.css">
 <script src="assets/js/modules/whatsapp.js"></script>
 <script id="vg-auth-script" src="assets/js/auth/auth-client.js"></script>
-<script id="ops-actions-script" src="assets/js/modules/actions-management.js"></script>
 
 <script id="vg-restore-after-auth" src="assets/js/auth/restore-after-auth.js"></script>
 <script id="vg-compat-stubs" src="assets/js/core/compat-stubs.js"></script>
@@ -1913,6 +1947,7 @@
 <script src="assets/js/modules/orcamento.js"></script>
 
 <script id="ri-script" src="assets/js/modules/revenue-intelligence.js"></script>
+<script id="ops-actions-script" src="assets/js/modules/actions-management.js"></script>
 <script id="ops-center-script" src="assets/js/ui/operations-center.js"></script>
 
 

@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "private": true,
-  "description": "VG Dashboard Operações — Central de Operações com gestão partilhada de ações + regressão automática",
+  "description": "VG Dashboard Operações — Gestão partilhada de ações v8.1 + regressão automática",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

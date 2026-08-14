@@ -15,6 +15,9 @@ assert(html.includes('id="opsCenter"'),'o Resumo deve conter a Central de Opera�
 assert(html.includes('assets/js/ui/operations-center.js'),'o módulo da Central de Operações deve estar ligado ao HTML');
 assert(html.includes('assets/css/operations-center.css'),'o CSS da Central de Operações deve estar ligado ao HTML');
 assert(html.includes('assets/js/modules/actions-management.js'),'o módulo de gestão de ações v8 deve estar ligado ao HTML');
+const actionsPos = html.indexOf('assets/js/modules/actions-management.js');
+const opsCenterPos = html.indexOf('assets/js/ui/operations-center.js');
+assert(actionsPos >= 0 && opsCenterPos >= 0 && actionsPos < opsCenterPos,'gestão de ações deve carregar antes da Central de Operações');
 assert(html.includes('assets/css/actions-management.css'),'o CSS de gestão de ações v8 deve estar ligado ao HTML');
 assert(html.includes('id="opsActionModal"')&&html.includes('id="opsActionsModal"'),'os modais de ações v8 devem existir');
 assert(html.includes('id="opsActionStats"')&&html.includes('id="opsActionWatch"'),'a Central deve expor acompanhamento de ações');
