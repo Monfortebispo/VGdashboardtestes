@@ -1,4 +1,4 @@
-# Testes automáticos — VG Dashboard v13
+# Testes automáticos — VG Dashboard v19
 
 A suite corre sem dados reais, sem Internet e sem acesso aos Netlify Blobs de produção.
 
@@ -17,6 +17,10 @@ npm test
 - `benchmarking.test.js` — ponderação regional, pares, STLY, metas/orçamento e percentis.
 - `data-center.test.js` — cobertura das fontes, backups e rollback local.
 - `forecast-scenarios.test.js` / `forecast-integration-v12.test.js` — forecast financeiro e integração RI.
+- `global-search-v19.test.js` — Ctrl/Cmd+K, pesquisa sem acentos, índice multi-módulo, Compras, comentários, metas e permissões de Auditoria.
+- `governance.test.js` — trilho server-side, diferenças e proteção de credenciais.
+- `performance-v18.test.js` — defer, XLSX lazy, renderização por vista e precache concorrente.
+- `pwa-mobile.test.js` — manifest, instalação, navegação mobile e cache segura.
 - `import.test.js` — parser real do P&L, anos dinâmicos e indicadores oficiais.
 - `kpi-data-quality.test.js` — GOP, ADR, ocupação, custos e validações.
 - `operations-center.test.js` — prioridades, risco, oportunidades e ligação às ações.

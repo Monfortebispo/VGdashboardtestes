@@ -1,97 +1,107 @@
-# Arquitetura — VG Dashboard v15
+# Arquitetura — VG Dashboard v27
 
-## Camadas principais
+## Workflow de Aprovações
 
-- `assets/js/core/` — importação, KPIs canónicos, persistência e bootstrap.
-- `assets/js/auth/` — cliente de autenticação.
-- `assets/js/modules/` — módulos funcionais.
-- `assets/js/ui/` — navegação e componentes transversais.
-- `assets/css/mobile-pwa.css` — camada responsiva PWA, sem alterar o desktop.
-- `assets/js/ui/mobile-pwa.js` — navegação mobile, instalação e sincronização.
-- `manifest.webmanifest` — metadados de instalação.
-- `service-worker.js` — app shell offline, sem cache de API.
-- `netlify/functions/` — autenticação, permissões e armazenamento partilhado.
-- `tests/` — regressão automática antes do deploy.
+A V27 acrescenta um fluxo formal de pedidos e decisões sobre a arquitetura já existente de autenticação, Netlify Functions e Netlify Blobs.
 
-## PWA / Mobile
+Frontend:
 
-A PWA não é uma segunda aplicação. Desktop e mobile usam o mesmo `index.html`, os mesmos módulos e os mesmos endpoints. A mudança é responsiva e ativada até 820 px.
+- `assets/js/modules/workflow-approvals-v27.js`
+- `assets/css/workflow-approvals-v27.css`
+- vista `#view-approvals`
+- API `VG.approvals`
 
-### `assets/js/ui/mobile-pwa.js`
+Backend:
 
-Responsabilidades:
+- `ops-approvals` — lista pedidos visíveis ao utilizador autenticado;
+- `ops-approval-save` — cria ou atualiza pedidos pendentes;
+- `ops-approval-decide` — aprova/rejeita, reservado à Direção;
+- `ops-approval-cancel` — cancela pedidos ainda pendentes.
 
-- criar a navegação inferior móvel;
-- criar o bottom sheet `Mais`;
-- abrir a Gestão de Ações existente;
-- chamar `setView()` para os módulos existentes;
-- executar a sincronização através de `fetchSharedData()`;
-- mostrar ações em atraso na barra inferior;
-- gerir `beforeinstallprompt`/instalação;
-- registar o service worker.
+Os Blobs `ops-approval/<id>` não podem ser alterados pela API genérica.
 
-Não contém fórmulas financeiras nem persiste datasets.
+## Estados e tipos
 
-### `assets/css/mobile-pwa.css`
+Estados:
 
-Responsabilidades:
+```text
+pending
+approved
+rejected
+cancelled
+```
 
-- adaptar Central, Ações, Forecast e Anomalias;
-- evitar scroll horizontal da página;
-- manter tabelas pesadas dentro de wrappers próprios;
-- respeitar `safe-area` de equipamentos móveis;
-- transformar modais de Ações em bottom sheets;
-- esconder a navegação móvel no desktop.
+Tipos:
 
-## Service worker
+```text
+target
+configuration
+operational
+exception
+document
+decision
+```
 
-`service-worker.js` usa a cache `vg-operations-shell-v15`.
+Prioridades:
 
-Estratégia:
+```text
+normal
+high
+critical
+```
 
-- precache da app shell estática;
-- navegação: network-first com fallback para `index.html`;
-- assets locais: cache-first + atualização em background;
-- `/.netlify/*`: network-only;
-- `/netlify/functions/*`: network-only;
-- métodos diferentes de GET: nunca intercetados para cache;
-- recursos CDN: network-only.
+## Âmbito e permissões
 
-Isto separa explicitamente disponibilidade offline da interface e armazenamento dos dados de negócio.
+- Diretor/Assistente: pode submeter pedidos para o hotel associado à conta.
+- Direção/Admin: pode submeter pedidos para qualquer hotel.
+- Apenas Direção/Admin pode aprovar ou rejeitar.
+- Quando existe um aprovador específico, outro utilizador da Direção não pode decidir esse pedido.
+- Um pedido pendente pode ser editado pelo requerente ou pela Direção.
+- Alterações concorrentes são rejeitadas através de `expectedUpdatedAt`.
 
-## Segurança das Ações
+## Segregação de funções
 
-`dashboard-sessao.js` mantém a validação server-side. Na v15, `nextIsoTimestamp()` garante que o token de concorrência `updatedAt` avança pelo menos 1 ms em relação à versão anterior, mesmo quando duas operações acontecem dentro do mesmo milissegundo.
+A autoaprovação não é tratada como uma aprovação normal.
 
-## Módulos anteriores
+Quando o requerente pertence à Direção e tenta decidir o próprio pedido, o servidor exige:
 
-As arquiteturas v8–v13 mantêm-se: Ações, Metas & Regras, Centro de Dados, Benchmarking, Forecast & Cenários e Deteção de Anomalias continuam a usar os mesmos objetos `VG.*` e os KPIs canónicos.
+- `overrideSelf=true`;
+- justificação com pelo menos 20 caracteres;
+- registo `selfApprovalException=true`;
+- evento crítico na Auditoria & Governação.
 
+Isto permite uma exceção operacional sem esconder a quebra de segregação de funções.
 
-## V16 — Auditoria & Governação
+## Associações
 
-- `assets/js/modules/audit-governance.js`: interface, filtros, detalhe antes/depois e exportação CSV.
-- `assets/css/audit-governance.css`: apresentação desktop/mobile da governação.
-- `netlify/functions/dashboard-sessao.js`: eventos `_audit-event/*` gerados server-side; o browser não escolhe a identidade registada.
-- `tests/governance.test.js`: permissões, diferenças, categorias e ausência de credenciais no trilho.
+Um pedido pode ser ligado a:
 
-A auditoria é não bloqueante: uma indisponibilidade isolada ao escrever um evento não deve impedir a operação principal. Os eventos críticos são sempre derivados de operações já autorizadas no servidor.
+```text
+hotel
+ops-action/<id>
+ops-agenda/<id>
+ops-doc-meta/<id>
+meta/regra em texto
+```
 
+O backend valida que Ações, Agenda e Documentos pertencem ao mesmo hotel.
 
-## v17 — Backup & Recuperação
+A V26 foi também estendida para que um documento possa ser associado a um pedido de aprovação.
 
-A recuperação é implementada na função `netlify/functions/dashboard-sessao.js` e exposta apenas através dos endpoints autenticados `recovery-list`, `recovery-create`, `recovery-restore` e `recovery-delete`. Os payloads internos usam os prefixos `_recovery-snapshot/` e `_recovery-data/`, que continuam bloqueados pela regra geral que impede acesso a recursos iniciados por `_`.
+## Auditoria, notificações e pesquisa
 
-Cada blob operacional é copiado individualmente para uma chave interna de backup. O manifesto guarda apenas metadados, a chave original, a chave da cópia e o tamanho. Esta abordagem evita concentrar todo o estado num único objeto grande e permite restaurar exatamente as chaves que existiam na versão capturada.
+- submissão, atualização, aprovação, rejeição e cancelamento entram no trilho V16;
+- autoaprovações excecionais ficam marcadas como críticas;
+- V21 gera notificações de pedidos pendentes para a Direção e decisões recentes para o requerente;
+- V19 indexa pedidos no `Ctrl+K`;
+- mobile/PWA expõe `Aprovações` em `Decidir e agir`.
 
-A reposição é global para o estado operacional recuperável: primeiro carrega todos os payloads da cópia para garantir integridade, depois cria um snapshot automático do estado atual, elimina as chaves operacionais existentes e reidrata a versão escolhida. Segurança/autenticação e auditoria não fazem parte deste domínio de rollback.
+## Backup & Recuperação
 
-Frontend: `assets/js/modules/backup-recovery.js` e `assets/css/backup-recovery.css`.
+`ops-approval/` passa a ser uma chave de negócio recuperável pela V17. Os snapshots V27 guardam `appVersion: "27"`.
 
+## PWA
 
-## V18 — Performance
+Shell estático atualizado para `vg-operations-shell-v27`.
 
-- `assets/js/core/05-performance.js`: scheduling idle, métricas, XLSX lazy e lifecycle de gráficos.
-- Os scripts externos usam `defer`, mantendo ordem e permitindo download paralelo.
-- Reputação, Agenda, Hotéis, Ocupação, Instagram e Receitas Detalhe só renderizam quando a vista é aberta.
-- O service worker usa pré-cache concorrente em lotes e mantém APIs/Blobs network-only.
+Apenas HTML/CSS/JS/ícones são cacheados. Pedidos, decisões e restantes dados operacionais continuam `network-only`.

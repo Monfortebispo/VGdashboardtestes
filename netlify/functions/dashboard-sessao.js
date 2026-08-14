@@ -21,6 +21,11 @@ const USER_CACHE_MS = 30 * 1000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 8;
 const ACTION_PREFIX = "ops-action/";
+const AGENDA_PREFIX = "ops-agenda/";
+const DOCUMENT_META_PREFIX = "ops-doc-meta/";
+const DOCUMENT_DATA_PREFIX = "ops-doc-data/";
+const APPROVAL_PREFIX = "ops-approval/";
+const DOCUMENT_MAX_BYTES = 3.5 * 1024 * 1024;
 const DATA_IMPORT_PREFIX = "_data-import/";
 const DATA_BACKUP_PREFIX = "_data-backup/";
 const DATA_HISTORY_LIMIT = 250;
@@ -29,6 +34,14 @@ const RECOVERY_SNAPSHOT_PREFIX = "_recovery-snapshot/";
 const RECOVERY_DATA_PREFIX = "_recovery-data/";
 const RECOVERY_MAX_SNAPSHOTS = 20;
 const ACTION_STATUSES = new Set(["open", "progress", "waiting", "resolved"]);
+const AGENDA_TYPES = new Set(["audit", "visit", "meeting", "deadline", "operational", "other"]);
+const DOCUMENT_CATEGORIES = new Set(["report", "audit", "minutes", "procedure", "evidence", "other"]);
+const DOCUMENT_LINK_TYPES = new Set(["hotel", "action", "agenda", "approval"]);
+const APPROVAL_TYPES = new Set(["target", "configuration", "operational", "exception", "document", "decision"]);
+const APPROVAL_PRIORITIES = new Set(["normal", "high", "critical"]);
+const APPROVAL_STATUSES = new Set(["pending", "approved", "rejected", "cancelled"]);
+const APPROVAL_LINK_TYPES = new Set(["hotel", "action", "document", "agenda", "target"]);
+const DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx", "csv", "png", "jpg", "jpeg", "webp", "txt"]);
 
 const HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -75,6 +88,12 @@ function nextIsoTimestamp(previous) {
   return new Date(Number.isFinite(prev) && now <= prev ? prev + 1 : now).toISOString();
 }
 function actionBlobKey(id) { return ACTION_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function agendaBlobKey(id) { return AGENDA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function documentMetaBlobKey(id) { return DOCUMENT_META_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function documentDataBlobKey(id) { return DOCUMENT_DATA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function approvalBlobKey(id) { return APPROVAL_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function documentExt(name) { const p=String(name||"").toLowerCase().split("."); return p.length>1?p.pop():""; }
+function safeDocumentFileName(name) { return cleanText(String(name||"").replace(/[\/\\<>:\"|?*\x00-\x1F]/g,"_"), 240); }
 function canManageHotel(user, hotel) {
   if (isDirection(user)) return true;
   return !!user && norm(hotel) === norm(user.hotel);
@@ -94,6 +113,110 @@ async function listOperationalActions(store) {
   }));
   return rows.filter(x => x && x.id).sort((a,b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
 }
+async function listOperationalAgenda(store) {
+  const listing = await store.list({ prefix: AGENDA_PREFIX });
+  const blobs = (listing && Array.isArray(listing.blobs)) ? listing.blobs : [];
+  const rows = await Promise.all(blobs.map(async (entry) => {
+    try { return await store.get(entry.key, { type: "json" }); } catch (e) { return null; }
+  }));
+  return rows.filter(x => x && x.id).sort((a,b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.startTime || "").localeCompare(String(b.startTime || "")));
+}
+function canSeeAgendaEvent(user, item) {
+  if (!user || !item) return false;
+  if (isDirection(user)) return true;
+  return norm(item.hotel) === norm(user.hotel) || safeUserName(item.ownerUser) === safeUserName(user.user);
+}
+function canManageAgendaEvent(user, item) { return canSeeAgendaEvent(user, item); }
+async function listOperationalDocuments(store) {
+  const listing = await store.list({ prefix: DOCUMENT_META_PREFIX });
+  const blobs = listing && Array.isArray(listing.blobs) ? listing.blobs : [];
+  const rows = await Promise.all(blobs.map(async entry => {
+    try { return await store.get(entry.key, { type:"json" }); } catch (e) { return null; }
+  }));
+  return rows.filter(x=>x&&x.id).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
+}
+function canSeeDocument(user,item) { if(!user||!item)return false; return isDirection(user)||norm(item.hotel)===norm(user.hotel); }
+function canManageDocument(user,item) { return canSeeDocument(user,item); }
+async function documentLinkLabel(store, linkType, linkId, hotel) {
+  if (linkType === "hotel") return cleanText(hotel,120);
+  if (linkType === "action") {
+    const a = await store.get(actionBlobKey(linkId), { type:"json" });
+    if (!a) throw new Error("Ação associada não encontrada.");
+    if (norm(a.hotel)!==norm(hotel)) throw new Error("A ação associada pertence a outro hotel.");
+    return cleanText(a.sourceTitle||a.title||linkId,240);
+  }
+  if (linkType === "agenda") {
+    const e = await store.get(agendaBlobKey(linkId), { type:"json" });
+    if (!e) throw new Error("Evento associado não encontrado.");
+    if (norm(e.hotel)!==norm(hotel)) throw new Error("O evento associado pertence a outro hotel.");
+    return cleanText([e.title,e.date].filter(Boolean).join(" · "),240);
+  }
+  if (linkType === "approval") {
+    const a = await store.get(approvalBlobKey(linkId), { type:"json" });
+    if (!a) throw new Error("Pedido de aprovação associado não encontrado.");
+    if (norm(a.hotel)!==norm(hotel)) throw new Error("O pedido de aprovação associado pertence a outro hotel.");
+    return cleanText([a.title,a.status].filter(Boolean).join(" · "),240);
+  }
+  return "";
+}
+function documentHistoryEntry(user,type,detail){ return {ts:new Date().toISOString(),type,detail:cleanText(detail,1200),user:user.user,name:user.name}; }
+
+async function listOperationalApprovals(store) {
+  const listing = await store.list({ prefix: APPROVAL_PREFIX });
+  const blobs = listing && Array.isArray(listing.blobs) ? listing.blobs : [];
+  const rows = await Promise.all(blobs.map(async entry => {
+    try { return await store.get(entry.key, { type:"json" }); } catch (e) { return null; }
+  }));
+  return rows.filter(x=>x&&x.id).sort((a,b)=>{
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (b.status === "pending" && a.status !== "pending") return 1;
+    const rank={critical:3,high:2,normal:1};
+    return (rank[b.priority]||0)-(rank[a.priority]||0) || String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||""));
+  });
+}
+function canSeeApproval(user,item) {
+  if (!user || !item) return false;
+  if (isDirection(user)) return true;
+  return norm(item.hotel) === norm(user.hotel) || safeUserName(item.requesterUser) === safeUserName(user.user) || safeUserName(item.approverUser) === safeUserName(user.user);
+}
+function canEditApproval(user,item) {
+  if (!user || !item || item.status !== "pending") return false;
+  return isDirection(user) || safeUserName(item.requesterUser) === safeUserName(user.user);
+}
+function canCancelApproval(user,item) { return canEditApproval(user,item); }
+function canDecideApproval(user,item) {
+  if (!isDirection(user) || !item || item.status !== "pending") return false;
+  const explicit = safeUserName(item.approverUser);
+  return !explicit || explicit === safeUserName(user.user);
+}
+async function approvalLinkLabel(store, linkType, linkId, hotel) {
+  if (linkType === "hotel") return cleanText(hotel,120);
+  if (linkType === "target") return cleanText(linkId,240);
+  if (linkType === "action") {
+    const a=await store.get(actionBlobKey(linkId),{type:"json"});
+    if(!a) throw new Error("Ação associada não encontrada.");
+    if(norm(a.hotel)!==norm(hotel)) throw new Error("A ação associada pertence a outro hotel.");
+    return cleanText(a.sourceTitle||a.title||linkId,240);
+  }
+  if (linkType === "agenda") {
+    const e=await store.get(agendaBlobKey(linkId),{type:"json"});
+    if(!e) throw new Error("Evento associado não encontrado.");
+    if(norm(e.hotel)!==norm(hotel)) throw new Error("O evento associado pertence a outro hotel.");
+    return cleanText([e.title,e.date].filter(Boolean).join(" · "),240);
+  }
+  if (linkType === "document") {
+    const d=await store.get(documentMetaBlobKey(linkId),{type:"json"});
+    if(!d) throw new Error("Documento associado não encontrado.");
+    if(norm(d.hotel)!==norm(hotel)) throw new Error("O documento associado pertence a outro hotel.");
+    return cleanText(d.title||d.fileName||linkId,240);
+  }
+  return "";
+}
+function approvalHistoryEntry(user,type,detail,extra={}) {
+  return Object.assign({ts:new Date().toISOString(),type,detail:cleanText(detail,1600),user:user.user,name:user.name},extra);
+}
+function validTimeOnly(v) { return !v || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v)); }
+function agendaHistoryEntry(user, type, detail) { return { ts:new Date().toISOString(), type, detail:cleanText(detail,1200), user:user.user, name:user.name }; }
 function actionHistoryEntry(user, type, detail, extra = {}) {
   return Object.assign({
     ts: new Date().toISOString(),
@@ -131,7 +254,7 @@ function recoveryDataKey(id, idx) { return RECOVERY_DATA_PREFIX + String(id || "
 function isRecoverableBusinessKey(key) {
   const k = String(key || "");
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
-  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/"].some(p => k.startsWith(p));
+  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
   const k=String(key||"");
@@ -140,6 +263,9 @@ function recoveryCategoryForKey(key) {
   if (k === "targets-rules" || k.startsWith("settings-")) return "Configuração";
   if (k.startsWith("hotelsheet-")) return "Ficha do Hotel";
   if (k.startsWith("ops-action/")) return "Ações";
+  if (k.startsWith("ops-agenda/")) return "Agenda";
+  if (k.startsWith("ops-doc-meta/") || k.startsWith("ops-doc-data/")) return "Documentos";
+  if (k.startsWith("ops-approval/")) return "Aprovações";
   if (k.startsWith("mesacum-")) return "P&L acumulado";
   if (k.startsWith("mes-")) return "P&L mensal";
   if (k.startsWith("hotelxlsx-")) return "Fichas técnicas";
@@ -207,7 +333,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"17"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"27"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -773,6 +899,253 @@ exports.handler = async (event) => {
     }
     if (["assignees","ops-actions","ops-action-save"].includes(resource)) return response(405, { error: "Método não permitido." });
     if (resource.startsWith("ops-action/")) return forbidden("As ações só podem ser acedidas pelos endpoints próprios.");
+
+    // -------------------- AGENDA OPERACIONAL (v22) --------------------
+    if (resource === "ops-agenda" && event.httpMethod === "GET") {
+      const rows = (await listOperationalAgenda(store)).filter(x => canSeeAgendaEvent(authUser, x));
+      return ok({ data: rows, total: rows.length, updatedAt: new Date().toISOString() });
+    }
+    if (resource === "ops-agenda-save" && event.httpMethod === "POST") {
+      if (bodySizeOf(event) > 192 * 1024) return tooLarge("O evento excede o tamanho permitido.");
+      const payload = parseBody(event);
+      if (!payload || typeof payload !== "object") return badRequest("Evento inválido.");
+      const id = cleanText(payload.id, 80).replace(/[^a-zA-Z0-9_.-]/g, "");
+      let existing = id ? await store.get(agendaBlobKey(id), { type:"json" }) : null;
+      const hotel = cleanText(payload.hotel || existing?.hotel, 120);
+      if (!hotel) return badRequest("Hotel obrigatório.");
+      if (existing) {
+        if (!canManageAgendaEvent(authUser, existing)) return forbidden("Não pode alterar este evento.");
+        if (!isDirection(authUser) && norm(hotel) !== norm(existing.hotel)) return forbidden("Um Diretor não pode transferir um evento para outro hotel.");
+        if (payload.expectedUpdatedAt && existing.updatedAt && String(payload.expectedUpdatedAt) !== String(existing.updatedAt)) {
+          return conflict("Este evento foi alterado por outro utilizador. Reabra-o para ver a versão mais recente.", { data: existing });
+        }
+      } else if (!canManageHotel(authUser, hotel)) {
+        return forbidden("Só pode criar eventos para o hotel associado à sua conta.");
+      }
+      const title = cleanText(payload.title !== undefined ? payload.title : existing?.title, 240);
+      if (!title) return badRequest("Título obrigatório.");
+      const type = cleanText(payload.type !== undefined ? payload.type : existing?.type || "operational", 30) || "operational";
+      if (!AGENDA_TYPES.has(type)) return badRequest("Tipo de evento inválido.");
+      const date = cleanText(payload.date !== undefined ? payload.date : existing?.date, 10);
+      if (!date || !validDateOnly(date)) return badRequest("Data inválida.");
+      const startTime = cleanText(payload.startTime !== undefined ? payload.startTime : existing?.startTime, 5);
+      const endTime = cleanText(payload.endTime !== undefined ? payload.endTime : existing?.endTime, 5);
+      if (!validTimeOnly(startTime) || !validTimeOnly(endTime)) return badRequest("Hora inválida.");
+      if (startTime && endTime && endTime < startTime) return badRequest("A hora de fim não pode ser anterior à hora de início.");
+      const users = await loadUsers(store, true);
+      const ownerUser = safeUserName(payload.ownerUser !== undefined ? payload.ownerUser : existing?.ownerUser);
+      let ownerName = "";
+      if (ownerUser) {
+        const owner = users[ownerUser];
+        if (!owner || owner.active === false) return badRequest("Responsável inválido ou inativo.");
+        if (!isDirection(authUser) && ownerUser !== authUser.user && norm(owner.hotel) !== norm(hotel)) return forbidden("Um Diretor só pode atribuir o evento a si próprio ou a alguém do mesmo hotel.");
+        ownerName = owner.name || ownerUser;
+      }
+      const now = nextIsoTimestamp(existing?.updatedAt);
+      const item = existing ? Object.assign({}, existing) : {
+        id:"evt_" + Date.now().toString(36) + "_" + crypto.randomBytes(5).toString("hex"),
+        createdAt:now, createdBy:{user:authUser.user,name:authUser.name}, history:[]
+      };
+      const before = existing ? {hotel:existing.hotel||"",title:existing.title||"",type:existing.type||"",date:existing.date||"",startTime:existing.startTime||"",endTime:existing.endTime||"",ownerUser:existing.ownerUser||""} : null;
+      item.hotel=hotel; item.title=title; item.type=type; item.date=date; item.startTime=startTime; item.endTime=endTime; item.allDay=!startTime;
+      item.notes=cleanText(payload.notes !== undefined ? payload.notes : existing?.notes, 2400);
+      item.ownerUser=ownerUser; item.ownerName=ownerName; item.updatedAt=now; item.updatedBy={user:authUser.user,name:authUser.name};
+      if (!Array.isArray(item.history)) item.history=[];
+      if (!existing) item.history.push(agendaHistoryEntry(authUser,"created","Evento criado."));
+      else {
+        const changes=[];
+        if (before.hotel!==hotel) changes.push(`Hotel: ${before.hotel} → ${hotel}`);
+        if (before.title!==title) changes.push(`Título: ${before.title} → ${title}`);
+        if (before.type!==type) changes.push(`Tipo: ${before.type} → ${type}`);
+        if (before.date!==date || before.startTime!==startTime || before.endTime!==endTime) changes.push(`Data/hora: ${before.date} ${before.startTime||""} → ${date} ${startTime||""}`);
+        if (before.ownerUser!==ownerUser) changes.push(`Responsável: ${before.ownerUser||"sem responsável"} → ${ownerUser||"sem responsável"}`);
+        if (changes.length) item.history.push(agendaHistoryEntry(authUser,"updated",changes.join(" · ")));
+      }
+      item.history=item.history.slice(-100);
+      await store.setJSON(agendaBlobKey(item.id), item);
+      await safeGovernanceAudit(store, authUser, {
+        category:"Agenda", action:existing ? "Evento operacional atualizado" : "Evento operacional criado", resource:"ops-agenda", key:item.id, hotel:item.hotel,
+        detail:[item.title, item.date, item.startTime].filter(Boolean).join(" · "), severity:"info", before,
+        after:{hotel:item.hotel,title:item.title,type:item.type,date:item.date,startTime:item.startTime,endTime:item.endTime,ownerUser:item.ownerUser||""}
+      });
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-agenda-delete" && event.httpMethod === "POST") {
+      const payload=parseBody(event); if(!payload||typeof payload!=="object") return badRequest("Pedido inválido.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id) return badRequest("Evento obrigatório.");
+      const existing=await store.get(agendaBlobKey(id),{type:"json"}); if(!existing) return badRequest("Evento não encontrado.");
+      if(!canManageAgendaEvent(authUser,existing)) return forbidden("Não pode eliminar este evento.");
+      if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt)) return conflict("Este evento foi alterado por outro utilizador. Reabra-o antes de eliminar.",{data:existing});
+      await store.delete(agendaBlobKey(id));
+      await safeGovernanceAudit(store,authUser,{category:"Agenda",action:"Evento operacional eliminado",resource:"ops-agenda",key:id,hotel:existing.hotel,detail:[existing.title,existing.date].filter(Boolean).join(" · "),severity:"warning",before:{hotel:existing.hotel,title:existing.title,type:existing.type,date:existing.date,startTime:existing.startTime||"",ownerUser:existing.ownerUser||""},after:null});
+      return ok({ok:true,id});
+    }
+    if (["ops-agenda","ops-agenda-save","ops-agenda-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (resource.startsWith("ops-agenda/")) return forbidden("A agenda só pode ser acedida pelos endpoints próprios.");
+
+    // -------------------- GESTÃO DE DOCUMENTOS (v26) --------------------
+    if (resource === "ops-documents" && event.httpMethod === "GET") {
+      const rows = (await listOperationalDocuments(store)).filter(x=>canSeeDocument(authUser,x));
+      return ok({data:rows,total:rows.length,updatedAt:new Date().toISOString()});
+    }
+    if (resource === "ops-document-file" && event.httpMethod === "GET") {
+      const id=cleanText(key,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id)return badRequest("Documento obrigatório.");
+      const meta=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!meta)return response(404,{error:"Documento não encontrado."});
+      if(!canSeeDocument(authUser,meta))return forbidden("Sem acesso a este documento.");
+      const contentBase64=await store.get(documentDataBlobKey(id),{type:"text",consistency:"strong"}); if(!contentBase64)return response(404,{error:"Conteúdo do documento indisponível."});
+      return ok({data:{id:meta.id,fileName:meta.fileName,mime:meta.mime,size:meta.size,contentBase64}});
+    }
+    if (resource === "ops-document-save" && event.httpMethod === "POST") {
+      if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("O documento excede o limite do endpoint. Máximo recomendado: 3,5 MB.");
+      const payload=parseBody(event); if(!payload||typeof payload!=="object")return badRequest("Documento inválido.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
+      let existing=id?await store.get(documentMetaBlobKey(id),{type:"json"}):null;
+      const hotel=cleanText(payload.hotel!==undefined?payload.hotel:existing?.hotel,120); if(!hotel)return badRequest("Hotel obrigatório.");
+      if(existing){
+        if(!canManageDocument(authUser,existing))return forbidden("Não pode alterar este documento.");
+        if(!isDirection(authUser)&&norm(hotel)!==norm(existing.hotel))return forbidden("Um Diretor não pode transferir documentos para outro hotel.");
+        if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt))return conflict("Este documento foi alterado por outro utilizador. Reabra-o para ver a versão mais recente.",{data:existing});
+      } else if(!canManageHotel(authUser,hotel)) return forbidden("Só pode adicionar documentos ao hotel associado à sua conta.");
+      const title=cleanText(payload.title!==undefined?payload.title:existing?.title,240); if(!title)return badRequest("Título obrigatório.");
+      const category=cleanText(payload.category!==undefined?payload.category:existing?.category||"other",30)||"other"; if(!DOCUMENT_CATEGORIES.has(category))return badRequest("Categoria inválida.");
+      const linkType=cleanText(payload.linkType!==undefined?payload.linkType:existing?.linkType||"hotel",20)||"hotel"; if(!DOCUMENT_LINK_TYPES.has(linkType))return badRequest("Tipo de associação inválido.");
+      const linkId=linkType==="hotel"?"":cleanText(payload.linkId!==undefined?payload.linkId:existing?.linkId,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(linkType!=="hotel"&&!linkId)return badRequest("Referência associada obrigatória.");
+      let linkLabel=""; try{linkLabel=await documentLinkLabel(store,linkType,linkId,hotel);}catch(e){return badRequest(e.message||"Referência associada inválida.");}
+      const replacing=typeof payload.contentBase64==="string"&&payload.contentBase64.length>0;
+      let fileName=existing?.fileName||"",mime=existing?.mime||"application/octet-stream",size=Number(existing?.size||0)||0,decoded=null;
+      if(!existing&&!replacing)return badRequest("Ficheiro obrigatório.");
+      if(replacing){
+        fileName=safeDocumentFileName(payload.fileName); const ext=documentExt(fileName); if(!fileName||!DOCUMENT_EXTENSIONS.has(ext))return badRequest("Formato de ficheiro não permitido.");
+        mime=cleanText(payload.mime||"application/octet-stream",120); size=Number(payload.size||0)||0;
+        try{decoded=Buffer.from(payload.contentBase64,"base64");}catch(e){return badRequest("Conteúdo do ficheiro inválido.");}
+        if(!decoded.length||decoded.length>DOCUMENT_MAX_BYTES||size>DOCUMENT_MAX_BYTES)return tooLarge("O ficheiro excede 3,5 MB.");
+        if(size&&Math.abs(decoded.length-size)>4)return badRequest("Tamanho do ficheiro inconsistente."); size=decoded.length;
+      }
+      const now=nextIsoTimestamp(existing?.updatedAt); const item=existing?Object.assign({},existing):{id:"doc_"+Date.now().toString(36)+"_"+crypto.randomBytes(5).toString("hex"),createdAt:now,createdBy:{user:authUser.user,name:authUser.name},history:[]};
+      const before=existing?{hotel:existing.hotel,title:existing.title,category:existing.category,linkType:existing.linkType,linkId:existing.linkId,fileName:existing.fileName,size:existing.size}:null;
+      item.hotel=hotel;item.title=title;item.category=category;item.linkType=linkType;item.linkId=linkId;item.linkLabel=linkLabel;item.tags=cleanText(payload.tags!==undefined?payload.tags:existing?.tags,300);item.description=cleanText(payload.description!==undefined?payload.description:existing?.description,1200);item.fileName=fileName;item.mime=mime;item.size=size;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      if(!Array.isArray(item.history))item.history=[];
+      if(!existing)item.history.push(documentHistoryEntry(authUser,"created","Documento criado.")); else { const changes=[]; if(before.title!==title)changes.push("Título alterado");if(before.category!==category)changes.push("Categoria alterada");if(before.linkType!==linkType||before.linkId!==linkId)changes.push("Associação alterada");if(replacing)changes.push("Ficheiro substituído");if(changes.length)item.history.push(documentHistoryEntry(authUser,"updated",changes.join(" · "))); }
+      item.history=item.history.slice(-100);
+      if(replacing)await store.set(documentDataBlobKey(item.id),payload.contentBase64);
+      await store.setJSON(documentMetaBlobKey(item.id),item);
+      await safeGovernanceAudit(store,authUser,{category:"Documentos",action:existing?"Documento atualizado":"Documento adicionado",resource:"ops-document",key:item.id,hotel:item.hotel,detail:[item.title,item.fileName,item.linkLabel].filter(Boolean).join(" · "),severity:"info",before,after:{hotel:item.hotel,title:item.title,category:item.category,linkType:item.linkType,linkId:item.linkId,fileName:item.fileName,size:item.size},meta:{mime:item.mime,replacedFile:replacing}});
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-document-delete" && event.httpMethod === "POST") {
+      const payload=parseBody(event); if(!payload||typeof payload!=="object")return badRequest("Pedido inválido.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id)return badRequest("Documento obrigatório.");
+      const existing=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!existing)return badRequest("Documento não encontrado.");
+      if(!canManageDocument(authUser,existing))return forbidden("Não pode eliminar este documento.");
+      if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt))return conflict("Este documento foi alterado por outro utilizador. Reabra-o antes de eliminar.",{data:existing});
+      await store.delete(documentMetaBlobKey(id)); await store.delete(documentDataBlobKey(id));
+      await safeGovernanceAudit(store,authUser,{category:"Documentos",action:"Documento eliminado",resource:"ops-document",key:id,hotel:existing.hotel,detail:[existing.title,existing.fileName].filter(Boolean).join(" · "),severity:"warning",before:{hotel:existing.hotel,title:existing.title,category:existing.category,fileName:existing.fileName,size:existing.size},after:null});
+      return ok({ok:true,id});
+    }
+    if (["ops-documents","ops-document-file","ops-document-save","ops-document-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (resource.startsWith("ops-doc-meta/")||resource.startsWith("ops-doc-data/")) return forbidden("Os documentos só podem ser acedidos pelos endpoints próprios.");
+
+
+    // -------------------- WORKFLOW DE APROVAÇÕES (v27) --------------------
+    if (resource === "ops-approvals" && event.httpMethod === "GET") {
+      const rows = await listOperationalApprovals(store);
+      const visible = rows.filter(x=>canSeeApproval(authUser,x));
+      return ok({ data:visible, total:visible.length, updatedAt:new Date().toISOString() });
+    }
+    if (resource === "ops-approval-save" && event.httpMethod === "POST") {
+      if (bodySizeOf(event) > 256 * 1024) return tooLarge("O pedido de aprovação excede o tamanho permitido.");
+      const payload=parseBody(event);
+      if(!payload||typeof payload!=="object") return badRequest("Pedido de aprovação inválido.");
+      const rawId=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
+      const existing=rawId?await store.get(approvalBlobKey(rawId),{type:"json"}):null;
+      if(existing){
+        if(!canEditApproval(authUser,existing)) return forbidden("Não pode editar este pedido.");
+        if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt)) return conflict("Este pedido foi alterado por outro utilizador. Reabra-o para ver a versão mais recente.",{data:existing});
+      }
+      const hotel=cleanText(payload.hotel||existing?.hotel,120);
+      if(!hotel) return badRequest("Hotel obrigatório.");
+      if(!existing&&!canManageHotel(authUser,hotel)) return forbidden("Só pode criar pedidos para o hotel associado à sua conta.");
+      if(existing&&norm(existing.hotel)!==norm(hotel)&&!isDirection(authUser)) return forbidden("Não pode transferir o pedido para outro hotel.");
+      const type=cleanText(payload.type!==undefined?payload.type:existing?.type||"operational",30);
+      const priority=cleanText(payload.priority!==undefined?payload.priority:existing?.priority||"normal",20);
+      const title=cleanText(payload.title!==undefined?payload.title:existing?.title,240);
+      const description=cleanText(payload.description!==undefined?payload.description:existing?.description,3000);
+      const dueDate=cleanText(payload.dueDate!==undefined?payload.dueDate:existing?.dueDate,10);
+      const linkType=cleanText(payload.linkType!==undefined?payload.linkType:existing?.linkType||"hotel",20);
+      const linkId=cleanText(payload.linkId!==undefined?payload.linkId:existing?.linkId,240);
+      if(!APPROVAL_TYPES.has(type)) return badRequest("Tipo de aprovação inválido.");
+      if(!APPROVAL_PRIORITIES.has(priority)) return badRequest("Prioridade inválida.");
+      if(!title||!description) return badRequest("Título e justificação são obrigatórios.");
+      if(!validDateOnly(dueDate)) return badRequest("Data limite inválida.");
+      if(!APPROVAL_LINK_TYPES.has(linkType)) return badRequest("Tipo de associação inválido.");
+      if(linkType!=="hotel"&&!linkId) return badRequest("Referência associada obrigatória.");
+      let linkLabel="";
+      try{linkLabel=await approvalLinkLabel(store,linkType,linkId,hotel);}catch(e){return badRequest(e.message||"Referência associada inválida.");}
+
+      const users=await loadUsers(store,true);
+      const approverUser=safeUserName(payload.approverUser!==undefined?payload.approverUser:existing?.approverUser);
+      let approverName="";
+      if(approverUser){
+        const ap=users[approverUser];
+        if(!ap||ap.active===false||!isDirection(ap)) return badRequest("O aprovador tem de ser um utilizador ativo da Direção.");
+        approverName=ap.name||ap.user;
+      }
+      const now=nextIsoTimestamp(existing?.updatedAt);
+      const item=existing?Object.assign({},existing):{
+        id:"apr_"+Date.now().toString(36)+"_"+crypto.randomBytes(5).toString("hex"),
+        status:"pending",createdAt:now,requesterUser:authUser.user,requesterName:authUser.name,
+        createdBy:{user:authUser.user,name:authUser.name},history:[]
+      };
+      const before=existing?{hotel:existing.hotel,type:existing.type,priority:existing.priority,title:existing.title,dueDate:existing.dueDate||"",approverUser:existing.approverUser||"",linkType:existing.linkType||"hotel",linkId:existing.linkId||""}:null;
+      item.hotel=hotel;item.type=type;item.priority=priority;item.title=title;item.description=description;item.dueDate=dueDate;item.approverUser=approverUser;item.approverName=approverName;item.linkType=linkType;item.linkId=linkType==="hotel"?"":linkId;item.linkLabel=linkLabel;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      if(!Array.isArray(item.history)) item.history=[];
+      item.history.push(approvalHistoryEntry(authUser,existing?"updated":"submitted",existing?"Pedido atualizado.":"Pedido submetido para decisão."));
+      item.history=item.history.slice(-180);
+      await store.setJSON(approvalBlobKey(item.id),item);
+      await safeGovernanceAudit(store,authUser,{category:"Aprovações",action:existing?"Pedido de aprovação atualizado":"Pedido de aprovação submetido",resource:"ops-approval",key:item.id,hotel:item.hotel,detail:[item.title,item.approverName||"Direção",item.priority].filter(Boolean).join(" · "),severity:item.priority==="critical"?"warning":"info",before,after:{hotel:item.hotel,type:item.type,priority:item.priority,title:item.title,dueDate:item.dueDate||"",approverUser:item.approverUser||"",linkType:item.linkType,linkId:item.linkId||""}});
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-approval-decide" && event.httpMethod === "POST") {
+      if(!isDirection(authUser)) return forbidden("A decisão de aprovação está reservada à Direção.");
+      const payload=parseBody(event);if(!payload||typeof payload!=="object") return badRequest("Decisão inválida.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
+      const item=id?await store.get(approvalBlobKey(id),{type:"json"}):null;
+      if(!item) return badRequest("Pedido de aprovação não encontrado.");
+      if(!canDecideApproval(authUser,item)) return forbidden("Este pedido está atribuído a outro aprovador ou já foi decidido.");
+      if(payload.expectedUpdatedAt&&item.updatedAt&&String(payload.expectedUpdatedAt)!==String(item.updatedAt)) return conflict("Este pedido foi alterado por outro utilizador. Reabra-o antes de decidir.",{data:item});
+      const decision=cleanText(payload.decision,20);
+      if(!["approve","reject"].includes(decision)) return badRequest("Decisão inválida.");
+      const note=cleanText(payload.note,2400);
+      if(decision==="reject"&&note.length<5) return badRequest("Indique o motivo da rejeição.");
+      const self=safeUserName(item.requesterUser)===safeUserName(authUser.user);
+      const overrideSelf=payload.overrideSelf===true;
+      if(self&&(!overrideSelf||note.length<20)) return forbidden("A decisão do próprio pedido exige aprovação excecional e justificação detalhada.");
+      const now=nextIsoTimestamp(item.updatedAt);
+      const oldStatus=item.status;
+      item.status=decision==="approve"?"approved":"rejected";
+      item.decisionAt=now;item.decisionBy={user:authUser.user,name:authUser.name};item.decisionNote=note;item.selfApprovalException=!!self;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      if(!Array.isArray(item.history))item.history=[];
+      item.history.push(approvalHistoryEntry(authUser,item.status==="approved"?"approved":"rejected",note|| (item.status==="approved"?"Pedido aprovado.":"Pedido rejeitado."),{selfApprovalException:!!self}));
+      item.history=item.history.slice(-180);
+      await store.setJSON(approvalBlobKey(item.id),item);
+      await safeGovernanceAudit(store,authUser,{category:"Aprovações",action:item.status==="approved"?"Pedido aprovado":"Pedido rejeitado",resource:"ops-approval",key:item.id,hotel:item.hotel,detail:[item.title,note,self?"APROVAÇÃO EXCECIONAL PELO PRÓPRIO REQUERENTE":""].filter(Boolean).join(" · "),severity:self?"critical":(item.status==="rejected"||item.priority==="critical"?"warning":"info"),before:{status:oldStatus},after:{status:item.status,decisionBy:authUser.user,selfApprovalException:!!self},meta:{type:item.type,priority:item.priority}});
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-approval-cancel" && event.httpMethod === "POST") {
+      const payload=parseBody(event);if(!payload||typeof payload!=="object") return badRequest("Pedido inválido.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
+      const item=id?await store.get(approvalBlobKey(id),{type:"json"}):null;
+      if(!item) return badRequest("Pedido de aprovação não encontrado.");
+      if(!canCancelApproval(authUser,item)) return forbidden("Não pode cancelar este pedido.");
+      if(payload.expectedUpdatedAt&&item.updatedAt&&String(payload.expectedUpdatedAt)!==String(item.updatedAt)) return conflict("Este pedido foi alterado por outro utilizador.",{data:item});
+      const now=nextIsoTimestamp(item.updatedAt);item.status="cancelled";item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      if(!Array.isArray(item.history))item.history=[];item.history.push(approvalHistoryEntry(authUser,"cancelled","Pedido cancelado."));item.history=item.history.slice(-180);
+      await store.setJSON(approvalBlobKey(item.id),item);
+      await safeGovernanceAudit(store,authUser,{category:"Aprovações",action:"Pedido de aprovação cancelado",resource:"ops-approval",key:item.id,hotel:item.hotel,detail:item.title,severity:"warning",before:{status:"pending"},after:{status:"cancelled"}});
+      return ok({ok:true,data:item});
+    }
+    if (["ops-approvals","ops-approval-save","ops-approval-decide","ops-approval-cancel"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (resource.startsWith("ops-approval/")) return forbidden("Os pedidos de aprovação só podem ser acedidos pelos endpoints próprios.");
 
     // -------------------- PASSWORD DO PRÓPRIO --------------------
     if (event.httpMethod === "POST" && resource === "auth-change-password") {

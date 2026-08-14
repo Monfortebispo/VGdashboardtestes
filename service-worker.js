@@ -1,6 +1,6 @@
-// VG Operations v18 — service worker
+// VG Operations v27 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v18';
+const CACHE_NAME = 'vg-operations-shell-v27';
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",
   "/assets/css/audit-governance.css",
@@ -14,6 +14,14 @@ const STATIC_ASSETS = [
   "/assets/css/cost-detail.css",
   "/assets/css/data-center.css",
   "/assets/css/forecast-scenarios.css",
+  "/assets/css/global-search.css",
+  "/assets/css/notifications-v21.css",
+  "/assets/css/operational-agenda-v22.css",
+  "/assets/css/hotel-performance-v23.css",
+  "/assets/css/automatic-reports-v24.css",
+  "/assets/css/analytical-assistant-v25.css",
+  "/assets/css/document-management-v26.css",
+  "/assets/css/workflow-approvals-v27.css",
   "/assets/css/forecast-state.css",
   "/assets/css/logo-fix.css",
   "/assets/css/mobile-pwa.css",
@@ -41,6 +49,12 @@ const STATIC_ASSETS = [
   "/assets/js/modules/audit-governance.js",
   "/assets/js/modules/backup-recovery.js",
   "/assets/js/modules/agenda-tempo.js",
+  "/assets/js/modules/operational-agenda-v22.js",
+  "/assets/js/modules/hotel-performance-v23.js",
+  "/assets/js/modules/automatic-reports-v24.js",
+  "/assets/js/modules/analytical-assistant-v25.js",
+  "/assets/js/modules/document-management-v26.js",
+  "/assets/js/modules/workflow-approvals-v27.js",
   "/assets/js/modules/analysis-tools.js",
   "/assets/js/modules/anomaly-detection.js",
   "/assets/js/modules/benchmarking.js",
@@ -65,6 +79,8 @@ const STATIC_ASSETS = [
   "/assets/js/ui/chart-actions.js",
   "/assets/js/ui/context-panel.js",
   "/assets/js/ui/forecast-state.js",
+  "/assets/js/ui/global-search.js",
+  "/assets/js/ui/notifications-v21.js",
   "/assets/js/ui/mobile-pwa.js",
   "/assets/js/ui/navigation-shell.js",
   "/assets/js/ui/operational-tools.js",
@@ -77,7 +93,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    // v18: pré-cache concorrente em pequenos lotes; evita dezenas de pedidos sequenciais.
+    // v27: inclui Pesquisa, Notificações, Agenda, Performance, Relatórios, Assistente, Documentos e Workflow de Aprovações.
     const batchSize=8;
     for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
       const batch=STATIC_ASSETS.slice(i,i+batchSize);

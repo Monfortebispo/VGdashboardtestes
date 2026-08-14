@@ -16,6 +16,7 @@ assert(html.includes('id="view-governance"')&&html.includes('id="nav-governance"
 assert(html.includes('assets/js/modules/audit-governance.js')&&html.includes('assets/css/audit-governance.css'),'os recursos de Auditoria & Governação v16 devem estar ligados ao HTML');
 assert(html.includes('id="view-backup"')&&html.includes('id="nav-backup"')&&html.includes('id="backupRoot"'),'a v17 deve expor Backup & Recuperação na navegação da Direção');
 assert(html.includes('assets/js/modules/backup-recovery.js')&&html.includes('assets/css/backup-recovery.css'),'os recursos de Backup & Recuperação v17 devem estar ligados ao HTML');
+assert(html.includes('assets/js/ui/global-search.js')&&html.includes('assets/css/global-search.css'),'a V19 deve ligar a Pesquisa Global ao HTML');
 assert(html.includes('assets/js/ui/operations-center.js'),'o módulo da Central de Operações deve estar ligado ao HTML');
 assert(html.includes('assets/css/operations-center.css'),'o CSS da Central de Operações deve estar ligado ao HTML');
 assert(html.includes('assets/js/modules/actions-management.js'),'o módulo de gestão de ações v8 deve estar ligado ao HTML');

@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "18.0.0",
+  "version": "27.0.0",
   "private": true,
-  "description": "VG Dashboard Operações — Performance v18: arranque progressivo, XLSX lazy, renderização por vista, lifecycle de gráficos e PWA otimizada",
+  "description": "VG Dashboard Operações — Workflow de Aprovações v27: pedidos formais, decisão da Direção, auditoria, notificações e backup",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

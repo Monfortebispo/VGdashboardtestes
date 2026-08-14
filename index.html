@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VG Dashboard · Performance v18 · 2026-08-14 -->
+<!-- VG Dashboard · Gestão de Documentos v26 · 2026-08-14 -->
 
 <html lang="pt">
 <head>
@@ -38,6 +38,14 @@
 
 <link rel="stylesheet" href="assets/css/revenue-intelligence-secondary.css">
 <link rel="stylesheet" href="assets/css/mobile-pwa.css">
+<link rel="stylesheet" href="assets/css/global-search.css">
+<link rel="stylesheet" href="assets/css/notifications-v21.css">
+<link rel="stylesheet" href="assets/css/operational-agenda-v22.css">
+<link rel="stylesheet" href="assets/css/hotel-performance-v23.css">
+<link rel="stylesheet" href="assets/css/automatic-reports-v24.css">
+<link rel="stylesheet" href="assets/css/analytical-assistant-v25.css">
+<link rel="stylesheet" href="assets/css/document-management-v26.css">
+<link rel="stylesheet" href="assets/css/workflow-approvals-v27.css">
 </head>
 <body>
 <div id="cdnWarningBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#9c0006;color:#fff;text-align:center;padding:10px 16px;font-family:Arial,sans-serif;font-size:13px;font-weight:700">
@@ -201,7 +209,11 @@
 <button class="sb-nav-btn" id="nav-kpis" onclick="setView('kpis')"> <span class="sb-nav-icon">🎯</span> KPIs</button>
 <button class="sb-nav-btn" id="nav-ocupacao" onclick="setView('ocupacao')"><span class="sb-nav-icon">🛏</span> Ocupação</button>
 <button class="sb-nav-btn" id="nav-fichahotel" onclick="setView('fichahotel')"><span class="sb-nav-icon">📋</span> Ficha do Hotel</button>
-<button class="sb-nav-btn" id="nav-relatorio" onclick="relatorioShowModal()" style="background:rgba(201,168,76,.12);color:var(--gold);border-left:2px solid var(--gold)"><span class="sb-nav-icon">📄</span> Relatório Hotel PDF</button>
+<button class="sb-nav-btn" id="nav-hotelperformance" onclick="setView('hotelperformance')"><span class="sb-nav-icon">🏨</span> Performance Hotel</button>
+<button class="sb-nav-btn" id="nav-automaticreports" onclick="setView('automaticreports')"><span class="sb-nav-icon">📄</span> Relatórios Automáticos</button>
+<button class="sb-nav-btn" id="nav-analyticalassistant" onclick="analyticalAssistantOpen()" style="background:rgba(201,168,76,.12);color:var(--gold);border-left:2px solid var(--gold)"><span class="sb-nav-icon">✦</span> Assistente Analítico</button>
+<button class="sb-nav-btn" id="nav-documents" onclick="setView('documents')"><span class="sb-nav-icon">🗂️</span> Gestão de Documentos</button>
+<button class="sb-nav-btn" id="nav-approvals" onclick="setView('approvals')"><span class="sb-nav-icon">✅</span> Workflow de Aprovações</button>
 </div>
 <!-- FINANCEIRO -->
 <div class="sb-nav-group">
@@ -228,7 +240,7 @@
 <div class="sb-nav-group-label">Qualidade &amp; Info</div>
 <button class="sb-nav-btn" id="nav-reputacao" onclick="setView('reputacao')"><span class="sb-nav-icon">★</span>  Reputação</button>
 <button class="sb-nav-btn" id="nav-instagram" onclick="setView('instagram')"><span class="sb-nav-icon">📱</span> Instagram</button>
-<button class="sb-nav-btn" id="nav-agenda" onclick="setView('agenda')"> <span class="sb-nav-icon">📅</span> Agenda &amp; Tempo</button>
+<button class="sb-nav-btn" id="nav-agenda" onclick="setView('agenda')"> <span class="sb-nav-icon">📅</span> Agenda Operacional</button>
 <button class="sb-nav-btn" id="nav-hoteis" onclick="setView('hoteis')"> <span class="sb-nav-icon">🏨</span> Hotéis</button>
 <button class="sb-nav-btn" id="nav-datacenter" onclick="setView('datacenter')"> <span class="sb-nav-icon">🗄️</span> Centro de Dados</button>
 <button class="sb-nav-btn vg-direction-only" id="nav-governance" onclick="setView('governance')"> <span class="sb-nav-icon">🛡️</span> Auditoria &amp; Governação</button>
@@ -745,6 +757,27 @@
 <div class="hs-history" id="hsHistory"></div>
 </div>
 </div>
+<!-- PERFORMANCE DOS HOTÉIS V23 -->
+<div class="tab-content" id="view-hotelperformance">
+  <div id="hotelPerformanceRoot"><div class="hp-empty prominent">A preparar Performance dos Hotéis…</div></div>
+</div>
+<!-- RELATÓRIOS AUTOMÁTICOS V24 -->
+<div class="tab-content" id="view-automaticreports">
+  <div id="automaticReportsRoot"><div class="ar-empty">A preparar Relatórios Automáticos…</div></div>
+</div>
+<!-- ASSISTENTE ANALÍTICO V25 -->
+<div class="tab-content" id="view-analyticalassistant">
+  <div id="analyticalAssistantRoot"><div class="aa-welcome">A preparar Assistente Analítico…</div></div>
+</div>
+<!-- GESTÃO DE DOCUMENTOS V26 -->
+<div class="tab-content" id="view-documents">
+  <div id="documentsRoot"><div class="doc-empty"><strong>A preparar Gestão de Documentos…</strong></div></div>
+</div>
+<!-- WORKFLOW DE APROVAÇÕES v27 -->
+<div class="tab-content" id="view-approvals">
+  <div id="approvalsRoot"><div class="ap-empty"><strong>A preparar Workflow de Aprovações…</strong></div></div>
+</div>
+<!-- /WORKFLOW DE APROVAÇÕES v27 -->
 <div class="tab-content" id="view-reputacao">
 <div class="view-rep-root">
 <div class="rt-bar">
@@ -1279,61 +1312,64 @@
 </div>
 </div>
 </div>
-<!-- AGENDA & TEMPO -->
+<!-- AGENDA OPERACIONAL v22 -->
 <div class="tab-content" id="view-agenda">
-<div class="agenda-grid">
-<div class="agenda-card">
-<!-- CALENDÁRIO -->
-<div class="section-title" style="margin-top:0">📅 Calendário 2026</div>
-<div class="cal-header">
-<button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
-<div class="cal-title" id="calTitle"></div>
-<button class="cal-nav-btn" onclick="calNav(1)">›</button>
-<select class="cal-year-sel" id="calYearSel" onchange="calSetYear(this.value)">
-<option value="2025">2025</option>
-<option selected="" value="2026">2026</option>
-<option value="2027">2027</option>
-</select>
-<div class="cal-legend">
-<div class="cal-leg-item"><div class="cal-leg-dot" style="background:#ef4444"></div> Feriado nacional</div>
-<div class="cal-leg-item"><div class="cal-leg-dot" style="background:#f59e0b"></div> Feriado regional</div>
-<div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--gold)"></div> Evento</div>
+  <div class="vg-agenda-shell" id="vgAgendaRoot">
+    <div class="vg-agenda-head">
+      <div><div class="vg-agenda-title">📅 Agenda Operacional</div><div class="vg-agenda-sub">Ações, prazos, auditorias, visitas, reuniões e eventos operacionais num único calendário partilhado.</div></div>
+      <div class="vg-agenda-head-actions">
+        <span class="vg-agenda-sub" id="vgAgendaMeta">A carregar agenda…</span>
+        <button class="vg-agenda-btn" type="button" data-agenda-cmd="refresh">↻ Atualizar</button>
+        <button class="vg-agenda-btn primary" type="button" data-agenda-cmd="new">＋ Novo evento</button>
+      </div>
+    </div>
+    <div class="vg-agenda-kpis">
+      <div class="vg-agenda-kpi" id="vgAgendaKpiToday"></div>
+      <div class="vg-agenda-kpi" id="vgAgendaKpi7"></div>
+      <div class="vg-agenda-kpi" id="vgAgendaKpiOverdue"></div>
+      <div class="vg-agenda-kpi" id="vgAgendaKpiMonth"></div>
+    </div>
+    <div class="vg-agenda-toolbar">
+      <div class="vg-agenda-field"><label>Hotel</label><select id="vgAgendaHotel"></select></div>
+      <div class="vg-agenda-field"><label>Tipo</label><select id="vgAgendaType"></select></div>
+      <div class="vg-agenda-field vg-agenda-search"><label>Pesquisar</label><input id="vgAgendaSearch" type="search" placeholder="Evento, responsável, hotel…"></div>
+      <div class="vg-agenda-field"><label>Vista</label><div class="vg-agenda-view-toggle" id="vgAgendaViewToggle"><button type="button" data-agenda-cmd="calendar" data-mode="calendar" class="active">Calendário</button><button type="button" data-agenda-cmd="list" data-mode="list">Lista</button></div></div>
+    </div>
+    <div class="vg-agenda-main" id="vgAgendaMain">
+      <div>
+        <div class="vg-agenda-calendar-wrap" id="vgAgendaCalendarWrap">
+          <div class="vg-agenda-calendar-card">
+            <div class="vg-agenda-calendar-head"><div class="vg-agenda-month-nav"><button type="button" data-agenda-cmd="prev">‹</button><div class="vg-agenda-month-title" id="vgAgendaMonthTitle"></div><button type="button" data-agenda-cmd="next">›</button></div><button class="vg-agenda-today" type="button" data-agenda-cmd="today">Hoje</button></div>
+            <div class="vg-agenda-weekdays"><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div></div>
+            <div class="vg-agenda-days" id="vgAgendaDays"></div>
+          </div>
+        </div>
+        <div class="vg-agenda-list-card" id="vgAgendaListCard"><div class="vg-agenda-list" id="vgAgendaList"></div></div>
+      </div>
+      <aside class="vg-agenda-side">
+        <div class="vg-agenda-side-card"><div class="vg-agenda-side-head">Próximos compromissos</div><div class="vg-agenda-upcoming" id="vgAgendaUpcoming"><div class="vg-agenda-upcoming-empty">A carregar…</div></div></div>
+        <div class="vg-agenda-weather">
+          <div class="wx-card"><div class="wx-head"><div><div class="wx-title">🌦️ Tempo por hotel</div><div class="wx-sub">Meteorologia para apoio ao planeamento operacional</div></div><button class="wx-refresh" onclick="wxLoadSelected()">Atualizar</button></div><select class="wx-select" id="wxHotelSelect" onchange="wxLoadSelected()"></select><div id="wxPanel"><div class="wx-status">A carregar previsão meteorológica...</div></div></div>
+        </div>
+      </aside>
+    </div>
+  </div>
 </div>
-</div>
-<div class="cal-grid">
-<div class="cal-weekdays">
-<div class="cal-wd">Seg</div><div class="cal-wd">Ter</div><div class="cal-wd">Qua</div>
-<div class="cal-wd">Qui</div><div class="cal-wd">Sex</div>
-<div class="cal-wd">Sáb</div><div class="cal-wd">Dom</div>
-</div>
-<div class="cal-days" id="calDays"></div>
-</div>
-</div>
-<div class="wx-card">
-<div class="wx-head">
-<div>
-<div class="wx-title">🌦️ Tempo por hotel</div>
-<div class="wx-sub">Escolhe a unidade para ver a meteorologia local</div>
-</div>
-<button class="wx-refresh" onclick="wxLoadSelected()">Atualizar</button>
-</div>
-<select class="wx-select" id="wxHotelSelect" onchange="wxLoadSelected()"></select>
-<div id="wxPanel"><div class="wx-status">A carregar previsão meteorológica...</div></div>
-</div>
-</div>
-</div>
-<!-- CALENDAR EVENT MODAL -->
-<div class="cal-modal" id="calModal">
-<div class="cal-modal-box">
-<div class="cal-modal-title" id="calModalDate"></div>
-<div class="cal-events-list" id="calEventsList"></div>
-<input class="cal-modal-input" id="calEventInput" maxlength="80" onkeydown="if(event.key==='Enter') calSaveEvent()" placeholder="Novo evento..." type="text"/>
-<div class="cal-modal-btns">
-<button class="cal-modal-btn del" id="calDelBtn" onclick="calDeleteLastEvent()" style="display:none">Remover</button>
-<button class="cal-modal-btn cancel" onclick="calCloseModal()">Fechar</button>
-<button class="cal-modal-btn save" onclick="calSaveEvent()">Adicionar</button>
-</div>
-</div>
+<div class="vg-agenda-modal" id="vgAgendaModal" aria-hidden="true">
+  <div class="vg-agenda-editor" role="dialog" aria-modal="true" aria-labelledby="vgAgendaEditorTitle">
+    <div class="vg-agenda-editor-head"><div><strong id="vgAgendaEditorTitle">Novo evento</strong><span>Agenda partilhada e sujeita às permissões do utilizador.</span></div><button class="vg-agenda-editor-close" id="vgAgendaClose" type="button" aria-label="Fechar">✕</button></div>
+    <div class="vg-agenda-editor-body"><div class="vg-agenda-form">
+      <div class="full"><label>Título</label><input id="vgAgendaEventTitle" maxlength="240" placeholder="Ex.: Auditoria Compras"></div>
+      <div><label>Hotel</label><select id="vgAgendaEventHotel"></select></div>
+      <div><label>Tipo</label><select id="vgAgendaEventType"><option value="audit">Auditoria</option><option value="visit">Visita</option><option value="meeting">Reunião</option><option value="deadline">Prazo</option><option value="operational" selected>Operacional</option><option value="other">Outro</option></select></div>
+      <div><label>Data</label><input id="vgAgendaEventDate" type="date"></div>
+      <div><label>Responsável</label><select id="vgAgendaEventOwner"><option value="">— Sem responsável —</option></select></div>
+      <div><label>Hora início</label><input id="vgAgendaEventStart" type="time"></div>
+      <div><label>Hora fim</label><input id="vgAgendaEventEnd" type="time"></div>
+      <div class="full"><label>Notas</label><textarea id="vgAgendaEventNotes" maxlength="2400" placeholder="Objetivo, participantes, pontos a preparar ou observações…"></textarea></div>
+    </div><div class="vg-agenda-editor-meta" id="vgAgendaEditorMeta"></div></div>
+    <div class="vg-agenda-editor-actions"><button class="vg-agenda-btn danger" id="vgAgendaDelete" type="button" style="display:none">Eliminar</button><div class="vg-agenda-editor-actions-right"><button class="vg-agenda-btn" type="button" onclick="document.getElementById('vgAgendaClose').click()">Cancelar</button><button class="vg-agenda-btn primary" id="vgAgendaSave" type="button">Criar evento</button></div></div>
+  </div>
 </div>
 <!-- HOTÉIS -->
 <div class="tab-content" id="view-hoteis">
@@ -1874,6 +1910,7 @@
 <script src="assets/js/modules/instagram.js" defer></script>
 <script src="assets/js/modules/pdf-export.js" defer></script>
 <script src="assets/js/modules/agenda-tempo.js" defer></script>
+<script id="vg-operational-agenda-v22" src="assets/js/modules/operational-agenda-v22.js" defer></script>
 <script src="assets/js/modules/hoteis.js" defer></script>
 <script src="assets/js/modules/receitas-detalhe.js" defer></script>
 <script src="assets/js/core/04-bootstrap.js" defer></script>
@@ -2038,6 +2075,11 @@
 
 <script id="ri-script" src="assets/js/modules/revenue-intelligence.js" defer></script>
 <script id="vg-forecast-scenarios" src="assets/js/modules/forecast-scenarios.js" defer></script>
+<script id="vg-hotel-performance-v23" src="assets/js/modules/hotel-performance-v23.js" defer></script>
+<script id="vg-automatic-reports-v24" src="assets/js/modules/automatic-reports-v24.js" defer></script>
+<script id="vg-analytical-assistant-v25" src="assets/js/modules/analytical-assistant-v25.js" defer></script>
+<script id="vg-document-management-v26" src="assets/js/modules/document-management-v26.js" defer></script>
+<script id="vg-workflow-approvals-v27" src="assets/js/modules/workflow-approvals-v27.js" defer></script>
 <script id="vg-anomaly-detection" src="assets/js/modules/anomaly-detection.js" defer></script>
 <script id="ops-actions-script" src="assets/js/modules/actions-management.js" defer></script>
 <script id="ops-center-script" src="assets/js/ui/operations-center.js" defer></script>
@@ -2068,6 +2110,8 @@
 
 <link rel="stylesheet" href="assets/css/logo-fix.css">
 <script id="vg-mobile-pwa" src="assets/js/ui/mobile-pwa.js" defer></script>
+<script id="vg-global-search-v19" src="assets/js/ui/global-search.js" defer></script>
+<script id="vg-notifications-v21" src="assets/js/ui/notifications-v21.js" defer></script>
 
 </body>
 </html>

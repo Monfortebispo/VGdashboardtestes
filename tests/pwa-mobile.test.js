@@ -36,7 +36,7 @@ const staticAssets=JSON.parse(staticMatch[1]);
 const localRefs=[...html.matchAll(/(?:src|href)=[\"']([^\"']+)[\"']/gi)].map(m=>m[1].split(/[?#]/)[0]).filter(r=>r&&!/^(?:https?:|data:|mailto:|#|\/\/)/i.test(r)&&!r.startsWith('/.netlify/')).map(r=>'/'+r.replace(/^\//,''));
 const missingFromShell=[...new Set(localRefs)].filter(r=>!staticAssets.includes(r));
 assert.deepStrictEqual(missingFromShell,[],`app shell offline incompleta: ${missingFromShell.join(', ')}`);
-assert(sw.includes('vg-operations-shell-v18'),'service worker v18 deve usar cache versionada');
+assert(sw.includes('vg-operations-shell-v27'),'service worker v21 deve usar cache versionada');
 assert(sw.includes('/assets/js/modules/audit-governance.js')&&sw.includes('/assets/css/audit-governance.css'),'PWA deve pré-cachear a interface estática de governação');
 assert(sw.includes('/assets/js/modules/backup-recovery.js')&&sw.includes('/assets/css/backup-recovery.css'),'PWA deve pré-cachear a interface estática de Backup & Recuperação');
 assert(js.includes('data-view=\"governance\"')||js.includes('data-view="governance"'),'menu mobile deve expor Auditoria à Direção');
