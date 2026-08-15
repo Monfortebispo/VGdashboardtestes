@@ -1,6 +1,6 @@
-// VG Operations v27 — service worker
+// VG Operations v30 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v27';
+const CACHE_NAME = 'vg-operations-shell-v30';
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",
   "/assets/css/audit-governance.css",
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
   "/assets/css/cost-detail.css",
   "/assets/css/data-center.css",
   "/assets/css/forecast-scenarios.css",
+  "/assets/css/scenario-comparison-v29.css",
   "/assets/css/global-search.css",
   "/assets/css/notifications-v21.css",
   "/assets/css/operational-agenda-v22.css",
@@ -22,6 +23,7 @@ const STATIC_ASSETS = [
   "/assets/css/analytical-assistant-v25.css",
   "/assets/css/document-management-v26.css",
   "/assets/css/workflow-approvals-v27.css",
+  "/assets/css/vg-operations-2-v30.css",
   "/assets/css/forecast-state.css",
   "/assets/css/logo-fix.css",
   "/assets/css/mobile-pwa.css",
@@ -44,6 +46,7 @@ const STATIC_ASSETS = [
   "/assets/js/core/03-persistence-sharing.js",
   "/assets/js/core/04-bootstrap.js",
   "/assets/js/core/05-performance.js",
+  "/assets/js/core/06-version-guard-v29_1.js",
   "/assets/js/core/compat-stubs.js",
   "/assets/js/modules/actions-management.js",
   "/assets/js/modules/audit-governance.js",
@@ -51,6 +54,9 @@ const STATIC_ASSETS = [
   "/assets/js/modules/agenda-tempo.js",
   "/assets/js/modules/operational-agenda-v22.js",
   "/assets/js/modules/hotel-performance-v23.js",
+  "/assets/js/modules/operational-score-v28.js",
+  "/assets/js/modules/hotel-360-v30.js",
+  "/assets/js/modules/revenue-hub-v30.js",
   "/assets/js/modules/automatic-reports-v24.js",
   "/assets/js/modules/analytical-assistant-v25.js",
   "/assets/js/modules/document-management-v26.js",
@@ -64,6 +70,7 @@ const STATIC_ASSETS = [
   "/assets/js/modules/data-center.js",
   "/assets/js/modules/ficha-hotel.js",
   "/assets/js/modules/forecast-scenarios.js",
+  "/assets/js/modules/scenario-comparison-v29.js",
   "/assets/js/modules/hoteis.js",
   "/assets/js/modules/instagram.js",
   "/assets/js/modules/ocupacao.js",
@@ -85,6 +92,7 @@ const STATIC_ASSETS = [
   "/assets/js/ui/navigation-shell.js",
   "/assets/js/ui/operational-tools.js",
   "/assets/js/ui/operations-center.js",
+  "/assets/js/ui/vg-operations-2-v30.js",
   "/assets/vendor/fflate.min.js",
   "/index.html",
   "/manifest.webmanifest"
@@ -93,7 +101,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    // v27: inclui Pesquisa, Notificações, Agenda, Performance, Relatórios, Assistente, Documentos e Workflow de Aprovações.
+    // v30: VG Operations 2.0; dados empresariais continuam network-only.
     const batchSize=8;
     for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
       const batch=STATIC_ASSETS.slice(i,i+batchSize);
@@ -127,6 +135,7 @@ self.addEventListener('fetch', event => {
   const url=new URL(req.url);
   if (isSensitive(req,url)) return; // network-only: nunca cachear dados empresariais/API
 
+  // Navegação: rede primeiro, shell apenas como fallback offline.
   if (req.mode==='navigate') {
     event.respondWith((async()=>{
       try {
@@ -143,18 +152,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // v30: recursos estáticos da própria aplicação são NETWORK-FIRST.
+  // Isto impede misturas do tipo HTML novo + JavaScript antigo. O browser
+  // continua a poder usar a sua cache HTTP e o Cache Storage fica como
+  // fallback offline, nunca como fonte prioritária quando há rede.
   if (url.origin===self.location.origin) {
     event.respondWith((async()=>{
-      const cached=await caches.match(req, {ignoreSearch:true});
-      if (cached) {
-        event.waitUntil(fetch(req).then(async fresh=>{if(fresh&&fresh.ok){const c=await caches.open(CACHE_NAME);await c.put(req,fresh.clone());}}).catch(()=>{}));
-        return cached;
-      }
       try {
         const fresh=await fetch(req);
-        if (fresh && fresh.ok) { const c=await caches.open(CACHE_NAME); await c.put(req,fresh.clone()); }
+        if (fresh && fresh.ok) {
+          const cache=await caches.open(CACHE_NAME);
+          await cache.put(req, fresh.clone());
+        }
         return fresh;
-      } catch (e) { return Response.error(); }
+      } catch (e) {
+        return (await caches.match(req,{ignoreSearch:true})) || Response.error();
+      }
     })());
   }
   // Recursos CDN são network-only. A app abre offline, mas gráficos/Excel podem ficar indisponíveis.

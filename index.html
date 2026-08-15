@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VG Dashboard · Gestão de Documentos v26 · 2026-08-14 -->
+<!-- VG Operations 2.0 · v30 · 2026-08-14 -->
 
 <html lang="pt">
 <head>
@@ -17,6 +17,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/vg-ops-192.png"/>
 <link rel="apple-touch-icon" href="assets/icons/vg-ops-180.png"/>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<script src="assets/js/core/06-version-guard-v29_1.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 
 <script src="assets/vendor/fflate.min.js" defer></script>
@@ -26,6 +27,7 @@
 <link rel="stylesheet" href="assets/css/targets-rules.css">
 <link rel="stylesheet" href="assets/css/benchmarking.css">
 <link rel="stylesheet" href="assets/css/forecast-scenarios.css">
+<link rel="stylesheet" href="assets/css/scenario-comparison-v29.css">
 <link rel="stylesheet" href="assets/css/anomaly-detection.css">
 <link rel="stylesheet" href="assets/css/data-center.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -46,6 +48,7 @@
 <link rel="stylesheet" href="assets/css/analytical-assistant-v25.css">
 <link rel="stylesheet" href="assets/css/document-management-v26.css">
 <link rel="stylesheet" href="assets/css/workflow-approvals-v27.css">
+<link rel="stylesheet" href="assets/css/vg-operations-2-v30.css">
 </head>
 <body>
 <div id="cdnWarningBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#9c0006;color:#fff;text-align:center;padding:10px 16px;font-family:Arial,sans-serif;font-size:13px;font-weight:700">
@@ -223,6 +226,7 @@
 <button class="sb-nav-btn" id="nav-pl" onclick="setView('pl')"> <span class="sb-nav-icon">📊</span> P&amp;L USALI</button>
 <button class="sb-nav-btn" id="nav-revenueint" onclick="setView('revenueint')"> <span class="sb-nav-icon">🧠</span> Revenue Intelligence</button>
 <button class="sb-nav-btn" id="nav-forecast" onclick="setView('forecast')"> <span class="sb-nav-icon">🔭</span> Forecast &amp; Cenários</button>
+<button class="sb-nav-btn" id="nav-scenariocompare" onclick="setView('scenariocompare')"> <span class="sb-nav-icon">⚖️</span> Comparação de Cenários</button>
 <button class="sb-nav-btn" id="nav-costanalysis" onclick="setView('costanalysis')"><span class="sb-nav-icon">🔬</span> Análise de Custos</button>
 <button class="sb-nav-btn" id="nav-cua" onclick="setView('cua')"> <span class="sb-nav-icon">⚡</span> Custo / Actividade</button>
 <button class="sb-nav-btn" id="nav-compras" onclick="setView('compras')"> <span class="sb-nav-icon">🧾</span> Compras &amp; Artigos</button>
@@ -475,6 +479,7 @@
 </div>
 <!-- RESUMO -->
 <div class="tab-content" id="view-resumo">
+<div id="v30ProfileHomeRoot"></div>
 <!-- CENTRAL DE OPERAÇÕES v8.1 -->
 <section class="ops-center" id="opsCenter">
   <div class="ops-head">
@@ -757,6 +762,18 @@
 <div class="hs-history" id="hsHistory"></div>
 </div>
 </div>
+<!-- VG OPERATIONS 2.0 / V30 — HOTEL 360º -->
+<div class="tab-content" id="view-hotel360">
+  <div id="hotel360Root"><div class="v30-empty prominent">A preparar Hotel 360º…</div></div>
+</div>
+<!-- VG OPERATIONS 2.0 / V30 — REVENUE & FORECAST -->
+<div class="tab-content" id="view-revenuehub">
+  <div id="revenueHubRoot" class="v30-revenue-shell">
+    <header class="v30-page-head"><div><div class="v30-eyebrow">VG Operations 2.0</div><h2>Revenue &amp; Forecast</h2><p>Revenue Intelligence, Forecast e Cenários numa única área.</p></div></header>
+    <nav class="v30-tabs"><button data-rh-tab="current" class="active">Situação atual</button><button data-rh-tab="forecast">Forecast</button><button data-rh-tab="scenarios">Cenários</button></nav>
+    <div class="v30-revenue-panels"><div class="v30-revenue-panel active" id="v30RevenuePanel-current"></div><div class="v30-revenue-panel" id="v30RevenuePanel-forecast"></div><div class="v30-revenue-panel" id="v30RevenuePanel-scenarios"></div></div>
+  </div>
+</div>
 <!-- PERFORMANCE DOS HOTÉIS V23 -->
 <div class="tab-content" id="view-hotelperformance">
   <div id="hotelPerformanceRoot"><div class="hp-empty prominent">A preparar Performance dos Hotéis…</div></div>
@@ -778,6 +795,11 @@
   <div id="approvalsRoot"><div class="ap-empty"><strong>A preparar Workflow de Aprovações…</strong></div></div>
 </div>
 <!-- /WORKFLOW DE APROVAÇÕES v27 -->
+<!-- COMPARAÇÃO DE CENÁRIOS v29 -->
+<div class="tab-content" id="view-scenariocompare">
+  <div id="scenarioComparisonRoot"><div class="sc29-empty"><strong>A preparar Comparação de Cenários…</strong></div></div>
+</div>
+<!-- /COMPARAÇÃO DE CENÁRIOS v29 -->
 <div class="tab-content" id="view-reputacao">
 <div class="view-rep-root">
 <div class="rt-bar">
@@ -2075,7 +2097,11 @@
 
 <script id="ri-script" src="assets/js/modules/revenue-intelligence.js" defer></script>
 <script id="vg-forecast-scenarios" src="assets/js/modules/forecast-scenarios.js" defer></script>
+<script id="vg-scenario-comparison-v29" src="assets/js/modules/scenario-comparison-v29.js" defer></script>
 <script id="vg-hotel-performance-v23" src="assets/js/modules/hotel-performance-v23.js" defer></script>
+<script id="vg-operational-score-v30" src="assets/js/modules/operational-score-v28.js" defer></script>
+<script id="vg-hotel-360-v30" src="assets/js/modules/hotel-360-v30.js" defer></script>
+<script id="vg-revenue-hub-v30" src="assets/js/modules/revenue-hub-v30.js" defer></script>
 <script id="vg-automatic-reports-v24" src="assets/js/modules/automatic-reports-v24.js" defer></script>
 <script id="vg-analytical-assistant-v25" src="assets/js/modules/analytical-assistant-v25.js" defer></script>
 <script id="vg-document-management-v26" src="assets/js/modules/document-management-v26.js" defer></script>
@@ -2112,6 +2138,7 @@
 <script id="vg-mobile-pwa" src="assets/js/ui/mobile-pwa.js" defer></script>
 <script id="vg-global-search-v19" src="assets/js/ui/global-search.js" defer></script>
 <script id="vg-notifications-v21" src="assets/js/ui/notifications-v21.js" defer></script>
+<script id="vg-operations-2-v30" src="assets/js/ui/vg-operations-2-v30.js" defer></script>
 
 </body>
 </html>

@@ -25,6 +25,7 @@ const AGENDA_PREFIX = "ops-agenda/";
 const DOCUMENT_META_PREFIX = "ops-doc-meta/";
 const DOCUMENT_DATA_PREFIX = "ops-doc-data/";
 const APPROVAL_PREFIX = "ops-approval/";
+const SCENARIO_PREFIX = "ops-scenario/";
 const DOCUMENT_MAX_BYTES = 3.5 * 1024 * 1024;
 const DATA_IMPORT_PREFIX = "_data-import/";
 const DATA_BACKUP_PREFIX = "_data-backup/";
@@ -92,6 +93,7 @@ function agendaBlobKey(id) { return AGENDA_PREFIX + String(id || "").replace(/[^
 function documentMetaBlobKey(id) { return DOCUMENT_META_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function documentDataBlobKey(id) { return DOCUMENT_DATA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function approvalBlobKey(id) { return APPROVAL_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function scenarioBlobKey(id) { return SCENARIO_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function documentExt(name) { const p=String(name||"").toLowerCase().split("."); return p.length>1?p.pop():""; }
 function safeDocumentFileName(name) { return cleanText(String(name||"").replace(/[\/\\<>:\"|?*\x00-\x1F]/g,"_"), 240); }
 function canManageHotel(user, hotel) {
@@ -215,6 +217,39 @@ async function approvalLinkLabel(store, linkType, linkId, hotel) {
 function approvalHistoryEntry(user,type,detail,extra={}) {
   return Object.assign({ts:new Date().toISOString(),type,detail:cleanText(detail,1600),user:user.user,name:user.name},extra);
 }
+
+async function listOperationalScenarios(store) {
+  const listing = await store.list({ prefix: SCENARIO_PREFIX });
+  const blobs = listing && Array.isArray(listing.blobs) ? listing.blobs : [];
+  const rows = await Promise.all(blobs.map(async entry => {
+    try { return await store.get(entry.key, { type:"json" }); } catch (e) { return null; }
+  }));
+  return rows.filter(x=>x&&x.id).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
+}
+function canSeeScenario(user,item) { if(!user||!item)return false; return isDirection(user)||norm(item.hotel)===norm(user.hotel); }
+function canManageScenario(user,itemOrHotel) { const hotel=typeof itemOrHotel==="string"?itemOrHotel:itemOrHotel?.hotel; return !!user&&!!hotel&&(isDirection(user)||norm(hotel)===norm(user.hotel)); }
+function scenarioAdjustments(input) {
+  const src=input&&typeof input==="object"&&!Array.isArray(input)?input:{};
+  const limits={occDelta:[-20,20],adrPct:[-30,30],otherRevenuePct:[-30,30],personnelPct:[-20,20],otherCostPct:[-20,20]};
+  const out={};
+  for(const [k,[min,max]] of Object.entries(limits)){
+    const v=Number(src[k]??0);
+    if(!Number.isFinite(v)||v<min||v>max) throw new Error("Ajuste inválido: "+k);
+    out[k]=Math.round(v*100)/100;
+  }
+  return out;
+}
+function scenarioNumericSnapshot(input, keys) {
+  const src=input&&typeof input==="object"&&!Array.isArray(input)?input:{}; const out={};
+  for(const k of keys){ const v=Number(src[k]); if(Number.isFinite(v)) out[k]=v; }
+  return out;
+}
+function scenarioBaseline(input) {
+  const out=scenarioNumericSnapshot(input,["forecastOcc","target","adrBase","baseRevenue","personnelRatio","otherCostRatio","sedeRatio","availableRN"]);
+  out.referenceYear=cleanText(input?.referenceYear,10); out.source=cleanText(input?.source,240); out.latestAt=cleanText(input?.latestAt,80); return out;
+}
+function scenarioCaptured(input) { return scenarioNumericSnapshot(input,["occ","rn","adr","lodging","nonRoom","revenue","personnel","otherCosts","costs","sedeEffect","gop","gopPct","revpar","trevpar"]); }
+function scenarioHistoryEntry(user,type,detail) { return {ts:new Date().toISOString(),type,detail:cleanText(detail,1200),user:user.user,name:user.name}; }
 function validTimeOnly(v) { return !v || /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v)); }
 function agendaHistoryEntry(user, type, detail) { return { ts:new Date().toISOString(), type, detail:cleanText(detail,1200), user:user.user, name:user.name }; }
 function actionHistoryEntry(user, type, detail, extra = {}) {
@@ -254,7 +289,7 @@ function recoveryDataKey(id, idx) { return RECOVERY_DATA_PREFIX + String(id || "
 function isRecoverableBusinessKey(key) {
   const k = String(key || "");
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
-  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/"].some(p => k.startsWith(p));
+  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
   const k=String(key||"");
@@ -266,6 +301,7 @@ function recoveryCategoryForKey(key) {
   if (k.startsWith("ops-agenda/")) return "Agenda";
   if (k.startsWith("ops-doc-meta/") || k.startsWith("ops-doc-data/")) return "Documentos";
   if (k.startsWith("ops-approval/")) return "Aprovações";
+  if (k.startsWith("ops-scenario/")) return "Cenários";
   if (k.startsWith("mesacum-")) return "P&L acumulado";
   if (k.startsWith("mes-")) return "P&L mensal";
   if (k.startsWith("hotelxlsx-")) return "Fichas técnicas";
@@ -333,7 +369,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"27"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -1146,6 +1182,51 @@ exports.handler = async (event) => {
     }
     if (["ops-approvals","ops-approval-save","ops-approval-decide","ops-approval-cancel"].includes(resource)) return response(405,{error:"Método não permitido."});
     if (resource.startsWith("ops-approval/")) return forbidden("Os pedidos de aprovação só podem ser acedidos pelos endpoints próprios.");
+
+    // -------------------- COMPARAÇÃO DE CENÁRIOS v29 --------------------
+    if (resource === "ops-scenarios" && event.httpMethod === "GET") {
+      const rows=await listOperationalScenarios(store);
+      return ok({data:rows.filter(x=>canSeeScenario(authUser,x))});
+    }
+    if (resource === "ops-scenario-save" && event.httpMethod === "POST") {
+      const payload=parseBody(event); if(!payload||typeof payload!=="object") return badRequest("Cenário inválido.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
+      const existing=id?await store.get(scenarioBlobKey(id),{type:"json"}):null;
+      if(id&&!existing) return badRequest("Cenário não encontrado.");
+      if(existing&&!canManageScenario(authUser,existing)) return forbidden("Não pode alterar este cenário.");
+      if(existing&&payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt)) return conflict("Este cenário foi alterado por outro utilizador. Reabra-o antes de gravar.",{data:existing});
+      const hotel=cleanText(payload.hotel!==undefined?payload.hotel:existing?.hotel,140);
+      if(!hotel) return badRequest("Hotel obrigatório.");
+      if(!canManageScenario(authUser,hotel)) return forbidden("Só pode gerir cenários do hotel associado à sua conta.");
+      const year=Number(payload.year!==undefined?payload.year:existing?.year); const month=Number(payload.month!==undefined?payload.month:existing?.month);
+      if(!Number.isInteger(year)||year<2000||year>2100) return badRequest("Ano inválido.");
+      if(!Number.isInteger(month)||month<1||month>12) return badRequest("Mês inválido.");
+      const name=cleanText(payload.name!==undefined?payload.name:existing?.name,100); if(name.length<2) return badRequest("Nome do cenário obrigatório.");
+      const description=cleanText(payload.description!==undefined?payload.description:existing?.description,1200);
+      let adjustments; try{adjustments=scenarioAdjustments(payload.adjustments!==undefined?payload.adjustments:existing?.adjustments);}catch(e){return badRequest(e.message||"Ajustes inválidos.");}
+      const baseline=scenarioBaseline(payload.baseline!==undefined?payload.baseline:existing?.baseline||{});
+      const captured=scenarioCaptured(payload.captured!==undefined?payload.captured:existing?.captured||{});
+      const now=nextIsoTimestamp(existing?.updatedAt);
+      const item=existing?Object.assign({},existing):{id:"scn_"+Date.now().toString(36)+"_"+crypto.randomBytes(5).toString("hex"),createdAt:now,createdBy:{user:authUser.user,name:authUser.name},history:[]};
+      const before=existing?{hotel:existing.hotel,year:existing.year,month:existing.month,name:existing.name,adjustments:existing.adjustments}:null;
+      item.hotel=hotel;item.year=year;item.month=month;item.name=name;item.description=description;item.adjustments=adjustments;item.baseline=baseline;item.captured=captured;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      if(!Array.isArray(item.history))item.history=[];item.history.push(scenarioHistoryEntry(authUser,existing?"updated":"created",existing?"Cenário atualizado.":"Cenário guardado."));item.history=item.history.slice(-120);
+      await store.setJSON(scenarioBlobKey(item.id),item);
+      await safeGovernanceAudit(store,authUser,{category:"Cenários",action:existing?"Cenário atualizado":"Cenário criado",resource:"ops-scenario",key:item.id,hotel:item.hotel,detail:[item.name,item.month+"/"+item.year].join(" · "),severity:"info",before,after:{hotel:item.hotel,year:item.year,month:item.month,name:item.name,adjustments:item.adjustments}});
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-scenario-delete" && event.httpMethod === "POST") {
+      const payload=parseBody(event);if(!payload||typeof payload!=="object") return badRequest("Pedido inválido.");
+      const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,""); const item=id?await store.get(scenarioBlobKey(id),{type:"json"}):null;
+      if(!item) return badRequest("Cenário não encontrado.");
+      if(!canManageScenario(authUser,item)) return forbidden("Não pode eliminar este cenário.");
+      if(payload.expectedUpdatedAt&&item.updatedAt&&String(payload.expectedUpdatedAt)!==String(item.updatedAt)) return conflict("Este cenário foi alterado por outro utilizador.",{data:item});
+      await store.delete(scenarioBlobKey(id));
+      await safeGovernanceAudit(store,authUser,{category:"Cenários",action:"Cenário eliminado",resource:"ops-scenario",key:id,hotel:item.hotel,detail:[item.name,item.month+"/"+item.year].join(" · "),severity:"warning",before:{name:item.name,year:item.year,month:item.month,adjustments:item.adjustments},after:null});
+      return ok({ok:true,id});
+    }
+    if (["ops-scenarios","ops-scenario-save","ops-scenario-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (resource.startsWith("ops-scenario/")) return forbidden("Os cenários só podem ser acedidos pelos endpoints próprios.");
 
     // -------------------- PASSWORD DO PRÓPRIO --------------------
     if (event.httpMethod === "POST" && resource === "auth-change-password") {

@@ -1,65 +1,109 @@
-# VG Dashboard — Workflow de Aprovações v27
+# VG Operations 2.0 — v30
 
-A V27 acrescenta um processo formal para submeter e decidir pedidos operacionais dentro da VG Operations.
+A V30 é uma consolidação de produto sobre a V29.1. O objetivo não é acrescentar páginas indiscriminadamente, mas reduzir a fragmentação da experiência mantendo as funcionalidades existentes disponíveis.
 
-## O que permite
+## Regra imutável: Ficha do Hotel
 
-- criar pedidos de aprovação por hotel;
-- classificar o pedido como Meta/Objetivo, Configuração, Decisão Operacional, Exceção, Documento ou Outra Decisão;
-- definir prioridade Normal, Alta ou Crítica;
-- indicar data limite para decisão;
-- enviar para a Direção em geral ou para um aprovador específico;
-- associar o pedido a uma Ação, evento da Agenda, Documento ou meta/regra;
-- editar pedidos ainda pendentes;
-- aprovar, rejeitar ou cancelar;
-- consultar histórico completo de submissão e decisão;
-- pesquisar pedidos na Pesquisa Global;
-- receber Notificações Inteligentes de pedidos pendentes/decididos.
+A **Ficha do Hotel permanece independente, com entrada própria no menu e sem alterações ao seu módulo**.
 
-## Regras de governação
+O ficheiro `assets/js/modules/ficha-hotel.js` é byte-a-byte igual ao da V29.1. O Hotel 360º é uma nova visão executiva complementar e nunca substitui a Ficha do Hotel.
 
-Diretores e Assistentes só podem criar pedidos para o respetivo hotel.
+## Nova navegação principal
 
-A decisão final fica reservada à Direção/Admin.
+A navegação é simplificada em torno de:
 
-Se um pedido tiver sido atribuído a um aprovador específico, outra pessoa da Direção não o consegue decidir.
+- Início & Hotéis — Resumo, Ficha do Hotel, Hotel 360º;
+- Gestão — Ações, Agenda Operacional, Aprovações;
+- Análise — Receitas, Custos, P&L USALI, Revenue & Forecast, Compras, Benchmarking, Anomalias;
+- Suporte — Documentos, Relatórios;
+- Administração — Centro de Dados, Auditoria & Governação, Backup & Recuperação e Upload/Setup quando permitido.
 
-A autoaprovação só é permitida como exceção explícita, com justificação detalhada, ficando destacada no registo de auditoria.
+As vistas históricas que continuam a ter utilidade técnica não foram apagadas. Deixam apenas de ocupar a navegação principal e podem continuar a ser abertas por pesquisa/atalho quando aplicável.
 
-## Documentos
+## Hotel 360º
 
-A Gestão de Documentos V26 passa também a permitir associar um ficheiro diretamente a um pedido de aprovação.
+Nova visão executiva por unidade, com separadores:
 
-Assim, uma decisão pode ficar acompanhada de relatório, ata, evidência ou outro documento relevante.
+`Visão Executiva | Financeiro | Revenue | Operação | Reputação | Ações | Documentos`
 
-## Auditoria e recuperação
+A visão executiva agrega informação já produzida pelos módulos existentes, incluindo Performance Hotel, Benchmarking, Revenue Intelligence, Ações, Reputação, Anomalias e Qualidade de Dados.
 
-Todas as alterações importantes do workflow entram na Auditoria & Governação V16.
+Inclui sempre um acesso direto à Ficha do Hotel original.
 
-O Backup & Recuperação V17 passa a incluir `ops-approval/*`, permitindo recuperar os pedidos e respetivo histórico.
+## Score Operacional — V28 integrado
 
-## Mobile/PWA
+A V30 integra a funcionalidade que estava prevista para a V28.
 
-`Aprovações` aparece na área `Decidir e agir`.
+O Score é explicável e configurável, com seis dimensões:
 
-O service worker continua sem guardar respostas da API ou dados empresariais em cache.
+- Financeiro;
+- Revenue;
+- Eficiência;
+- Reputação;
+- Execução;
+- Dados.
 
-## Validação
+Os pesos por defeito são 25/20/15/15/15/10 e são normalizados para 100%. A Direção pode ajustar os pesos; a configuração é partilhada através do recurso existente `settings-score-v30`.
 
-A V27 acrescenta uma suite própria que testa:
+O Score não cria uma nova fonte financeira. Reutiliza o modelo canónico do Hotel Performance/Benchmarking e os restantes módulos existentes.
 
-- submissão por hotel;
-- permissões;
-- aprovador explícito;
-- aprovação/rejeição;
-- bloqueio de acesso direto ao Blob;
-- concorrência otimista;
-- cancelamento;
-- autoaprovação excecional;
-- associação de documentos;
-- auditoria;
-- backup.
+## Análise automática de causa
+
+O Hotel 360º inclui uma ponte explicativa da variação do GOP com sede entre os dois períodos comparáveis:
+
+`Δ Receita − Δ Custos por família + residual de reconciliação = Δ GOP com sede`
+
+São destacados, quando disponíveis, Pessoal, Energia, Manutenção, Comidas, Bebidas, Operacionais, Marketing, outros custos e efeito de sede/reconciliação.
+
+Esta análise é apresentada como **explicação estimada de contributos**, não como causalidade contabilística forense.
+
+## Objetivos & Planos de Recuperação
+
+As metas explícitas e o Forecast podem gerar gaps operacionais visíveis no Hotel 360º.
+
+A partir de um gap é possível criar uma Ação de recuperação usando o módulo de Ações já existente. Assim, o fluxo fica:
+
+`Meta → Gap → Ação → acompanhamento`
+
+Não é criado um segundo sistema de tarefas.
+
+## Revenue & Forecast
+
+A V30 cria uma única experiência com três separadores:
+
+`Situação atual | Forecast | Cenários`
+
+Por baixo, continuam a ser utilizados os módulos existentes:
+
+- Revenue Intelligence;
+- Forecast & Cenários;
+- Comparação de Cenários V29.
+
+Não existe uma segunda fórmula de Forecast ou de GOP.
+
+## Alertas e Notificações
+
+As Notificações Inteligentes passam a ser a camada principal de aviso ao utilizador. Os Alertas clássicos continuam disponíveis como detalhe técnico/drill-down, mas deixam de ocupar a navegação principal.
+
+## Assistente Analítico
+
+O Assistente deixa de depender de uma página visível no menu principal e passa a ter acesso transversal pelo botão `Perguntar aos dados` no topo, mantendo o motor local e as regras da V25.
+
+## Home por perfil
+
+O Resumo passa a adaptar a leitura inicial ao perfil:
+
+- Direção/Admin — visão do portefólio, críticos/atenção/estáveis, receita em risco, ações vencidas, Score médio e prioridades;
+- Diretor/Assistente — visão da própria unidade, Score, estado, ações, Forecast e prioridades/notificações relevantes.
+
+## Compatibilidade e PWA
+
+A V30 mantém o mecanismo de coerência de versão introduzido na V29.1. O service worker usa `vg-operations-shell-v30`, mantém a aplicação estática em cache e continua a excluir `/.netlify/` e dados empresariais do cache operacional.
+
+O backend `dashboard-sessao.js` permanece inalterado face à V29.1. A nova configuração do Score usa o recurso genérico de `settings` já protegido no servidor, e os planos de recuperação usam o endpoint existente de Ações.
 
 ## Publicação
 
-O pacote é entregue completo e em dois lotes com menos de 100 ficheiros cada para permitir upload pelo GitHub no browser.
+O pacote é entregue completo e em dois lotes com menos de 100 ficheiros cada para upload pelo GitHub no browser.
+
+Não é necessária a eliminação manual de ficheiros da V29.1: a V30 preserva os módulos legados necessários por compatibilidade e apenas simplifica a navegação visível.

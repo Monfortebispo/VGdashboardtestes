@@ -13,8 +13,8 @@ const cssPath=path.join(ROOT,'assets/css/hotel-performance-v23.css');
 cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 assert(fs.existsSync(cssPath),'CSS da Performance V23 deve existir');
 assert(html.includes('nav-hotelperformance')&&html.includes('view-hotelperformance')&&html.includes('hotel-performance-v23.js')&&html.includes('hotel-performance-v23.css'),'V23 deve estar ligada ao menu, vista, JS e CSS');
-assert(sw.includes('vg-operations-shell-v27')&&sw.includes('/assets/js/modules/hotel-performance-v23.js')&&sw.includes('/assets/css/hotel-performance-v23.css'),'PWA deve incluir V23 no shell estático');
-assert(mobile.includes('data-view="hotelperformance"'),'mobile deve expor Performance dos Hotéis');
+assert(sw.includes('vg-operations-shell-v30')&&sw.includes('/assets/js/modules/hotel-performance-v23.js')&&sw.includes('/assets/css/hotel-performance-v23.css'),'PWA deve incluir V23 no shell estático');
+assert(mobile.includes('data-view="hotel360"'),'V30 deve expor a Performance através do Hotel 360º no mobile');
 assert(search.includes("type:'performance'")&&search.includes('hotelPerformance?.openHotel'),'Pesquisa Global deve abrir a V23 por hotel');
 
 function ops(rec25,rec26,aloj25,aloj26,occ25,occ26,disp25,disp26,gop25,gop26){return{

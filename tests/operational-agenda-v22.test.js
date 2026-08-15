@@ -17,7 +17,7 @@ const mobile=fs.readFileSync(path.join(ROOT,'assets/js/ui/mobile-pwa.js'),'utf8'
 cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 cp.execFileSync(process.execPath,['--check',serverPath],{stdio:'pipe'});
 assert(html.includes('Agenda Operacional')&&html.includes('operational-agenda-v22.js')&&html.includes('operational-agenda-v22.css'),'V22 deve estar ligada à Agenda');
-assert(sw.includes('vg-operations-shell-v27')&&sw.includes('/assets/js/modules/operational-agenda-v22.js')&&sw.includes('/assets/css/operational-agenda-v22.css'),'PWA deve incluir shell estático da Agenda V22');
+assert(sw.includes('vg-operations-shell-v30')&&sw.includes('/assets/js/modules/operational-agenda-v22.js')&&sw.includes('/assets/css/operational-agenda-v22.css'),'PWA deve incluir shell estático da Agenda V22');
 assert(server.includes('AGENDA_PREFIX = "ops-agenda/"')&&server.includes('resource === "ops-agenda-save"')&&server.includes('resource === "ops-agenda-delete"'),'backend deve ter endpoints próprios da Agenda');
 assert(server.includes('"ops-agenda/"')&&server.includes('return "Agenda"'),'Backup V17 deve passar a proteger eventos da Agenda');
 assert(notifications.includes("agenda:{label:'Agenda'")&&notifications.includes('function buildAgenda(out,scope)'),'Notificações V21 devem integrar compromissos V22 sem duplicar Ações');

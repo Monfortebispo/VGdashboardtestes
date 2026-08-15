@@ -1,107 +1,171 @@
-# Arquitetura — VG Dashboard v27
+# Arquitetura — VG Operations 2.0 v30
 
-## Workflow de Aprovações
+## Princípio
 
-A V27 acrescenta um fluxo formal de pedidos e decisões sobre a arquitetura já existente de autenticação, Netlify Functions e Netlify Blobs.
+A V30 é uma camada de consolidação sobre a arquitetura modular existente. Não reescreve as fontes de verdade de P&L, Revenue, Ações, Documentos, Aprovações ou Cenários.
 
-Frontend:
+O objetivo é reduzir a fragmentação de UX e acrescentar inteligência executiva reutilizando APIs e modelos já validados.
 
-- `assets/js/modules/workflow-approvals-v27.js`
-- `assets/css/workflow-approvals-v27.css`
-- vista `#view-approvals`
-- API `VG.approvals`
+## Ficha do Hotel — contrato de imutabilidade
 
-Backend:
+A Ficha do Hotel é uma exceção deliberada à consolidação:
 
-- `ops-approvals` — lista pedidos visíveis ao utilizador autenticado;
-- `ops-approval-save` — cria ou atualiza pedidos pendentes;
-- `ops-approval-decide` — aprova/rejeita, reservado à Direção;
-- `ops-approval-cancel` — cancela pedidos ainda pendentes.
+- `#nav-fichahotel` permanece como item próprio do menu;
+- `#view-fichahotel` permanece como vista própria;
+- `assets/js/modules/ficha-hotel.js` não é modificado;
+- Hotel 360º apenas referencia/abre a Ficha, não a substitui.
 
-Os Blobs `ops-approval/<id>` não podem ser alterados pela API genérica.
+O teste V30 verifica o SHA-256 do módulo para impedir alterações acidentais.
 
-## Estados e tipos
+## Novos módulos
+
+### `assets/js/modules/operational-score-v28.js`
+
+API: `VG.operationalScore`
+
+Responsabilidades:
+
+- calcular Score 0–100 por seis dimensões;
+- normalizar pesos para 100%;
+- carregar/gravar configuração partilhada em `settings-score-v30`;
+- expor decomposição e dimensão mais forte/fraca.
+
+Apenas Direção/Admin pode guardar pesos, recorrendo à proteção server-side já existente do recurso `settings`.
+
+### `assets/js/modules/hotel-360-v30.js`
+
+API: `VG.hotel360`
+
+Responsabilidades:
+
+- consumir `VG.hotelPerformance.buildModel()`;
+- apresentar visão executiva e separadores por domínio;
+- integrar Score;
+- construir ponte explicativa da variação de GOP;
+- detetar gaps de metas/Forecast;
+- criar Ações de recuperação através de `VG.actions.openForPriority()`.
+
+Não persiste uma segunda cópia de KPIs.
+
+### `assets/js/modules/revenue-hub-v30.js`
+
+API: `VG.revenueHub`
+
+Cria a experiência `Revenue & Forecast` e reutiliza fisicamente as interfaces legadas:
+
+- `view-revenueint`;
+- `view-forecast`;
+- `view-scenariocompare`.
+
+As funções originais `riRender`, `forecastRender` e `scenarioComparisonRender` continuam a executar a lógica.
+
+### `assets/js/ui/vg-operations-2-v30.js`
+
+API: `VG.operations2`
+
+Responsabilidades:
+
+- reorganizar o menu principal;
+- manter vistas legadas sem as expor como opções primárias;
+- redirecionar rotas antigas para as novas experiências agregadas;
+- criar o botão transversal `Perguntar aos dados`;
+- renderizar Home específica por perfil.
+
+## Score Operacional
+
+Pesos por defeito:
+
+```text
+Financeiro  25
+Revenue     20
+Eficiência  15
+Reputação   15
+Execução    15
+Dados       10
+```
+
+Cada dimensão produz 0–100 a partir de sinais existentes. O score final é a média ponderada normalizada.
 
 Estados:
 
 ```text
-pending
-approved
-rejected
-cancelled
+< 60   Crítico
+< 75   Atenção
+< 88   Bom
+>= 88  Muito bom
 ```
 
-Tipos:
+O Score é um indicador executivo explicável, não uma nota contabilística ou avaliação individual de gestão.
+
+## Análise automática de causa
+
+A ponte de GOP usa os valores P&L disponíveis por hotel e período:
 
 ```text
-target
-configuration
-operational
-exception
-document
-decision
+ΔGOP oficial com sede
+= ΔReceita
+- ΔPessoal
+- ΔEnergia
+- ΔManutenção
+- ΔComidas
+- ΔBebidas
+- ΔOperacionais
+- ΔMarketing
+- ΔOutros custos
++ residual de sede/reconciliação
 ```
 
-Prioridades:
+O residual garante reconciliação com o GOP oficial. A interface identifica claramente o método como explicativo/estimado.
+
+## Planos de recuperação
+
+Não existe novo armazenamento. Cada gap relevante cria/consulta Ações existentes com `sourceKey` estável:
 
 ```text
-normal
-high
-critical
+recovery:<HOTEL>:<METRICA>:<ANO>
 ```
 
-## Âmbito e permissões
+Assim permanecem disponíveis responsável, prazo, estado, comentários, histórico, permissões e auditoria já implementados na Gestão de Ações.
 
-- Diretor/Assistente: pode submeter pedidos para o hotel associado à conta.
-- Direção/Admin: pode submeter pedidos para qualquer hotel.
-- Apenas Direção/Admin pode aprovar ou rejeitar.
-- Quando existe um aprovador específico, outro utilizador da Direção não pode decidir esse pedido.
-- Um pedido pendente pode ser editado pelo requerente ou pela Direção.
-- Alterações concorrentes são rejeitadas através de `expectedUpdatedAt`.
+## Revenue & Forecast
 
-## Segregação de funções
+A nova vista `#view-revenuehub` funciona como orquestrador visual. Não duplica os cálculos de:
 
-A autoaprovação não é tratada como uma aprovação normal.
+- Revenue Intelligence;
+- Forecast V12;
+- Comparação de Cenários V29.
 
-Quando o requerente pertence à Direção e tenta decidir o próprio pedido, o servidor exige:
+Rotas antigas são encaminhadas para o separador correspondente, preservando compatibilidade com links/atalhos.
 
-- `overrideSelf=true`;
-- justificação com pelo menos 20 caracteres;
-- registo `selfApprovalException=true`;
-- evento crítico na Auditoria & Governação.
+## Navegação e descoberta
 
-Isto permite uma exceção operacional sem esconder a quebra de segregação de funções.
+O menu principal é reduzido. As vistas avançadas/legadas continuam presentes no DOM e podem ser acedidas por command palette/Pesquisa Global quando aplicável.
 
-## Associações
+Notificações permanecem no topo e o Assistente Analítico passa a ser transversal.
 
-Um pedido pode ser ligado a:
+## Home por perfil
 
-```text
-hotel
-ops-action/<id>
-ops-agenda/<id>
-ops-doc-meta/<id>
-meta/regra em texto
-```
+A Home usa as mesmas permissões já aplicadas ao resto da aplicação:
 
-O backend valida que Ações, Agenda e Documentos pertencem ao mesmo hotel.
+- Direção/Admin pode agregar portefólio;
+- Diretor/Assistente é limitado ao hotel associado.
 
-A V26 foi também estendida para que um documento possa ser associado a um pedido de aprovação.
+Não é criado um endpoint adicional.
 
-## Auditoria, notificações e pesquisa
+## PWA e versão
 
-- submissão, atualização, aprovação, rejeição e cancelamento entram no trilho V16;
-- autoaprovações excecionais ficam marcadas como críticas;
-- V21 gera notificações de pedidos pendentes para a Direção e decisões recentes para o requerente;
-- V19 indexa pedidos no `Ctrl+K`;
-- mobile/PWA expõe `Aprovações` em `Decidir e agir`.
+- Version guard: build `30.0`;
+- Service worker: `vg-operations-shell-v30`;
+- shell network-first quando online;
+- `/.netlify/` continua network-only;
+- novos assets V30 estão no precache estático.
 
-## Backup & Recuperação
+## Backend
 
-`ops-approval/` passa a ser uma chave de negócio recuperável pela V17. Os snapshots V27 guardam `appVersion: "27"`.
+`netlify/functions/dashboard-sessao.js` é byte-a-byte igual ao da V29.1.
 
-## PWA
+A V30 usa recursos já existentes:
 
-Shell estático atualizado para `vg-operations-shell-v27`.
-
-Apenas HTML/CSS/JS/ícones são cacheados. Pedidos, decisões e restantes dados operacionais continuam `network-only`.
+- `settings-score-v30` através do recurso genérico `settings`;
+- Ações para planos de recuperação;
+- modelos e endpoints já existentes para restantes dados.
