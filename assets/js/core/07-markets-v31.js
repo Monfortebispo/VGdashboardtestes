@@ -222,10 +222,16 @@
 
   function ensureSelector(){
     if(document.getElementById('vgMarketSwitch'))return;
-    const host=document.querySelector('.topbar');if(!host)return;
+    const topbar=document.querySelector('.topbar');if(!topbar)return;
+    // V31.1: o seletor tem de ser inserido no MESMO pai da âncora.
+    // Na V31 tentava-se topbar.insertBefore(wrap, themeDots), mas themeDots
+    // é filho de .topbar-right (não filho direto de .topbar), causando
+    // NotFoundError e impedindo totalmente a montagem do controlo.
+    const host=topbar.querySelector('.topbar-right')||topbar;
     const wrap=document.createElement('div');wrap.id='vgMarketSwitch';wrap.className='vg-market-switch';
-    wrap.innerHTML=`<span>Mercado</span><div>${Object.values(DEFINITIONS).map(m=>`<button type="button" data-market="${m.id}">${m.flag} ${m.label}</button>`).join('')}</div>`;
-    const anchor=host.querySelector('.theme-dots')||host.lastElementChild;host.insertBefore(wrap,anchor);
+    wrap.innerHTML=`<span>Mercado</span><div>${Object.values(DEFINITIONS).map(m=>`<button type="button" data-market="${m.id}"><span class="vg-market-flag">${m.flag}</span><span class="vg-market-label">${m.label}</span></button>`).join('')}</div>`;
+    const anchor=host.querySelector('.theme-dots');
+    if(anchor&&anchor.parentNode===host)host.insertBefore(wrap,anchor);else host.appendChild(wrap);
     wrap.querySelectorAll('[data-market]').forEach(b=>b.addEventListener('click',()=>switchTo(b.dataset.market)));
     updateSelector();
   }
@@ -301,6 +307,6 @@
   function init(){enforceUserMarket();installSnapshotRouting();installDynamicRegionFunctions();installMixedImportAdapters();ensureSelector();applyMarketUi();installFichaCurrencyAdapter();state.initialized=true;setTimeout(()=>{const before=id();enforceUserMarket();if(before!==id()){updateSelector();applyMarketUi();}},1200);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 
-  window.VG.market={version:31,state,DEFINITIONS,BR_HOTELS:BR_HOTELS.slice(),id,def,hotelMarket,isBrasil,isCurrentHotel,canonicalHotel,defaultRegions,regionLabels,regionLabel,currency,symbol,locale,formatNumber,formatMoney,formatMoneyCompact,moneyUnit,currentUser,isDirection,userMarket,enforceUserMarket,detectHotels,detectDataset,detectPurchases,filterSnapshot,mergeSnapshots,switchTo,routePnlImport,ensureMarketForPurchases,currentScopeLabel,applyMarketUi};
+  window.VG.market={version:31,state,DEFINITIONS,BR_HOTELS:BR_HOTELS.slice(),id,def,hotelMarket,isBrasil,isCurrentHotel,canonicalHotel,defaultRegions,regionLabels,regionLabel,currency,symbol,locale,formatNumber,formatMoney,formatMoneyCompact,moneyUnit,currentUser,isDirection,userMarket,enforceUserMarket,detectHotels,detectDataset,detectPurchases,filterSnapshot,mergeSnapshots,switchTo,routePnlImport,ensureMarketForPurchases,currentScopeLabel,applyMarketUi,ensureSelector};
   window.vgCurrencySymbol=()=>symbol();window.vgFormatMoney=(v,d=0,space=false)=>formatMoney(v,d,space);window.vgFormatMoneyCompact=(v,d=1)=>formatMoneyCompact(v,d);
 })();
