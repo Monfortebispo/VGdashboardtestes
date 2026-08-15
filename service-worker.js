@@ -1,6 +1,6 @@
-// VG Operations v30.2 — service worker
+// VG Operations v30.3 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v30_2';
+const CACHE_NAME = 'vg-operations-shell-v30_3';
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",
   "/assets/css/audit-governance.css",
@@ -101,7 +101,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    // v30: VG Operations 2.0; dados empresariais continuam network-only.
+    // v30.3: correções de Portefólio, Ponte GOP e Revenue Hub; dados empresariais continuam network-only.
     const batchSize=8;
     for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
       const batch=STATIC_ASSETS.slice(i,i+batchSize);
@@ -152,7 +152,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // v30: recursos estáticos da própria aplicação são NETWORK-FIRST.
+  // v30.3: recursos estáticos da própria aplicação são NETWORK-FIRST.
   // Isto impede misturas do tipo HTML novo + JavaScript antigo. O browser
   // continua a poder usar a sua cache HTTP e o Cache Storage fica como
   // fallback offline, nunca como fonte prioritária quando há rede.

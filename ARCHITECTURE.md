@@ -173,3 +173,10 @@ A V30 usa recursos já existentes:
 
 ## V30.1 — Correção da navegação
 A reconstrução do menu preserva agora todos os botões antes de remover os grupos antigos. Isto corrige os grupos vazios vistos na V30. A Ficha do Hotel permanece independente e o respetivo módulo não foi alterado.
+
+
+## V30.3 — Correções consolidadas
+- O Portefólio da Home respeita o filtro ativo de região/hotéis.
+- A Ponte do GOP apresenta contribuição económica: menos custo melhora GOP (verde), mais custo deteriora (vermelho), independentemente do sinal contabilístico da rubrica.
+- Revenue & Forecast incorpora as views originais completas, preservando os IDs usados pelos estilos e pelos renderizadores legados.
+- Ficha do Hotel e backend não foram alterados.
