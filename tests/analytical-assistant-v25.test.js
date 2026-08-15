@@ -13,7 +13,7 @@ const cssPath=path.join(ROOT,'assets/css/analytical-assistant-v25.css');
 cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 assert(fs.existsSync(cssPath),'CSS do Assistente V25 deve existir');
 assert(html.includes('nav-analyticalassistant')&&html.includes('view-analyticalassistant')&&html.includes('analytical-assistant-v25.js')&&html.includes('analytical-assistant-v25.css'),'V25 deve estar ligada ao menu, vista, JS e CSS');
-assert(sw.includes('vg-operations-shell-v30')&&sw.includes('/assets/js/modules/analytical-assistant-v25.js')&&sw.includes('/assets/css/analytical-assistant-v25.css'),'PWA deve incluir o Assistente V25 no shell estático');
+assert(sw.includes('vg-operations-shell-v31')&&sw.includes('/assets/js/modules/analytical-assistant-v25.js')&&sw.includes('/assets/css/analytical-assistant-v25.css'),'PWA deve incluir o Assistente V25 no shell estático');
 assert(mobile.includes('data-action="assistant"'),'mobile deve expor o Assistente Analítico');
 assert(search.includes("type:'assistant'")&&search.includes('analyticalAssistant?.open'),'Pesquisa Global deve encontrar e abrir o Assistente');
 

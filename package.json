@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "30.3.0",
+  "version": "31.0.0",
   "private": true,
-  "description": "VG Dashboard Operações — v30.3: Portefólio filtrado, Ponte do GOP semanticamente correta e Revenue & Forecast com layout preservado; Ficha do Hotel inalterada",
+  "description": "VG Operations v31: mercados PT+ES e Brasil separados, moeda contextual EUR/BRL e dados/Blobs isolados por mercado",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

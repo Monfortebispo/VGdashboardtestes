@@ -19,6 +19,6 @@ assert(nav.includes("currentView === 'hoteis'")&&nav.includes("currentView === '
 assert(nav.includes('__vgNumberFormats'),'formatadores numéricos devem ser reutilizados');
 assert(nav.includes('resizeVisibleCharts'),'mudança de vista deve redimensionar apenas gráficos visíveis');
 assert(health.includes('XLSX é carregado sob pedido'),'healthcheck deve reconhecer XLSX lazy');
-assert(sw.includes("vg-operations-shell-v30")&&sw.includes('Promise.allSettled'),'service worker deve manter precache concorrente com cache versionada v22');
+assert(sw.includes("vg-operations-shell-v31")&&sw.includes('Promise.allSettled'),'service worker deve manter precache concorrente com cache versionada v22');
 const s=createSandbox({requestIdleCallback:fn=>fn({didTimeout:false,timeRemaining:()=>10}),cancelIdleCallback(){}});s.window.performance={now:()=>10};s.performance=s.window.performance;load('assets/js/core/05-performance.js',s);assert.strictEqual(s.window.VG.performance.version,18);assert.strictEqual(typeof s.window.VG.performance.ensureXLSX,'function');assert.strictEqual(typeof s.window.VG.performance.report,'function');
 console.log('✓ performance v18: defer, XLSX lazy, init por vista, formatters, charts e SW concorrente');

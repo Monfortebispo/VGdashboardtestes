@@ -19,7 +19,7 @@ cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 cp.execFileSync(process.execPath,['--check',serverPath],{stdio:'pipe'});
 
 assert(html.includes('Workflow de Aprovações')&&html.includes('workflow-approvals-v27.js')&&html.includes('workflow-approvals-v27.css'),'V27 deve estar ligada ao HTML');
-assert(sw.includes('vg-operations-shell-v30')&&sw.includes('workflow-approvals-v27.js')&&sw.includes('workflow-approvals-v27.css'),'PWA deve incluir shell V27');
+assert(sw.includes('vg-operations-shell-v31')&&sw.includes('workflow-approvals-v27.js')&&sw.includes('workflow-approvals-v27.css'),'PWA deve incluir shell V27');
 assert(server.includes('APPROVAL_PREFIX = "ops-approval/"')&&server.includes('resource === "ops-approval-save"')&&server.includes('resource === "ops-approval-decide"'),'backend deve ter endpoints próprios de aprovação');
 assert(server.includes('"ops-approval/"')&&server.includes('return "Aprovações"'),'Backup deve proteger aprovações');
 assert(search.includes("type:'approval'")&&search.includes('buildApprovals(arr)'),'Pesquisa Global deve indexar aprovações');

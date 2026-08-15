@@ -118,3 +118,49 @@ A reconstrução do menu preserva agora todos os botões antes de remover os gru
 - A Ponte do GOP apresenta contribuição económica: menos custo melhora GOP (verde), mais custo deteriora (vermelho), independentemente do sinal contabilístico da rubrica.
 - Revenue & Forecast incorpora as views originais completas, preservando os IDs usados pelos estilos e pelos renderizadores legados.
 - Ficha do Hotel e backend não foram alterados.
+
+## V31 — Mercados Internacionais
+
+A VG Operations passa a trabalhar com dois universos financeiros independentes:
+
+- `PT + ES` — moeda EUR (`€`);
+- `Brasil` — moeda BRL (`R$`).
+
+O seletor `Mercado` no topo muda o contexto integral da aplicação: hotéis, regiões, P&L, ocupação, reputação, Compras, Benchmarking, Revenue, Forecast, Score, metas, relatórios e registos operacionais.
+
+### Regra de isolamento
+
+A aplicação nunca soma nem compara diretamente valores financeiros EUR e BRL. Não existe conversão cambial na V31. Rankings, percentis, anomalias, metas e Score são calculados apenas dentro do mercado ativo.
+
+Os dados já existentes mantêm-se como `PT + ES`; não é necessária uma reimportação. No backend, as chaves históricas de PT+ES permanecem intactas. O Brasil utiliza namespace próprio (`market/brasil/...`) para recursos genéricos e o campo `market` nos registos operacionais.
+
+### Brasil — unidades iniciais
+
+A configuração inicial é baseada nos ficheiros P&L/A&B fornecidos e contém 13 unidades:
+
+`FORTALEZA`, `SALVADOR`, `CUMBUCO`, `RIO DE JANEIRO`, `TOUROS`, `MARES`, `PAULISTA`, `CABO`, `ECO RESORT DE ANGRA`, `ALAGOAS`, `COLLECTION SUNSET CUMBUCO`, `COLLECTION OURO PRETO`, `COLLECTION AMAZÔNIA`.
+
+Grupos iniciais, editáveis no Setup:
+
+- Cidade — Fortaleza, Paulista, Rio de Janeiro, Salvador;
+- Resorts — Alagoas, Cabo, Cumbuco, Eco Resort de Angra, Mares, Touros;
+- Collection — Collection Amazônia, Collection Ouro Preto, Collection Sunset Cumbuco.
+
+### Importações mistas
+
+O runtime V31 separa automaticamente dados mistos por hotel. Isto permite que fontes comuns de Ocupação/Reputação que contenham PT/ES e Brasil alimentem os dois bancos sem misturar os universos. P&L e Compras detetam o mercado pelos hotéis presentes no ficheiro e, quando necessário, mudam o contexto antes de aplicar os dados.
+
+### Ficha do Hotel
+
+O ficheiro `assets/js/modules/ficha-hotel.js` continua byte-a-byte inalterado. A moeda é adaptada externamente pelo runtime V31: EUR em PT+ES e BRL no Brasil.
+
+### Segurança e permissões
+
+Direção/Admin pode alternar entre os dois mercados. Diretor/Assistente fica automaticamente limitado ao mercado da unidade associada. O backend valida novamente o parâmetro `market`; alterar manualmente o URL não permite consultar o outro universo.
+
+### PWA
+
+- Build guard: `31.0`;
+- Service worker: `vg-operations-shell-v31`;
+- API/Netlify continua network-only;
+- dados empresariais não entram no cache estático.

@@ -23,8 +23,8 @@ assert(rh.includes("current:'revenueint'")&&rh.includes("forecast:'forecast'")&&
 assert(h360.includes('causeAnalysis')&&h360.includes('Objetivos &amp; plano de recuperação')&&h360.includes('openForPriority'),'Hotel 360 deve incluir causa e planos ligados a Ações');
 assert(score.includes("settings','score-v30")&&score.includes('DEFAULT_WEIGHTS')&&score.includes('dimensionScores'),'Score deve ser explicável e pesos partilhados');
 assert(ui.includes('buildDirectionHome')&&ui.includes('buildHotelHome'),'Home deve diferir por perfil');
-assert(sw.includes("vg-operations-shell-v30")&&sw.includes('/assets/js/modules/hotel-360-v30.js')&&sw.includes('/assets/js/modules/operational-score-v28.js')&&sw.includes('/assets/js/modules/revenue-hub-v30.js')&&sw.includes('/assets/js/ui/vg-operations-2-v30.js')&&sw.includes('/assets/css/vg-operations-2-v30.css'),'PWA deve incluir shell V30');
-assert.strictEqual(sha('netlify/functions/dashboard-sessao.js'),'4507a0617d5fb1606358890e6fbd80250468aa7625d3047e1cbebc22cafcd206','V30 não necessita alterar backend face à V29.1');
+assert(sw.includes("vg-operations-shell-v31")&&sw.includes('/assets/js/modules/hotel-360-v30.js')&&sw.includes('/assets/js/modules/operational-score-v28.js')&&sw.includes('/assets/js/modules/revenue-hub-v30.js')&&sw.includes('/assets/js/ui/vg-operations-2-v30.js')&&sw.includes('/assets/css/vg-operations-2-v30.css'),'PWA deve incluir shell V30');
+assert(read('netlify/functions/dashboard-sessao.js').includes('marketStoreKey')&&read('netlify/functions/dashboard-sessao.js').includes('market/brasil'),'V31 pode alterar backend apenas para isolar mercados; funcionalidades V30 permanecem');
 
 // Teste funcional mínimo do Score: normalização dos pesos e cálculo determinístico.
 const sandbox={window:{VG:{shared:{get:async()=>({data:null}),post:async()=>({ok:true})},events:{emit(){}}}},console,Date,Math,Number,String,Object,Array,JSON,Promise,setTimeout,clearTimeout};sandbox.window.window=sandbox.window;sandbox.window.vgAuthCurrent=()=>({role:'direcao'});vm.createContext(sandbox);vm.runInContext(score,sandbox,{filename:'operational-score-v28.js'});const api=sandbox.window.VG.operationalScore;

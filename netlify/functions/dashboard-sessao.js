@@ -77,6 +77,15 @@ function blobKeyFor(resource, key) {
   if (key === undefined || key === null || key === "") return resource;
   return resource + "-" + encodeURIComponent(String(key));
 }
+const MARKET_IDS = new Set(["iberia","brasil"]);
+function marketId(v) { const x=String(v||"iberia").toLowerCase(); return MARKET_IDS.has(x)?x:"iberia"; }
+function marketStoreKey(market,key) { market=marketId(market); return market === "iberia" ? key : `market/${market}/${key}`; }
+function itemMarket(item) { return marketId(item?.market || "iberia"); }
+const BR_HOTELS_SERVER = new Set(["FORTALEZA","SALVADOR","CUMBUCO","RIO DE JANEIRO","TOUROS","MARES","PAULISTA","CABO","ECO RESORT DE ANGRA","ALAGOAS","COLLECTION SUNSET CUMBUCO","COLLECTION OURO PRETO","COLLECTION AMAZONIA"]);
+function normHotelMarket(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim(); }
+function hotelMarketServer(h){ const k=normHotelMarket(h); if(BR_HOTELS_SERVER.has(k))return "brasil"; if(k.includes("AMAZONIA")||k.includes("OURO PRETO")||k.includes("SUNSET CUMBUCO")||k.includes("ECO RESORT DE ANGRA"))return "brasil"; return "iberia"; }
+function userMarketServer(user){ return user&&user.hotel&&user.hotel!=="*"?hotelMarketServer(user.hotel):"iberia"; }
+function isGlobalResource(resource){ return ["auth-change-password","users","assignees","vg_presence","audit","audit-events","recovery-list","recovery-create","recovery-restore","recovery-delete"].includes(resource); }
 function isDirection(user) { return !!user && (user.role === "direcao" || user.role === "admin"); }
 function norm(s) { return String(s || "").trim().toUpperCase(); }
 function safeUserName(s) { return String(s || "").trim().toLowerCase().replace(/[^a-z0-9_.-]/g, ""); }
@@ -107,21 +116,21 @@ function canManageAction(user, action) {
 function minimalAssignee(rec) {
   return { user: rec.user, name: rec.name, role: rec.role, hotel: rec.hotel || "*", active: rec.active !== false };
 }
-async function listOperationalActions(store) {
+async function listOperationalActions(store, market="iberia") {
   const listing = await store.list({ prefix: ACTION_PREFIX });
   const blobs = (listing && Array.isArray(listing.blobs)) ? listing.blobs : [];
   const rows = await Promise.all(blobs.map(async (entry) => {
     try { return await store.get(entry.key, { type: "json" }); } catch (e) { return null; }
   }));
-  return rows.filter(x => x && x.id).sort((a,b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+  return rows.filter(x => x && x.id && itemMarket(x)===marketId(market)).sort((a,b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
 }
-async function listOperationalAgenda(store) {
+async function listOperationalAgenda(store, market="iberia") {
   const listing = await store.list({ prefix: AGENDA_PREFIX });
   const blobs = (listing && Array.isArray(listing.blobs)) ? listing.blobs : [];
   const rows = await Promise.all(blobs.map(async (entry) => {
     try { return await store.get(entry.key, { type: "json" }); } catch (e) { return null; }
   }));
-  return rows.filter(x => x && x.id).sort((a,b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.startTime || "").localeCompare(String(b.startTime || "")));
+  return rows.filter(x => x && x.id && itemMarket(x)===marketId(market)).sort((a,b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.startTime || "").localeCompare(String(b.startTime || "")));
 }
 function canSeeAgendaEvent(user, item) {
   if (!user || !item) return false;
@@ -129,33 +138,36 @@ function canSeeAgendaEvent(user, item) {
   return norm(item.hotel) === norm(user.hotel) || safeUserName(item.ownerUser) === safeUserName(user.user);
 }
 function canManageAgendaEvent(user, item) { return canSeeAgendaEvent(user, item); }
-async function listOperationalDocuments(store) {
+async function listOperationalDocuments(store, market="iberia") {
   const listing = await store.list({ prefix: DOCUMENT_META_PREFIX });
   const blobs = listing && Array.isArray(listing.blobs) ? listing.blobs : [];
   const rows = await Promise.all(blobs.map(async entry => {
     try { return await store.get(entry.key, { type:"json" }); } catch (e) { return null; }
   }));
-  return rows.filter(x=>x&&x.id).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
+  return rows.filter(x=>x&&x.id&&itemMarket(x)===marketId(market)).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
 }
 function canSeeDocument(user,item) { if(!user||!item)return false; return isDirection(user)||norm(item.hotel)===norm(user.hotel); }
 function canManageDocument(user,item) { return canSeeDocument(user,item); }
-async function documentLinkLabel(store, linkType, linkId, hotel) {
+async function documentLinkLabel(store, linkType, linkId, hotel, market="iberia") {
   if (linkType === "hotel") return cleanText(hotel,120);
   if (linkType === "action") {
     const a = await store.get(actionBlobKey(linkId), { type:"json" });
     if (!a) throw new Error("Ação associada não encontrada.");
+    if (itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
     if (norm(a.hotel)!==norm(hotel)) throw new Error("A ação associada pertence a outro hotel.");
     return cleanText(a.sourceTitle||a.title||linkId,240);
   }
   if (linkType === "agenda") {
     const e = await store.get(agendaBlobKey(linkId), { type:"json" });
     if (!e) throw new Error("Evento associado não encontrado.");
+    if (itemMarket(e)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
     if (norm(e.hotel)!==norm(hotel)) throw new Error("O evento associado pertence a outro hotel.");
     return cleanText([e.title,e.date].filter(Boolean).join(" · "),240);
   }
   if (linkType === "approval") {
     const a = await store.get(approvalBlobKey(linkId), { type:"json" });
     if (!a) throw new Error("Pedido de aprovação associado não encontrado.");
+    if (itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
     if (norm(a.hotel)!==norm(hotel)) throw new Error("O pedido de aprovação associado pertence a outro hotel.");
     return cleanText([a.title,a.status].filter(Boolean).join(" · "),240);
   }
@@ -163,13 +175,13 @@ async function documentLinkLabel(store, linkType, linkId, hotel) {
 }
 function documentHistoryEntry(user,type,detail){ return {ts:new Date().toISOString(),type,detail:cleanText(detail,1200),user:user.user,name:user.name}; }
 
-async function listOperationalApprovals(store) {
+async function listOperationalApprovals(store, market="iberia") {
   const listing = await store.list({ prefix: APPROVAL_PREFIX });
   const blobs = listing && Array.isArray(listing.blobs) ? listing.blobs : [];
   const rows = await Promise.all(blobs.map(async entry => {
     try { return await store.get(entry.key, { type:"json" }); } catch (e) { return null; }
   }));
-  return rows.filter(x=>x&&x.id).sort((a,b)=>{
+  return rows.filter(x=>x&&x.id&&itemMarket(x)===marketId(market)).sort((a,b)=>{
     if (a.status === "pending" && b.status !== "pending") return -1;
     if (b.status === "pending" && a.status !== "pending") return 1;
     const rank={critical:3,high:2,normal:1};
@@ -191,24 +203,27 @@ function canDecideApproval(user,item) {
   const explicit = safeUserName(item.approverUser);
   return !explicit || explicit === safeUserName(user.user);
 }
-async function approvalLinkLabel(store, linkType, linkId, hotel) {
+async function approvalLinkLabel(store, linkType, linkId, hotel, market="iberia") {
   if (linkType === "hotel") return cleanText(hotel,120);
   if (linkType === "target") return cleanText(linkId,240);
   if (linkType === "action") {
     const a=await store.get(actionBlobKey(linkId),{type:"json"});
     if(!a) throw new Error("Ação associada não encontrada.");
+    if(itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
     if(norm(a.hotel)!==norm(hotel)) throw new Error("A ação associada pertence a outro hotel.");
     return cleanText(a.sourceTitle||a.title||linkId,240);
   }
   if (linkType === "agenda") {
     const e=await store.get(agendaBlobKey(linkId),{type:"json"});
     if(!e) throw new Error("Evento associado não encontrado.");
+    if(itemMarket(e)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
     if(norm(e.hotel)!==norm(hotel)) throw new Error("O evento associado pertence a outro hotel.");
     return cleanText([e.title,e.date].filter(Boolean).join(" · "),240);
   }
   if (linkType === "document") {
     const d=await store.get(documentMetaBlobKey(linkId),{type:"json"});
     if(!d) throw new Error("Documento associado não encontrado.");
+    if(itemMarket(d)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
     if(norm(d.hotel)!==norm(hotel)) throw new Error("O documento associado pertence a outro hotel.");
     return cleanText(d.title||d.fileName||linkId,240);
   }
@@ -218,13 +233,13 @@ function approvalHistoryEntry(user,type,detail,extra={}) {
   return Object.assign({ts:new Date().toISOString(),type,detail:cleanText(detail,1600),user:user.user,name:user.name},extra);
 }
 
-async function listOperationalScenarios(store) {
+async function listOperationalScenarios(store, market="iberia") {
   const listing = await store.list({ prefix: SCENARIO_PREFIX });
   const blobs = listing && Array.isArray(listing.blobs) ? listing.blobs : [];
   const rows = await Promise.all(blobs.map(async entry => {
     try { return await store.get(entry.key, { type:"json" }); } catch (e) { return null; }
   }));
-  return rows.filter(x=>x&&x.id).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
+  return rows.filter(x=>x&&x.id&&itemMarket(x)===marketId(market)).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
 }
 function canSeeScenario(user,item) { if(!user||!item)return false; return isDirection(user)||norm(item.hotel)===norm(user.hotel); }
 function canManageScenario(user,itemOrHotel) { const hotel=typeof itemOrHotel==="string"?itemOrHotel:itemOrHotel?.hotel; return !!user&&!!hotel&&(isDirection(user)||norm(hotel)===norm(user.hotel)); }
@@ -274,25 +289,26 @@ function cleanDataMetrics(v) {
   });
   return out;
 }
-async function listDataImports(store) {
+async function listDataImports(store, market="iberia") {
   const listing = await store.list({ prefix: DATA_IMPORT_PREFIX });
   const blobs = (listing && Array.isArray(listing.blobs)) ? listing.blobs : [];
   const rows = await Promise.all(blobs.map(async (entry) => {
     try { return await store.get(entry.key, { type: "json" }); } catch (e) { return null; }
   }));
-  return rows.filter(x => x && x.id).sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, DATA_HISTORY_LIMIT);
+  return rows.filter(x => x && x.id && itemMarket(x)===marketId(market)).sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, DATA_HISTORY_LIMIT);
 }
 
 
 function recoverySnapshotKey(id) { return RECOVERY_SNAPSHOT_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function recoveryDataKey(id, idx) { return RECOVERY_DATA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, "") + "/" + String(idx).padStart(5, "0"); }
 function isRecoverableBusinessKey(key) {
-  const k = String(key || "");
+  let k = String(key || "");
+  if (k.startsWith("market/brasil/")) k = k.slice("market/brasil/".length);
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
   return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
-  const k=String(key||"");
+  let k=String(key||""); if(k.startsWith("market/brasil/")) k=k.slice("market/brasil/".length);
   if (k === "index" || k === "meta") return "Índice / Metadados";
   if (k === "notas") return "Notas";
   if (k === "targets-rules" || k.startsWith("settings-")) return "Configuração";
@@ -709,6 +725,7 @@ exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const resource = params.resource || "";
   const key = params.key || "";
+  const market = marketId(params.market || "iberia");
   if (!resource) return badRequest("Falta o parâmetro resource.");
 
   try {
@@ -740,6 +757,8 @@ exports.handler = async (event) => {
     if (!authUser) return unauthorized();
     // Blobs internos nunca são endereçáveis pela API genérica, mesmo por utilizadores autenticados.
     if (resource.startsWith("_")) return forbidden();
+    // V31: utilizadores de hotel não podem mudar o parâmetro market para consultar outro universo.
+    if (!isDirection(authUser) && !isGlobalResource(resource) && market !== userMarketServer(authUser)) return forbidden("O seu perfil não tem acesso a este mercado.");
 
     // -------------------- AUDITORIA & GOVERNAÇÃO (v16) --------------------
     if (resource === "audit-events" && event.httpMethod === "GET") {
@@ -787,13 +806,15 @@ exports.handler = async (event) => {
 
     // -------------------- CENTRO DE DADOS (v10) --------------------
     if (resource === "data-import-history" && event.httpMethod === "GET") {
-      const rows = await listDataImports(store);
+      const rows = await listDataImports(store, market);
       return ok({ data: rows, total: rows.length, updatedAt: new Date().toISOString() });
     }
     if (resource === "data-import-backup" && event.httpMethod === "GET") {
       if (!isDirection(authUser)) return forbidden("Apenas a Direção pode consultar snapshots para rollback.");
       const id = cleanText(key, 100).replace(/[^a-zA-Z0-9_.-]/g, "");
       if (!id) return badRequest("Identificador do carregamento em falta.");
+      const record = await store.get(dataImportBlobKey(id), { type: "json" });
+      if (!record || itemMarket(record)!==market) return response(404, { error: "Snapshot anterior não encontrado neste mercado." });
       const backup = await store.get(dataBackupBlobKey(id), { type: "json" });
       if (!backup) return response(404, { error: "Snapshot anterior não encontrado." });
       return ok({ data: backup });
@@ -826,14 +847,14 @@ exports.handler = async (event) => {
         action, status, fileName: cleanText(input.fileName, 300), fileSize: Number(input.fileSize || 0) || 0,
         scope: cleanText(input.scope, 400), summary: cleanText(input.summary, 600), metrics: cleanDataMetrics(input.metrics),
         warnings, duplicate: !!input.duplicate, backupAvailable, backupReason,
-        createdAt: now, user: authUser.user, name: authUser.name, role: authUser.role, hotel: authUser.hotel || "*"
+        createdAt: now, user: authUser.user, name: authUser.name, role: authUser.role, hotel: authUser.hotel || "*", market
       };
       await store.setJSON(dataImportBlobKey(id), record);
       await safeGovernanceAudit(store, authUser, {
         category:"Dados", action: action === "rollback" ? "Rollback de dados" : (status === "error" ? "Importação com erro" : "Importação registada"),
         resource:"data-import", key:id, detail:[record.sourceName || source, record.fileName, record.scope, record.summary].filter(Boolean).join(" · "),
         severity: action === "rollback" ? "critical" : (status === "error" || record.duplicate ? "warning" : "info"),
-        meta:{ source, fileName:record.fileName, scope:record.scope, duplicate:record.duplicate, backupAvailable:record.backupAvailable, status }
+        meta:{ market, source, fileName:record.fileName, scope:record.scope, duplicate:record.duplicate, backupAvailable:record.backupAvailable, status }
       });
       return ok({ ok: true, data: record });
     }
@@ -847,7 +868,7 @@ exports.handler = async (event) => {
       return ok({ data: rows });
     }
     if (resource === "ops-actions" && event.httpMethod === "GET") {
-      const rows = await listOperationalActions(store);
+      const rows = await listOperationalActions(store, market);
       return ok({ data: rows, total: rows.length, updatedAt: new Date().toISOString() });
     }
     if (resource === "ops-action-save" && event.httpMethod === "POST") {
@@ -856,6 +877,7 @@ exports.handler = async (event) => {
       if (!payload || typeof payload !== "object") return badRequest("Ação inválida.");
       const id = cleanText(payload.id, 80).replace(/[^a-zA-Z0-9_.-]/g, "");
       let existing = id ? await store.get(actionBlobKey(id), { type: "json" }) : null;
+      if(existing && itemMarket(existing)!==market) existing=null;
       const hotel = cleanText(payload.hotel || existing?.hotel, 120);
       if (!hotel) return badRequest("Hotel obrigatório.");
       if (existing) {
@@ -889,6 +911,7 @@ exports.handler = async (event) => {
         createdBy: { user: authUser.user, name: authUser.name },
         history: []
       };
+      action.market = market;
       action.hotel = hotel;
       action.sourceKey = cleanText(payload.sourceKey !== undefined ? payload.sourceKey : action.sourceKey, 600);
       action.sourceTitle = cleanText(payload.sourceTitle !== undefined ? payload.sourceTitle : action.sourceTitle, 400);
@@ -938,7 +961,7 @@ exports.handler = async (event) => {
 
     // -------------------- AGENDA OPERACIONAL (v22) --------------------
     if (resource === "ops-agenda" && event.httpMethod === "GET") {
-      const rows = (await listOperationalAgenda(store)).filter(x => canSeeAgendaEvent(authUser, x));
+      const rows = (await listOperationalAgenda(store, market)).filter(x => canSeeAgendaEvent(authUser, x));
       return ok({ data: rows, total: rows.length, updatedAt: new Date().toISOString() });
     }
     if (resource === "ops-agenda-save" && event.httpMethod === "POST") {
@@ -947,6 +970,7 @@ exports.handler = async (event) => {
       if (!payload || typeof payload !== "object") return badRequest("Evento inválido.");
       const id = cleanText(payload.id, 80).replace(/[^a-zA-Z0-9_.-]/g, "");
       let existing = id ? await store.get(agendaBlobKey(id), { type:"json" }) : null;
+      if(existing && itemMarket(existing)!==market) existing=null;
       const hotel = cleanText(payload.hotel || existing?.hotel, 120);
       if (!hotel) return badRequest("Hotel obrigatório.");
       if (existing) {
@@ -983,7 +1007,7 @@ exports.handler = async (event) => {
         createdAt:now, createdBy:{user:authUser.user,name:authUser.name}, history:[]
       };
       const before = existing ? {hotel:existing.hotel||"",title:existing.title||"",type:existing.type||"",date:existing.date||"",startTime:existing.startTime||"",endTime:existing.endTime||"",ownerUser:existing.ownerUser||""} : null;
-      item.hotel=hotel; item.title=title; item.type=type; item.date=date; item.startTime=startTime; item.endTime=endTime; item.allDay=!startTime;
+      item.market=market; item.hotel=hotel; item.title=title; item.type=type; item.date=date; item.startTime=startTime; item.endTime=endTime; item.allDay=!startTime;
       item.notes=cleanText(payload.notes !== undefined ? payload.notes : existing?.notes, 2400);
       item.ownerUser=ownerUser; item.ownerName=ownerName; item.updatedAt=now; item.updatedBy={user:authUser.user,name:authUser.name};
       if (!Array.isArray(item.history)) item.history=[];
@@ -1009,7 +1033,7 @@ exports.handler = async (event) => {
     if (resource === "ops-agenda-delete" && event.httpMethod === "POST") {
       const payload=parseBody(event); if(!payload||typeof payload!=="object") return badRequest("Pedido inválido.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id) return badRequest("Evento obrigatório.");
-      const existing=await store.get(agendaBlobKey(id),{type:"json"}); if(!existing) return badRequest("Evento não encontrado.");
+      const existing=await store.get(agendaBlobKey(id),{type:"json"}); if(!existing||itemMarket(existing)!==market) return badRequest("Evento não encontrado.");
       if(!canManageAgendaEvent(authUser,existing)) return forbidden("Não pode eliminar este evento.");
       if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt)) return conflict("Este evento foi alterado por outro utilizador. Reabra-o antes de eliminar.",{data:existing});
       await store.delete(agendaBlobKey(id));
@@ -1021,12 +1045,12 @@ exports.handler = async (event) => {
 
     // -------------------- GESTÃO DE DOCUMENTOS (v26) --------------------
     if (resource === "ops-documents" && event.httpMethod === "GET") {
-      const rows = (await listOperationalDocuments(store)).filter(x=>canSeeDocument(authUser,x));
+      const rows = (await listOperationalDocuments(store, market)).filter(x=>canSeeDocument(authUser,x));
       return ok({data:rows,total:rows.length,updatedAt:new Date().toISOString()});
     }
     if (resource === "ops-document-file" && event.httpMethod === "GET") {
       const id=cleanText(key,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id)return badRequest("Documento obrigatório.");
-      const meta=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!meta)return response(404,{error:"Documento não encontrado."});
+      const meta=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!meta||itemMarket(meta)!==market)return response(404,{error:"Documento não encontrado."});
       if(!canSeeDocument(authUser,meta))return forbidden("Sem acesso a este documento.");
       const contentBase64=await store.get(documentDataBlobKey(id),{type:"text",consistency:"strong"}); if(!contentBase64)return response(404,{error:"Conteúdo do documento indisponível."});
       return ok({data:{id:meta.id,fileName:meta.fileName,mime:meta.mime,size:meta.size,contentBase64}});
@@ -1036,6 +1060,7 @@ exports.handler = async (event) => {
       const payload=parseBody(event); if(!payload||typeof payload!=="object")return badRequest("Documento inválido.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
       let existing=id?await store.get(documentMetaBlobKey(id),{type:"json"}):null;
+      if(existing && itemMarket(existing)!==market) existing=null;
       const hotel=cleanText(payload.hotel!==undefined?payload.hotel:existing?.hotel,120); if(!hotel)return badRequest("Hotel obrigatório.");
       if(existing){
         if(!canManageDocument(authUser,existing))return forbidden("Não pode alterar este documento.");
@@ -1046,7 +1071,7 @@ exports.handler = async (event) => {
       const category=cleanText(payload.category!==undefined?payload.category:existing?.category||"other",30)||"other"; if(!DOCUMENT_CATEGORIES.has(category))return badRequest("Categoria inválida.");
       const linkType=cleanText(payload.linkType!==undefined?payload.linkType:existing?.linkType||"hotel",20)||"hotel"; if(!DOCUMENT_LINK_TYPES.has(linkType))return badRequest("Tipo de associação inválido.");
       const linkId=linkType==="hotel"?"":cleanText(payload.linkId!==undefined?payload.linkId:existing?.linkId,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(linkType!=="hotel"&&!linkId)return badRequest("Referência associada obrigatória.");
-      let linkLabel=""; try{linkLabel=await documentLinkLabel(store,linkType,linkId,hotel);}catch(e){return badRequest(e.message||"Referência associada inválida.");}
+      let linkLabel=""; try{linkLabel=await documentLinkLabel(store,linkType,linkId,hotel,market);}catch(e){return badRequest(e.message||"Referência associada inválida.");}
       const replacing=typeof payload.contentBase64==="string"&&payload.contentBase64.length>0;
       let fileName=existing?.fileName||"",mime=existing?.mime||"application/octet-stream",size=Number(existing?.size||0)||0,decoded=null;
       if(!existing&&!replacing)return badRequest("Ficheiro obrigatório.");
@@ -1059,7 +1084,7 @@ exports.handler = async (event) => {
       }
       const now=nextIsoTimestamp(existing?.updatedAt); const item=existing?Object.assign({},existing):{id:"doc_"+Date.now().toString(36)+"_"+crypto.randomBytes(5).toString("hex"),createdAt:now,createdBy:{user:authUser.user,name:authUser.name},history:[]};
       const before=existing?{hotel:existing.hotel,title:existing.title,category:existing.category,linkType:existing.linkType,linkId:existing.linkId,fileName:existing.fileName,size:existing.size}:null;
-      item.hotel=hotel;item.title=title;item.category=category;item.linkType=linkType;item.linkId=linkId;item.linkLabel=linkLabel;item.tags=cleanText(payload.tags!==undefined?payload.tags:existing?.tags,300);item.description=cleanText(payload.description!==undefined?payload.description:existing?.description,1200);item.fileName=fileName;item.mime=mime;item.size=size;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      item.market=market;item.hotel=hotel;item.title=title;item.category=category;item.linkType=linkType;item.linkId=linkId;item.linkLabel=linkLabel;item.tags=cleanText(payload.tags!==undefined?payload.tags:existing?.tags,300);item.description=cleanText(payload.description!==undefined?payload.description:existing?.description,1200);item.fileName=fileName;item.mime=mime;item.size=size;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
       if(!Array.isArray(item.history))item.history=[];
       if(!existing)item.history.push(documentHistoryEntry(authUser,"created","Documento criado.")); else { const changes=[]; if(before.title!==title)changes.push("Título alterado");if(before.category!==category)changes.push("Categoria alterada");if(before.linkType!==linkType||before.linkId!==linkId)changes.push("Associação alterada");if(replacing)changes.push("Ficheiro substituído");if(changes.length)item.history.push(documentHistoryEntry(authUser,"updated",changes.join(" · "))); }
       item.history=item.history.slice(-100);
@@ -1071,7 +1096,7 @@ exports.handler = async (event) => {
     if (resource === "ops-document-delete" && event.httpMethod === "POST") {
       const payload=parseBody(event); if(!payload||typeof payload!=="object")return badRequest("Pedido inválido.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id)return badRequest("Documento obrigatório.");
-      const existing=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!existing)return badRequest("Documento não encontrado.");
+      const existing=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!existing||itemMarket(existing)!==market)return badRequest("Documento não encontrado.");
       if(!canManageDocument(authUser,existing))return forbidden("Não pode eliminar este documento.");
       if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt))return conflict("Este documento foi alterado por outro utilizador. Reabra-o antes de eliminar.",{data:existing});
       await store.delete(documentMetaBlobKey(id)); await store.delete(documentDataBlobKey(id));
@@ -1084,7 +1109,7 @@ exports.handler = async (event) => {
 
     // -------------------- WORKFLOW DE APROVAÇÕES (v27) --------------------
     if (resource === "ops-approvals" && event.httpMethod === "GET") {
-      const rows = await listOperationalApprovals(store);
+      const rows = await listOperationalApprovals(store, market);
       const visible = rows.filter(x=>canSeeApproval(authUser,x));
       return ok({ data:visible, total:visible.length, updatedAt:new Date().toISOString() });
     }
@@ -1093,7 +1118,8 @@ exports.handler = async (event) => {
       const payload=parseBody(event);
       if(!payload||typeof payload!=="object") return badRequest("Pedido de aprovação inválido.");
       const rawId=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
-      const existing=rawId?await store.get(approvalBlobKey(rawId),{type:"json"}):null;
+      let existing=rawId?await store.get(approvalBlobKey(rawId),{type:"json"}):null;
+      if(existing && itemMarket(existing)!==market) existing=null;
       if(existing){
         if(!canEditApproval(authUser,existing)) return forbidden("Não pode editar este pedido.");
         if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt)) return conflict("Este pedido foi alterado por outro utilizador. Reabra-o para ver a versão mais recente.",{data:existing});
@@ -1116,7 +1142,7 @@ exports.handler = async (event) => {
       if(!APPROVAL_LINK_TYPES.has(linkType)) return badRequest("Tipo de associação inválido.");
       if(linkType!=="hotel"&&!linkId) return badRequest("Referência associada obrigatória.");
       let linkLabel="";
-      try{linkLabel=await approvalLinkLabel(store,linkType,linkId,hotel);}catch(e){return badRequest(e.message||"Referência associada inválida.");}
+      try{linkLabel=await approvalLinkLabel(store,linkType,linkId,hotel,market);}catch(e){return badRequest(e.message||"Referência associada inválida.");}
 
       const users=await loadUsers(store,true);
       const approverUser=safeUserName(payload.approverUser!==undefined?payload.approverUser:existing?.approverUser);
@@ -1133,7 +1159,7 @@ exports.handler = async (event) => {
         createdBy:{user:authUser.user,name:authUser.name},history:[]
       };
       const before=existing?{hotel:existing.hotel,type:existing.type,priority:existing.priority,title:existing.title,dueDate:existing.dueDate||"",approverUser:existing.approverUser||"",linkType:existing.linkType||"hotel",linkId:existing.linkId||""}:null;
-      item.hotel=hotel;item.type=type;item.priority=priority;item.title=title;item.description=description;item.dueDate=dueDate;item.approverUser=approverUser;item.approverName=approverName;item.linkType=linkType;item.linkId=linkType==="hotel"?"":linkId;item.linkLabel=linkLabel;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      item.market=market;item.hotel=hotel;item.type=type;item.priority=priority;item.title=title;item.description=description;item.dueDate=dueDate;item.approverUser=approverUser;item.approverName=approverName;item.linkType=linkType;item.linkId=linkType==="hotel"?"":linkId;item.linkLabel=linkLabel;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
       if(!Array.isArray(item.history)) item.history=[];
       item.history.push(approvalHistoryEntry(authUser,existing?"updated":"submitted",existing?"Pedido atualizado.":"Pedido submetido para decisão."));
       item.history=item.history.slice(-180);
@@ -1146,7 +1172,7 @@ exports.handler = async (event) => {
       const payload=parseBody(event);if(!payload||typeof payload!=="object") return badRequest("Decisão inválida.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
       const item=id?await store.get(approvalBlobKey(id),{type:"json"}):null;
-      if(!item) return badRequest("Pedido de aprovação não encontrado.");
+      if(!item||itemMarket(item)!==market) return badRequest("Pedido de aprovação não encontrado.");
       if(!canDecideApproval(authUser,item)) return forbidden("Este pedido está atribuído a outro aprovador ou já foi decidido.");
       if(payload.expectedUpdatedAt&&item.updatedAt&&String(payload.expectedUpdatedAt)!==String(item.updatedAt)) return conflict("Este pedido foi alterado por outro utilizador. Reabra-o antes de decidir.",{data:item});
       const decision=cleanText(payload.decision,20);
@@ -1171,7 +1197,7 @@ exports.handler = async (event) => {
       const payload=parseBody(event);if(!payload||typeof payload!=="object") return badRequest("Pedido inválido.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
       const item=id?await store.get(approvalBlobKey(id),{type:"json"}):null;
-      if(!item) return badRequest("Pedido de aprovação não encontrado.");
+      if(!item||itemMarket(item)!==market) return badRequest("Pedido de aprovação não encontrado.");
       if(!canCancelApproval(authUser,item)) return forbidden("Não pode cancelar este pedido.");
       if(payload.expectedUpdatedAt&&item.updatedAt&&String(payload.expectedUpdatedAt)!==String(item.updatedAt)) return conflict("Este pedido foi alterado por outro utilizador.",{data:item});
       const now=nextIsoTimestamp(item.updatedAt);item.status="cancelled";item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
@@ -1185,13 +1211,14 @@ exports.handler = async (event) => {
 
     // -------------------- COMPARAÇÃO DE CENÁRIOS v29 --------------------
     if (resource === "ops-scenarios" && event.httpMethod === "GET") {
-      const rows=await listOperationalScenarios(store);
+      const rows=await listOperationalScenarios(store, market);
       return ok({data:rows.filter(x=>canSeeScenario(authUser,x))});
     }
     if (resource === "ops-scenario-save" && event.httpMethod === "POST") {
       const payload=parseBody(event); if(!payload||typeof payload!=="object") return badRequest("Cenário inválido.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,"");
-      const existing=id?await store.get(scenarioBlobKey(id),{type:"json"}):null;
+      let existing=id?await store.get(scenarioBlobKey(id),{type:"json"}):null;
+      if(existing && itemMarket(existing)!==market) existing=null;
       if(id&&!existing) return badRequest("Cenário não encontrado.");
       if(existing&&!canManageScenario(authUser,existing)) return forbidden("Não pode alterar este cenário.");
       if(existing&&payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt)) return conflict("Este cenário foi alterado por outro utilizador. Reabra-o antes de gravar.",{data:existing});
@@ -1209,7 +1236,7 @@ exports.handler = async (event) => {
       const now=nextIsoTimestamp(existing?.updatedAt);
       const item=existing?Object.assign({},existing):{id:"scn_"+Date.now().toString(36)+"_"+crypto.randomBytes(5).toString("hex"),createdAt:now,createdBy:{user:authUser.user,name:authUser.name},history:[]};
       const before=existing?{hotel:existing.hotel,year:existing.year,month:existing.month,name:existing.name,adjustments:existing.adjustments}:null;
-      item.hotel=hotel;item.year=year;item.month=month;item.name=name;item.description=description;item.adjustments=adjustments;item.baseline=baseline;item.captured=captured;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
+      item.market=market;item.hotel=hotel;item.year=year;item.month=month;item.name=name;item.description=description;item.adjustments=adjustments;item.baseline=baseline;item.captured=captured;item.updatedAt=now;item.updatedBy={user:authUser.user,name:authUser.name};
       if(!Array.isArray(item.history))item.history=[];item.history.push(scenarioHistoryEntry(authUser,existing?"updated":"created",existing?"Cenário atualizado.":"Cenário guardado."));item.history=item.history.slice(-120);
       await store.setJSON(scenarioBlobKey(item.id),item);
       await safeGovernanceAudit(store,authUser,{category:"Cenários",action:existing?"Cenário atualizado":"Cenário criado",resource:"ops-scenario",key:item.id,hotel:item.hotel,detail:[item.name,item.month+"/"+item.year].join(" · "),severity:"info",before,after:{hotel:item.hotel,year:item.year,month:item.month,name:item.name,adjustments:item.adjustments}});
@@ -1218,7 +1245,7 @@ exports.handler = async (event) => {
     if (resource === "ops-scenario-delete" && event.httpMethod === "POST") {
       const payload=parseBody(event);if(!payload||typeof payload!=="object") return badRequest("Pedido inválido.");
       const id=cleanText(payload.id,80).replace(/[^a-zA-Z0-9_.-]/g,""); const item=id?await store.get(scenarioBlobKey(id),{type:"json"}):null;
-      if(!item) return badRequest("Cenário não encontrado.");
+      if(!item||itemMarket(item)!==market) return badRequest("Cenário não encontrado.");
       if(!canManageScenario(authUser,item)) return forbidden("Não pode eliminar este cenário.");
       if(payload.expectedUpdatedAt&&item.updatedAt&&String(payload.expectedUpdatedAt)!==String(item.updatedAt)) return conflict("Este cenário foi alterado por outro utilizador.",{data:item});
       await store.delete(scenarioBlobKey(id));
@@ -1349,12 +1376,12 @@ exports.handler = async (event) => {
     // -------------------- GET DADOS PARTILHADOS --------------------
     if (event.httpMethod === "GET") {
       if (resource === "index") {
-        const idx = (await store.get("index", { type: "json" })) || {
+        const idx = (await store.get(marketStoreKey(market,"index"), { type: "json" })) || {
           meses: [], hoteis: [], occIds: [], igIds: [], rdIds: [], piuKeys: [], hxKeys: [], updatedAt: null
         };
         return ok({ data: idx });
       }
-      const data = await store.get(blobKeyFor(resource, key), { type: "json" });
+      const data = await store.get(marketStoreKey(market,blobKeyFor(resource, key)), { type: "json" });
       return ok({ key: key || null, data: data === undefined ? null : data });
     }
 
@@ -1369,17 +1396,17 @@ exports.handler = async (event) => {
       if (payload === null) return badRequest("JSON inválido.");
 
       const shouldAudit = auditedGeneric(resource);
-      const auditKey = resource === "index" ? "index" : blobKeyFor(resource, key);
+      const auditKey = marketStoreKey(market, resource === "index" ? "index" : blobKeyFor(resource, key));
       const beforeAudit = shouldAudit ? await store.get(auditKey, { type:"json" }) : null;
       if (resource === "index") {
         if (!payload || typeof payload !== "object") return badRequest("Índice inválido.");
         const next = Object.assign({}, payload, { updatedAt: new Date().toISOString() });
-        await store.setJSON("index", next);
+        await store.setJSON(marketStoreKey(market,"index"), next);
         const d = genericAuditDescriptor(resource, key);
         await safeGovernanceAudit(store, authUser, Object.assign({}, d, { resource, key:"", detail:`Publicação com ${Array.isArray(payload.meses)?payload.meses.length:0} meses e ${Array.isArray(payload.hoteis)?payload.hoteis.length:0} hotéis.`, before:beforeAudit, after:next, meta:{meses:Array.isArray(payload.meses)?payload.meses.length:0,hoteis:Array.isArray(payload.hoteis)?payload.hoteis.length:0} }));
         return ok({ ok: true });
       }
-      await store.setJSON(blobKeyFor(resource, key), payload);
+      await store.setJSON(marketStoreKey(market,blobKeyFor(resource, key)), payload);
       if (shouldAudit) {
         const d = genericAuditDescriptor(resource, key);
         await safeGovernanceAudit(store, authUser, Object.assign({}, d, { resource, key, before:beforeAudit, after:payload }));

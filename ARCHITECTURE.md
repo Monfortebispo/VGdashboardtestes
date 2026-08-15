@@ -180,3 +180,42 @@ A reconstrução do menu preserva agora todos os botões antes de remover os gru
 - A Ponte do GOP apresenta contribuição económica: menos custo melhora GOP (verde), mais custo deteriora (vermelho), independentemente do sinal contabilístico da rubrica.
 - Revenue & Forecast incorpora as views originais completas, preservando os IDs usados pelos estilos e pelos renderizadores legados.
 - Ficha do Hotel e backend não foram alterados.
+
+## V31 — Camada de mercado
+
+A dimensão `market` passa a anteceder hotel/ano/mês no modelo de contexto:
+
+```text
+market -> hotel -> ano -> mês
+```
+
+Mercados iniciais:
+
+```text
+iberia  -> PT+ES -> EUR
+brasil  -> BR     -> BRL
+```
+
+`assets/js/core/07-markets-v31.js` mantém um banco de sessão por mercado e expõe `VG.market` para identificação de hotéis, moeda, regiões, formatação, mudança de contexto e separação de snapshots mistos.
+
+### Persistência
+
+Compatibilidade retroativa foi priorizada:
+
+- Iberia usa as chaves Blob históricas sem prefixo;
+- Brasil usa `market/brasil/<legacy-key>` nos recursos genéricos;
+- Ações/Agenda/Documentos/Aprovações/Cenários mantêm os prefixes existentes e armazenam `market` em cada registo;
+- listas e operações server-side filtram/validam `market`;
+- migrações antigas de `localStorage` são executadas apenas em Iberia, impedindo que configurações/fichas PT+ES sejam publicadas no namespace Brasil.
+
+### Moeda
+
+`VG.market.formatMoney()` e `VG.market.formatMoneyCompact()` são a fonte transversal para EUR/BRL. Nenhum agregado financeiro deve atravessar mercados. A V31 não contém taxa de câmbio nem conversão automática.
+
+### Dados mistos
+
+O snapshot local continua compatível com os globais legados (`STORE`, `REP_STORE`, `OCC_SNAPSHOTS`, etc.), mas apenas o mercado ativo é projetado nesses globais. `MARKETS_V31` transporta os dois bancos quando a sessão é persistida/restaurada.
+
+### Permissões
+
+O frontend limita a seleção pelo hotel associado e o backend aplica a mesma regra. Recursos globais de autenticação/administração continuam globais; recursos operacionais e dados são market-scoped.

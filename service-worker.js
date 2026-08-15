@@ -1,6 +1,6 @@
-// VG Operations v30.3 — service worker
+// VG Operations v31 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v30_3';
+const CACHE_NAME = 'vg-operations-shell-v31';
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",
   "/assets/css/audit-governance.css",
@@ -27,6 +27,7 @@ const STATIC_ASSETS = [
   "/assets/css/forecast-state.css",
   "/assets/css/logo-fix.css",
   "/assets/css/mobile-pwa.css",
+  "/assets/css/markets-v31.css",
   "/assets/css/navigation-shell.css",
   "/assets/css/operations-center.css",
   "/assets/css/revenue-intelligence-ask.css",
@@ -47,6 +48,7 @@ const STATIC_ASSETS = [
   "/assets/js/core/04-bootstrap.js",
   "/assets/js/core/05-performance.js",
   "/assets/js/core/06-version-guard-v29_1.js",
+  "/assets/js/core/07-markets-v31.js",
   "/assets/js/core/compat-stubs.js",
   "/assets/js/modules/actions-management.js",
   "/assets/js/modules/audit-governance.js",
@@ -101,7 +103,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    // v30.3: correções de Portefólio, Ponte GOP e Revenue Hub; dados empresariais continuam network-only.
+    // v31: correções de Portefólio, Ponte GOP e Revenue Hub; dados empresariais continuam network-only.
     const batchSize=8;
     for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
       const batch=STATIC_ASSETS.slice(i,i+batchSize);
