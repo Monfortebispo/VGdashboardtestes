@@ -5,7 +5,7 @@ const RI_MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','No
 let riCharts={};
 function riN(v){ v=Number(v); return isFinite(v)?v:0; }
 function riFmt(v,d=0){ if(v==null||!isFinite(v)) return '—'; return Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d}); }
-function riMoney(v){ if(v==null||!isFinite(v)) return '—'; const s=v<0?'-':''; return s+'€'+Math.abs(v).toLocaleString('pt-PT',{maximumFractionDigits:0}); }
+function riMoney(v){ if(v==null||!isFinite(v)) return '—'; if(window.VG?.market?.formatMoney)return window.VG.market.formatMoney(v,0,false); const s=v<0?'-':''; return s+'€'+Math.abs(v).toLocaleString('pt-PT',{maximumFractionDigits:0}); }
 function riPct(v,d=1){ return v==null||!isFinite(v)?'—':riFmt(v,d)+'%'; }
 function riNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\b(VG|VILA|GALE|HOTEL|COLLECTION|C\.)\b/g,'').replace(/[^A-Z0-9]+/g,' ').trim(); }
 function riShort(h){ return String(h||'').replace('COLLECTION ','C. '); }
@@ -125,7 +125,7 @@ function riRenderImpact(rows){
   const el=document.getElementById('riChartImpact'); if(!el || typeof Chart==='undefined') return;
   const top=[...rows].filter(r=>r.impact!=null).sort((a,b)=>Math.abs(b.impact)-Math.abs(a.impact)).slice(0,12).reverse();
   if(riCharts.impact) riCharts.impact.destroy();
-  riCharts.impact=new Chart(el,{type:'bar',data:{labels:top.map(r=>riShort(r.hotel)),datasets:[{label:'Impacto €',data:top.map(r=>Math.round(r.impact)),backgroundColor:top.map(r=>r.impact>=0?'rgba(31,158,107,.55)':'rgba(192,57,43,.55)'),borderColor:top.map(r=>r.impact>=0?'#1f9e6b':'#c0392b'),borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>riMoney(c.raw)}}},scales:{x:{ticks:{callback:v=>riMoney(v),color:'#64748b'},grid:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'#94aabf',font:{size:10}},grid:{display:false}}}}});
+  riCharts.impact=new Chart(el,{type:'bar',data:{labels:top.map(r=>riShort(r.hotel)),datasets:[{label:'Impacto '+(window.VG?.market?.symbol?.()||'€'),data:top.map(r=>Math.round(r.impact)),backgroundColor:top.map(r=>r.impact>=0?'rgba(31,158,107,.55)':'rgba(192,57,43,.55)'),borderColor:top.map(r=>r.impact>=0?'#1f9e6b':'#c0392b'),borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>riMoney(c.raw)}}},scales:{x:{ticks:{callback:v=>riMoney(v),color:'#64748b'},grid:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'#94aabf',font:{size:10}},grid:{display:false}}}}});
 }
 function riRiskClass(r){
   if(r.occNow<60 && (r.delta==null || r.delta<=0)) return {level:'Alto', cls:'red', txt:'OCC baixa + pickup negativo/estagnado'};

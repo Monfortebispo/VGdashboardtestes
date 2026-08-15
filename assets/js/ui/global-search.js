@@ -21,7 +21,7 @@
   const selectedMonth=()=>{try{const a=window.VG?.state?.selectedMonths?.()||[];return a.length?a[a.length-1]:null;}catch(e){return null;}};
   const hotels=()=>{const r=raw();const list=(r?.hotel_list||Object.keys(r?.hotels_ops||{})).filter(Boolean);return [...new Set(list)].sort((a,b)=>String(a).localeCompare(String(b),'pt'));};
   const fmtNum=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
-  const fmtEur=v=>Number.isFinite(Number(v))?'€ '+Number(v).toLocaleString('pt-PT',{maximumFractionDigits:0}):'—';
+  const fmtEur=v=>Number.isFinite(Number(v))?(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,0,true):'€ '+Number(v).toLocaleString('pt-PT',{maximumFractionDigits:0})):'—';
   const fmtPct=v=>Number.isFinite(Number(v))?fmtNum(v,1)+'%':'—';
   const add=(arr,item)=>{if(!item||!item.title)return;item.type=item.type||'hotel';item.group=GROUP[item.type]||item.type;item.search=norm([item.title,item.subtitle,item.hotel,item.value,item.keywords,KIND[item.type]].filter(Boolean).join(' '));arr.push(item);};
 
@@ -68,7 +68,7 @@
         ['RevPAR',k?.revpar?.(h,y,r),'eur2','revpar revenue available room'],
         ['Custos Totais',k?.totalCosts?.(h,y,r),'eur','custos despesas totais']
       ];
-      for(const [label,val,format,keys] of rows){if(val==null||!Number.isFinite(Number(val)))continue;const value=format==='pct'?fmtPct(val):format==='eur2'?'€ '+fmtNum(val,2):fmtEur(val);add(arr,{type:'kpi',title:`${h} · ${label}`,subtitle:`${y} · valor atual do período selecionado`,hotel:h,value,keywords:`${label} ${keys}`});}
+      for(const [label,val,format,keys] of rows){if(val==null||!Number.isFinite(Number(val)))continue;const value=format==='pct'?fmtPct(val):format==='eur2'?(window.VG?.market?.formatMoney?window.VG.market.formatMoney(val,2,true):'€ '+fmtNum(val,2)):fmtEur(val);add(arr,{type:'kpi',title:`${h} · ${label}`,subtitle:`${y} · valor atual do período selecionado`,hotel:h,value,keywords:`${label} ${keys}`});}
     }
   }
 
@@ -99,7 +99,7 @@
     const d=cd.dic,H=d.hoteis||[],A=d.art||[],F=d.forn||[],latest=(cd.meta?.meses||[]).length-1;
     const artStat=new Map(),fornStat=new Map();
     for(const r of cd.PM||[]){const [art,forn,hotel,mi,val,qtd]=r;if(mi!==latest)continue;let a=artStat.get(art);if(!a){a={value:0,qtd:0,hotels:new Set(),suppliers:new Set()};artStat.set(art,a);}a.value+=Number(val)||0;a.qtd+=Number(qtd)||0;a.hotels.add(H[hotel]||'');a.suppliers.add(F[forn]||'');let f=fornStat.get(forn);if(!f){f={value:0,articles:new Set(),hotels:new Set()};fornStat.set(forn,f);}f.value+=Number(val)||0;f.articles.add(A[art]||'');f.hotels.add(H[hotel]||'');}
-    for(let i=1;i<A.length;i++){const name=A[i];if(!name)continue;const s=artStat.get(i);const price=s?.qtd>0?s.value/s.qtd:null;add(arr,{type:'article',title:name,subtitle:s?`${s.hotels.size} hotel(is) · ${s.suppliers.size} fornecedor(es) · último mês disponível`:'Artigo no dicionário de Compras',value:price!=null?'€ '+fmtNum(price,2)+'/un':'',keywords:s?[...s.suppliers].join(' '):''});}
+    for(let i=1;i<A.length;i++){const name=A[i];if(!name)continue;const s=artStat.get(i);const price=s?.qtd>0?s.value/s.qtd:null;add(arr,{type:'article',title:name,subtitle:s?`${s.hotels.size} hotel(is) · ${s.suppliers.size} fornecedor(es) · último mês disponível`:'Artigo no dicionário de Compras',value:price!=null?(window.VG?.market?.formatMoney?window.VG.market.formatMoney(price,2,true):'€ '+fmtNum(price,2))+'/un':'',keywords:s?[...s.suppliers].join(' '):''});}
     for(let i=1;i<F.length;i++){const name=F[i];if(!name)continue;const s=fornStat.get(i);add(arr,{type:'supplier',title:name,subtitle:s?`${s.articles.size} artigo(s) · ${s.hotels.size} hotel(is) · último mês disponível`:'Fornecedor no dicionário de Compras',value:s?fmtEur(s.value):'',keywords:s?[...s.articles].slice(0,30).join(' '):''});}
   }
 

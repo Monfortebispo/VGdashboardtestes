@@ -258,4 +258,6 @@
   window.opsActionClose=()=>closeEditor();
   window.opsActionSave=()=>saveEditor();
   window.opsActionsRenderBoard=()=>renderBoard();
+  window.VG?.events?.on?.('market:before-change',()=>{cache=[];loaded=false;fetchedAt=0;loadingPromise=null;});
+  window.VG?.events?.on?.('market:changed',()=>ensureLoaded(true).then(()=>{try{renderBoard();}catch(e){}}));
 })();

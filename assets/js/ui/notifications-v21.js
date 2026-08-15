@@ -31,7 +31,7 @@
   const parseDate=v=>{if(!v)return null;const d=new Date(String(v).length<=10?String(v)+'T12:00:00':v);return isNaN(d)?null:d;};
   const daysUntil=v=>{const d=parseDate(v);if(!d)return null;return Math.ceil((d.getTime()-Date.now())/86400000);};
   const fmtDate=v=>{const d=parseDate(v);return d?d.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit'}):'—';};
-  const fmtMoney=v=>Number.isFinite(Number(v))?'€ '+Math.round(Number(v)).toLocaleString('pt-PT'):'—';
+  const fmtMoney=v=>Number.isFinite(Number(v))?(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,0,true):'€ '+Math.round(Number(v)).toLocaleString('pt-PT')):'—';
   const shortHotel=h=>String(h||'').replace('COLLECTION ','C. ');
   const userKey=()=>norm(authUser()?.user||'anon').replace(/[^a-z0-9_-]+/g,'_')||'anon';
   const storageKey=()=>`vg_notifications_v21_${userKey()}`;

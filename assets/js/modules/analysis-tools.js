@@ -1,6 +1,8 @@
 // ==========================================================
 // 1. ALERTAS AUTOMÁTICOS
 // ==========================================================
+function vgAnalysisSym(){return window.VG?.market?.symbol?.()||'€';}
+function vgAnalysisMoney(v,d=0){return window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,false):vgAnalysisSym()+Number(v||0).toLocaleString('pt-PT',{maximumFractionDigits:d});}
 function vgAlertRuleConfig(id, fallback, severity='orange'){
   try{
     if(typeof window.vgRuleConfig==='function') return window.vgRuleConfig(id);
@@ -17,7 +19,7 @@ function vgAlertGrowth(prev,cur){ prev=Number(prev);cur=Number(cur);return isFin
 function alertRuleLabel(rule,h){ try{return typeof rule.labelFor==='function'?rule.labelFor(h):rule.label;}catch(e){return rule.label;} }
 
 const ALERT_RULES = [
-  { id:'gop_neg', get severity(){return vgAlertRuleConfig('gop_neg',0,'red').severity;}, label:'GOP com sede abaixo do mínimo absoluto', labelFor:(h)=>{const v=vgAlertRuleValue('gop_neg',0,'red');return `GOP com sede < €${Number(v??0).toLocaleString('pt-PT',{maximumFractionDigits:0})}`;}, check:(h)=>{ const v=vgAlertRuleValue('gop_neg',0,'red'); if(v==null)return false; const g=gop(h,YR_CUR); return g!=null&&g<v; } },
+  { id:'gop_neg', get severity(){return vgAlertRuleConfig('gop_neg',0,'red').severity;}, label:'GOP com sede abaixo do mínimo absoluto', labelFor:(h)=>{const v=vgAlertRuleValue('gop_neg',0,'red');return `GOP com sede < ${vgAnalysisMoney(v??0,0)}`;}, check:(h)=>{ const v=vgAlertRuleValue('gop_neg',0,'red'); if(v==null)return false; const g=gop(h,YR_CUR); return g!=null&&g<v; } },
   { id:'gop_low', get severity(){return vgAlertRuleConfig('gop_low',20,'red').severity;}, label:'Margem GOP com sede abaixo do mínimo', labelFor:(h)=>{const t=vgAlertTarget(h,'gopPct');const v=t!=null?t:vgAlertRuleValue('gop_low',20,'red');return t!=null?`GOP% abaixo da meta (${Number(v).toLocaleString('pt-PT',{maximumFractionDigits:1})}%)`:`Margem GOP com sede < ${Number(v??20).toLocaleString('pt-PT',{maximumFractionDigits:1})}%`;}, check:(h)=>{ const cfg=vgAlertRuleConfig('gop_low',20,'red');if(cfg?.enabled===false)return false;const t=vgAlertTarget(h,'gopPct');const v=t!=null?t:Number(cfg.value);if(v==null||!isFinite(v))return false; const p=gopPct(h,YR_CUR); return p!=null&&p<v; } },
   { id:'occ_low', get severity(){return vgAlertRuleConfig('occ_low',40,'orange').severity;}, label:'Ocupação abaixo do mínimo', labelFor:(h)=>{const t=vgAlertTarget(h,'occupancy');const v=t!=null?t:vgAlertRuleValue('occ_low',40,'orange');return t!=null?`Ocupação abaixo da meta (${Number(v).toLocaleString('pt-PT',{maximumFractionDigits:1})}%)`:`Ocupação < ${Number(v??40).toLocaleString('pt-PT',{maximumFractionDigits:1})}%`;}, check:(h)=>{ const cfg=vgAlertRuleConfig('occ_low',40,'orange');if(cfg?.enabled===false)return false;const t=vgAlertTarget(h,'occupancy');const v=t!=null?t:Number(cfg.value);if(v==null||!isFinite(v))return false; const o=occ(h,YR_CUR); return o!==null&&o<v; } },
   { id:'occ_drop', get severity(){return vgAlertRuleConfig('occ_drop',10,'orange').severity;}, label:'Queda de ocupação vs ano anterior', labelFor:()=>{const v=vgAlertRuleValue('occ_drop',10,'orange');return `Ocupação caiu > ${Number(v??10).toLocaleString('pt-PT',{maximumFractionDigits:1})}pp`;}, check:(h)=>{ const v=vgAlertRuleValue('occ_drop',10,'orange');if(v==null)return false; const o25=occ(h,YR_PREV),o26=occ(h,YR_CUR); return o25!==null&&o26!==null&&(o26-o25)<-v; } },
@@ -120,7 +122,7 @@ function alertasRender() {
         <span>Receita: <strong style="color:var(--text-1)">${fmtV(rec26)}</strong></span>
         <span>GOP: <strong style="color:${(gopPctV??0)<0?'#ef4444':(gopPctV??0)<20?'#f59e0b':'#27ae60'}">${gopPctV==null?'—':fmt(gopPctV,1)+'%'}</strong></span>
         ${occV!==null?`<span>Occ: <strong style="color:${occV<40?'#ef4444':'var(--text-1)'}">${fmt(occV,1)}%</strong></span>`:''}
-        ${adrV!==null?`<span>ADR: <strong>€${fmt(adrV,0)}</strong></span>`:''}
+        ${adrV!==null?`<span>ADR: <strong>${vgAnalysisSym()}${fmt(adrV,0)}</strong></span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -129,7 +131,7 @@ function alertasRender() {
 function waBuildAlertas() {
   if (!RAW) return '🔔 Sem dados carregados.';
   const mNames = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const regionLabels = { todos:'Todos os Hotéis', norte:'Norte e Centro', lisboa:'Lisboa & Ilhas', alentejo:'Alentejo', algarve:'Algarve' };
+  const regionLabels = new Proxy({todos:'Todos os Hotéis'},{get:(o,k)=>k==='todos'?'Todos os Hotéis':(window.VG?.market?.regionLabel?.(k)||String(k))});
   const hotels = waSelectedRegion==='todos' ? RAW.hotel_list : (REGIOES[waSelectedRegion]||[]).filter(h=>RAW.hotel_list.includes(h));
   const now = new Date().toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
   const mesesStr = [...waSelectedMeses].sort((a,b)=>a-b).map(m=>mNames[m]).join(', ');
@@ -176,13 +178,13 @@ function cmpRender() {
     { l:'Receita '+YR_PREV,         fA:()=>fmtV(n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_PREV])), fB:()=>fmtV(n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_PREV])), higherBetter:true, getV:h=>n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_PREV]) },
     { l:'GOP % com sede',       fA:()=>{const v=gopPct(hA,YR_CUR);return v==null?'—':fmt(v,1)+'%';}, fB:()=>{const v=gopPct(hB,YR_CUR);return v==null?'—':fmt(v,1)+'%';}, higherBetter:true, getV:h=>gopPct(h,YR_CUR)??-Infinity },
     { l:'Occupancy '+YR_CUR,       fA:()=>fmt(occ(hA,YR_CUR)||0,1)+'%', fB:()=>fmt(occ(hB,YR_CUR)||0,1)+'%', higherBetter:true, getV:h=>occ(h,YR_CUR)||0 },
-    { l:'ADR '+YR_CUR,             fA:()=>'€'+fmt(adr(hA,YR_CUR)||0,2), fB:()=>'€'+fmt(adr(hB,YR_CUR)||0,2), higherBetter:true, getV:h=>adr(h,YR_CUR)||0 },
-    { l:'RevPAR '+YR_CUR,          fA:()=>'€'+fmt(revpar(hA,YR_CUR)||0,2), fB:()=>'€'+fmt(revpar(hB,YR_CUR)||0,2), higherBetter:true, getV:h=>revpar(h,YR_CUR)||0 },
+    { l:'ADR '+YR_CUR,             fA:()=>vgAnalysisSym()+fmt(adr(hA,YR_CUR)||0,2), fB:()=>vgAnalysisSym()+fmt(adr(hB,YR_CUR)||0,2), higherBetter:true, getV:h=>adr(h,YR_CUR)||0 },
+    { l:'RevPAR '+YR_CUR,          fA:()=>vgAnalysisSym()+fmt(revpar(hA,YR_CUR)||0,2), fB:()=>vgAnalysisSym()+fmt(revpar(hB,YR_CUR)||0,2), higherBetter:true, getV:h=>revpar(h,YR_CUR)||0 },
     { l:'Custos Totais',        fA:()=>fmtV(totalCosts(hA,YR_CUR)), fB:()=>fmtV(totalCosts(hB,YR_CUR)), higherBetter:false, getV:h=>totalCosts(h,YR_CUR) },
     { l:'Custo Pessoal %',      fA:()=>{ const r=n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_CUR]),p=n(RAW.hotels_costs[hA]?.PESSOAL?.[YR_CUR]); return r>0?fmt(p/r*100,1)+'%':'—'; }, fB:()=>{ const r=n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_CUR]),p=n(RAW.hotels_costs[hB]?.PESSOAL?.[YR_CUR]); return r>0?fmt(p/r*100,1)+'%':'—'; }, higherBetter:false, getV:h=>{ const r=n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]),p=n(RAW.hotels_costs[h]?.PESSOAL?.[YR_CUR]); return r>0?p/r*100:0; } },
     { l:'Energia %',            fA:()=>{ const r=n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_CUR]),e=n(RAW.hotels_costs[hA]?.ENERGIA?.[YR_CUR]); return r>0?fmt(e/r*100,1)+'%':'—'; }, fB:()=>{ const r=n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_CUR]),e=n(RAW.hotels_costs[hB]?.ENERGIA?.[YR_CUR]); return r>0?fmt(e/r*100,1)+'%':'—'; }, higherBetter:false, getV:h=>{ const r=n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]),e=n(RAW.hotels_costs[h]?.ENERGIA?.[YR_CUR]); return r>0?e/r*100:0; } },
     { l:'Manutenção %',         fA:()=>{ const r=n(RAW.hotels_ops[hA]?.['Receita Total']?.[YR_CUR]),m=n(RAW.hotels_costs[hA]?.MANUTENÇÃO?.[YR_CUR]); return r>0?fmt(m/r*100,1)+'%':'—'; }, fB:()=>{ const r=n(RAW.hotels_ops[hB]?.['Receita Total']?.[YR_CUR]),m=n(RAW.hotels_costs[hB]?.MANUTENÇÃO?.[YR_CUR]); return r>0?fmt(m/r*100,1)+'%':'—'; }, higherBetter:false, getV:h=>{ const r=n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR]),m=n(RAW.hotels_costs[h]?.MANUTENÇÃO?.[YR_CUR]); return r>0?m/r*100:0; } },
-    { l:'Custo / Dormida',      fA:()=>{ const c=totalCosts(hA,YR_CUR),d=n(RAW.hotels_ops[hA]?.Dormidas?.[YR_CUR]); return d>0?'€'+fmt(c/d,2):'—'; }, fB:()=>{ const c=totalCosts(hB,YR_CUR),d=n(RAW.hotels_ops[hB]?.Dormidas?.[YR_CUR]); return d>0?'€'+fmt(c/d,2):'—'; }, higherBetter:false, getV:h=>{ const c=totalCosts(h,YR_CUR),d=n(RAW.hotels_ops[h]?.Dormidas?.[YR_CUR]); return d>0?c/d:0; } },
+    { l:'Custo / Dormida',      fA:()=>{ const c=totalCosts(hA,YR_CUR),d=n(RAW.hotels_ops[hA]?.Dormidas?.[YR_CUR]); return d>0?vgAnalysisSym()+fmt(c/d,2):'—'; }, fB:()=>{ const c=totalCosts(hB,YR_CUR),d=n(RAW.hotels_ops[hB]?.Dormidas?.[YR_CUR]); return d>0?vgAnalysisSym()+fmt(c/d,2):'—'; }, higherBetter:false, getV:h=>{ const c=totalCosts(h,YR_CUR),d=n(RAW.hotels_ops[h]?.Dormidas?.[YR_CUR]); return d>0?c/d:0; } },
     { l:'Dormidas',             fA:()=>fmt(n(RAW.hotels_ops[hA]?.Dormidas?.[YR_CUR])), fB:()=>fmt(n(RAW.hotels_ops[hB]?.Dormidas?.[YR_CUR])), higherBetter:true, getV:h=>n(RAW.hotels_ops[h]?.Dormidas?.[YR_CUR]) },
     { l:'GRI™ Reputação',       fA:()=>REP_STORE?.[hA]?.gri!=null?fmt(REP_STORE[hA].gri,1):'—', fB:()=>REP_STORE?.[hB]?.gri!=null?fmt(REP_STORE[hB].gri,1):'—', higherBetter:true, getV:h=>REP_STORE?.[h]?.gri||0 },
   ];
@@ -261,7 +263,7 @@ function rankRender() {
   let html = `<table class="pl-table"><thead><tr>
     <th>#</th><th style="text-align:left">Hotel</th>
     <th>Score</th><th>GOP%</th><th>Occ%</th><th>ADR</th>
-    <th>€/Dorm</th><th>GRI™</th><th>Quartil</th>
+    <th>${vgAnalysisSym()}/Dorm</th><th>GRI™</th><th>Quartil</th>
   </tr></thead><tbody>`;
 
   scored.forEach((r,i) => {
@@ -281,8 +283,8 @@ function rankRender() {
       </td>
       <td class="${r.gopP>=20?'pl-cell-good':r.gopP<0?'pl-cell-bad':''}">${fmt(r.gopP,1)}%</td>
       <td>${fmt(r.occV,1)}%</td>
-      <td>€${fmt(r.adrV,0)}</td>
-      <td>€${fmt(r.cPD,2)}</td>
+      <td>${vgAnalysisSym()}${fmt(r.adrV,0)}</td>
+      <td>${vgAnalysisSym()}${fmt(r.cPD,2)}</td>
       <td>${r.griV!=null?fmt(r.griV,1):'—'}</td>
       <td style="font-size:10px">${badge}</td>
     </tr>`;
@@ -379,7 +381,7 @@ function sazonRender() {
         },
         scales:{
           x:{ ticks:{ color:'#8aa0b8', font:{ size:11 } }, grid:{ color:'rgba(255,255,255,.06)' } },
-          y:{ ticks:{ color:'#8aa0b8', font:{ size:11 }, callback:v=>metric==='rec'?fmtV(v):metric==='occ'||metric==='gop'||metric==='pessoal'?v.toFixed(1)+'%':'€'+v.toFixed(0) }, grid:{ color:'rgba(255,255,255,.06)' } }
+          y:{ ticks:{ color:'#8aa0b8', font:{ size:11 }, callback:v=>metric==='rec'?fmtV(v):metric==='occ'||metric==='gop'||metric==='pessoal'?v.toFixed(1)+'%':vgAnalysisSym()+v.toFixed(0) }, grid:{ color:'rgba(255,255,255,.06)' } }
         }
       }
     });

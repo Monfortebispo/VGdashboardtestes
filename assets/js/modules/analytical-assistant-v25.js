@@ -13,7 +13,7 @@
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9%+€./ -]+/g,' ').replace(/\s+/g,' ').trim();
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const fmt=(v,d=1)=>n(v)==null?'—':Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
-  const eur=(v,d=0)=>n(v)==null?'—':'€ '+Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const eur=(v,d=0)=>n(v)==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,true):'€ '+Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d}));
   const pct=(v,d=1)=>n(v)==null?'—':`${fmt(v,d)}%`;
   const pp=(v,d=1)=>n(v)==null?'—':`${v>=0?'+':''}${fmt(v,d)} p.p.`;
   const growth=(a,b)=>{const p=n(a),c=n(b);return p!=null&&p!==0&&c!=null?(c-p)/Math.abs(p)*100:null;};

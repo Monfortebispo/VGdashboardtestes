@@ -1,3 +1,5 @@
+function occSym(){return window.VG?.market?.symbol?.()||'€';}
+function occRegionLabel(r){return r==='todos'?'Todos os Hotéis':(window.VG?.market?.regionLabel?.(r)||({norte:'Norte e Centro',lisboa:'Lisboa & Ilhas',alentejo:'Alentejo',algarve:'Algarve'})[r]||String(r||''));}
 // OCUPAÇÃO — Módulo completo
 // ==========================================================
 
@@ -131,6 +133,9 @@ function occParsePdf(text) {
     'DOURO VINEYARDS','ERICEIRA','ESTORIL','EVORA','ISLA CANELA',
     'LAGOS','MARINA','NAUTICO','NEP KIDS','OPERA','PORTO','PORTO RIBEIRA',
     'SANTA CRUZ','TAVIRA',
+    // Brasil — V31
+    'FORTALEZA','SALVADOR','CUMBUCO','RIO DE JANEIRO','TOUROS','MARES','PAULISTA','CABO','ECO RESORT DE ANGRA','ALAGOAS',
+    'COLLECTION SUNSET CUMBUCO','COLLECTION OURO PRETO','COLLECTION AMAZÔNIA','COLLECTION AMAZONIA','AMAZONIA','OURO PRETO','SUNSET CUMBUCO',
     // Nomes antigos (antes de passarem a Collection) — normalizados abaixo
     'SINTRA','SERRA DA ESTRELA'
   ];
@@ -138,7 +143,9 @@ function occParsePdf(text) {
   // Normaliza nomes antigos → nome actual (para consistência entre anos)
   const HOTEL_NAME_MAP = {
     'SINTRA': 'COLLECTION SINTRA',
-    'SERRA DA ESTRELA': 'COLLECTION SERRA DA ESTRELA'
+    'SERRA DA ESTRELA': 'COLLECTION SERRA DA ESTRELA',
+    'COLLECTION AMAZONIA':'COLLECTION AMAZÔNIA','AMAZONIA':'COLLECTION AMAZÔNIA',
+    'OURO PRETO':'COLLECTION OURO PRETO','SUNSET CUMBUCO':'COLLECTION SUNSET CUMBUCO'
   };
 
   // For partial rows (< 12 values): align to END of year (i.e. offset = 12 - count)
@@ -508,7 +515,7 @@ function occRenderPortfolioPerformance(snap, hotel='__all__') {
   occChartPortfolioInst = new Chart(ctx, {
     type:'bubble',
     data:{ datasets:[{ label:'Hotéis', data:rows, backgroundColor:'rgba(201,168,76,.35)', borderColor:'#c9a84c', borderWidth:1.5 }] },
-    options:{ responsive:true, maintainAspectRatio:false, parsing:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>`${occShortName(c.raw.hotel)}: OCC ${c.raw.x.toFixed(1)}% · ADR ${fmt(c.raw.y,0)}€ · Rec. ${fmt(c.raw.total,0)}€` } } }, scales:{ x:{min:0,max:100,title:{display:true,text:`Ocupação média ${YR_CUR}`,color:'#94aabf'},ticks:{callback:v=>v+'%',color:'#64748b'},grid:{color:'rgba(255,255,255,.04)'}}, y:{title:{display:true,text:'ADR estimado',color:'#94aabf'},ticks:{callback:v=>v+'€',color:'#64748b'},grid:{color:'rgba(255,255,255,.04)'}} } },
+    options:{ responsive:true, maintainAspectRatio:false, parsing:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>`${occShortName(c.raw.hotel)}: OCC ${c.raw.x.toFixed(1)}% · ADR ${fmt(c.raw.y,0)}${occSym()} · Rec. ${fmt(c.raw.total,0)}${occSym()}` } } }, scales:{ x:{min:0,max:100,title:{display:true,text:`Ocupação média ${YR_CUR}`,color:'#94aabf'},ticks:{callback:v=>v+'%',color:'#64748b'},grid:{color:'rgba(255,255,255,.04)'}}, y:{title:{display:true,text:'ADR estimado',color:'#94aabf'},ticks:{callback:v=>v+'€',color:'#64748b'},grid:{color:'rgba(255,255,255,.04)'}} } },
     plugins:[{ id:'occQuadrantLines', afterDraw(chart){ const {ctx, chartArea:{left,right,top,bottom}, scales:{x,y}}=chart; ctx.save(); ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.setLineDash([5,4]); const vx=x.getPixelForValue(avgOcc), hy=y.getPixelForValue(avgAdr); ctx.beginPath(); ctx.moveTo(vx,top); ctx.lineTo(vx,bottom); ctx.moveTo(left,hy); ctx.lineTo(right,hy); ctx.stroke(); ctx.fillStyle='rgba(148,170,191,.75)'; ctx.font='10px Plus Jakarta Sans'; ctx.fillText('↑ ADR / OCC →', left+8, top+14); ctx.restore(); } }]
   });
 }
@@ -533,7 +540,7 @@ function occRenderRevenueRadar(snap, hotel='__all__') {
   // depois ordena por calendário (Jan→Dez) para leitura cronológica.
   rows = rows.sort((a,b)=> Math.abs((b.occ||0)-70) - Math.abs((a.occ||0)-70)).slice(0,12);
   rows.sort((a,b)=> a.monthIdx - b.monthIdx || occShortName(a.hotel).localeCompare(occShortName(b.hotel)));
-  table.innerHTML = `<thead><tr><th>Hotel</th><th>Mês</th><th>Ocupação</th><th>ADR</th><th>Estado</th><th>Ação sugerida</th></tr></thead><tbody>` + rows.map(r=>{ const p=occPressure(r.occ); return `<tr><td>${occShortName(r.hotel)}</td><td>${r.month}/${String(r.year).slice(-2)}</td><td>${r.occ.toFixed(1)}%</td><td>${r.adr!=null?fmt(r.adr,0)+'€':'—'}</td><td><span class="occ-pressure-pill ${p.cls}">${p.icon} ${p.label}</span></td><td style="font-family:var(--font);color:var(--text-2)">${p.action}</td></tr>`; }).join('') + `</tbody>`;
+  table.innerHTML = `<thead><tr><th>Hotel</th><th>Mês</th><th>Ocupação</th><th>ADR</th><th>Estado</th><th>Ação sugerida</th></tr></thead><tbody>` + rows.map(r=>{ const p=occPressure(r.occ); return `<tr><td>${occShortName(r.hotel)}</td><td>${r.month}/${String(r.year).slice(-2)}</td><td>${r.occ.toFixed(1)}%</td><td>${r.adr!=null?fmt(r.adr,0)+occSym():'—'}</td><td><span class="occ-pressure-pill ${p.cls}">${p.icon} ${p.label}</span></td><td style="font-family:var(--font);color:var(--text-2)">${p.action}</td></tr>`; }).join('') + `</tbody>`;
   const high = rows.filter(r=>r.occ>=90).length, low = rows.filter(r=>r.occ<70).length, mid = rows.filter(r=>r.occ>=70 && r.occ<90).length;
   actions.innerHTML = [
     {t:'Pressão alta', x:`${high} casos acima de 90%. Prioridade: proteger preço e fechar promoções.`},
@@ -671,8 +678,7 @@ function occRenderHeatmap(snap) {
   // Update heatmap title
   const titleEl = document.querySelector('#occHeatmapWrap .occ-chart-title');
   if (titleEl) {
-    const regionLabels = { todos:'Todos os Hotéis', norte:'Norte e Centro', lisboa:'Lisboa & Ilhas', alentejo:'Alentejo', algarve:'Algarve' };
-    titleEl.textContent = `Heatmap de Ocupação — ${regionLabels[activeRegion] || 'Todos os Hotéis'}`;
+    titleEl.textContent = `Heatmap de Ocupação — ${occRegionLabel(activeRegion) || 'Todos os Hotéis'}`;
   }
 
   const ANOS = [Number(YR_PREV), Number(YR_CUR)].filter(Number.isFinite);
@@ -1863,8 +1869,8 @@ async function relatorioGerar() {
   const fv = (v, type) => {
     if (v == null || isNaN(v)) return '—';
     if (type === 'pct') return fmt(v,1)+'%';
-    if (type === 'eur2') return '€'+fmt(v,2);
-    if (type === 'eur') { const s=v<0?'-':''; return s+'€'+Math.abs(v).toLocaleString('pt-PT',{maximumFractionDigits:0}); }
+    if (type === 'eur2') return occSym()+fmt(v,2);
+    if (type === 'eur') { const s=v<0?'-':''; return s+occSym()+Math.abs(v).toLocaleString('pt-PT',{maximumFractionDigits:0}); }
     return fmt(v,0);
   };
   const fvar = (v25, v26, type, isCost) => {
@@ -2114,11 +2120,11 @@ async function relatorioGerar() {
   if (mesesSel.length > 1 && seccoesAtivas.kpis) {
     const linhasConsol = [
       { label:'Taxa Ocupação (%)',   fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=occ(h,y); RAW=old; return v; }, type:'pct', sum:false },
-      { label:'ADR (€)',             fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=adr(h,y); RAW=old; return v; }, type:'eur2', sum:false },
-      { label:'RevPAR (€)',          fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=revpar(h,y); RAW=old; return v; }, type:'eur2', sum:false },
-      { label:'Receita Total (€)',   fn:(h,y,data)=>n(data.hotels_ops?.[h]?.['Receita Total']?.[y]), type:'eur', sum:true },
-      { label:'GOP com Sede (€)',    fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=gopComSede(h,y); RAW=old; return v; }, type:'eur', sum:true },
-      { label:'Custos Totais (€)',   fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=totalCosts(h,y); RAW=old; return v; }, type:'eur', sum:true, cost:true },
+      { label:'ADR ('+occSym()+')',             fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=adr(h,y); RAW=old; return v; }, type:'eur2', sum:false },
+      { label:'RevPAR ('+occSym()+')',          fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=revpar(h,y); RAW=old; return v; }, type:'eur2', sum:false },
+      { label:'Receita Total ('+occSym()+')',   fn:(h,y,data)=>n(data.hotels_ops?.[h]?.['Receita Total']?.[y]), type:'eur', sum:true },
+      { label:'GOP com Sede ('+occSym()+')',    fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=gopComSede(h,y); RAW=old; return v; }, type:'eur', sum:true },
+      { label:'Custos Totais ('+occSym()+')',   fn:(h,y,data)=>{ const old=RAW; RAW=data; const v=totalCosts(h,y); RAW=old; return v; }, type:'eur', sum:true, cost:true },
     ];
     const colMeses = mesesSel.map(m => ({ m, nome: MES_NOME[m] || m, data: STORE[m] })).filter(c=>c.data);
     let consolHtml = `

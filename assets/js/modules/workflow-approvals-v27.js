@@ -249,5 +249,7 @@
   function pendingForCurrentUser(){const u=currentUser();return state.rows.filter(r=>r.status==='pending'&&isDirection()&&(!r.approverUser||norm(r.approverUser)===norm(u?.user)));}
 
   window.VG.approvals={version:27,state,ensureLoaded,render:renderPage,all,stats,openById,openFor,searchItems,pendingForCurrentUser,TYPES,PRIORITY,STATUS,canDecide};
+  window.VG?.events?.on?.('market:before-change',()=>{state.rows=[];state.loaded=false;state.fetchedAt=0;state.loading=null;state.hotel='';});
+  window.VG?.events?.on?.('market:changed',()=>ensureLoaded(true).then(()=>{try{renderPage();}catch(e){}}));
   window.approvalsRender=renderPage;window.approvalsOpen=openFor;
 })();

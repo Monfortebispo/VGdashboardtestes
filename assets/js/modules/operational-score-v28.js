@@ -76,6 +76,8 @@
   function explain(model){const x=calculate(model);if(!x.available)return [];return Object.keys(x.dimensions).map(id=>({id,label:LABELS[id],score:x.dimensions[id],weight:x.weights[id],contribution:x.dimensions[id]*x.weights[id]/100}));}
   function badge(model){const x=calculate(model);if(!x.available)return null;return {score:x.score,label:x.statusLabel,status:x.status};}
 
-  window.VG.operationalScore={version:30,DEFAULT_WEIGHTS,LABELS,ensureConfig,saveWeights,getConfig:()=>({...config,weights:{...config.weights}}),normalizeWeights,dimensionScores,calculate,explain,badge};
+  window.VG.operationalScore={version:31,DEFAULT_WEIGHTS,LABELS,ensureConfig,saveWeights,getConfig:()=>({...config,weights:{...config.weights}}),normalizeWeights,dimensionScores,calculate,explain,badge};
+  window.VG?.events?.on?.('market:before-change',()=>{loaded=false;loading=null;config={weights:{...DEFAULT_WEIGHTS},updatedAt:null};});
+  window.VG?.events?.on?.('market:changed',()=>ensureConfig(true).then(()=>window.VG?.events?.emit?.('score-config:ready',config)));
   setTimeout(()=>ensureConfig(false).then(()=>window.VG?.events?.emit?.('score-config:ready',config)),900);
 })();

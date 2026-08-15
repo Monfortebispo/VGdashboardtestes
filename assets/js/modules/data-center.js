@@ -42,6 +42,7 @@
   async function api(resource, options, key){
     let url=(window.SHARED_API_URL || '/.netlify/functions/dashboard-sessao')+'?resource='+encodeURIComponent(resource);
     if(key!==undefined&&key!==null) url+='&key='+encodeURIComponent(String(key));
+    url+='&market='+encodeURIComponent(window.VG?.market?.id?.()||'iberia');
     const opts=Object.assign({},options||{});
     const headers=Object.assign({},opts.headers||{});
     const token=apiToken(); if(token) headers.Authorization='Bearer '+token;
@@ -321,5 +322,7 @@
   window.vgDataCenterSources=()=>clone(sourceRows());
 
   function init(){ if(apiToken()) loadHistory(false).catch(()=>{}); }
+  window.VG?.events?.on?.('market:before-change',()=>{DC_HISTORY=[];DC_LOADED_AT=0;DC_LOADING=false;});
+  window.VG?.events?.on?.('market:changed',()=>{if(apiToken())loadHistory(true).then(()=>render()).catch(()=>{});});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

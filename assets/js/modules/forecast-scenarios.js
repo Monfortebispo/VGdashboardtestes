@@ -25,7 +25,7 @@
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0));}
   function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function fmt(v,d=1){return v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});}
-  function eur(v,d=0){return v==null?'—':`€${fmt(v,d)}`;}
+  function eur(v,d=0){return v==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,false):`€${fmt(v,d)}`);}
   function pct(v,d=1){return v==null?'—':`${fmt(v,d)}%`;}
   function sign(v,d=1,suffix=''){if(v==null)return '—';const x=Number(v);return `${x>=0?'+':''}${fmt(x,d)}${suffix}`;}
   function daysInMonth(m){return new Date(Number(YR_CUR),Number(m),0).getDate();}

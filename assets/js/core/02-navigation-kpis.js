@@ -125,15 +125,16 @@ function setYear(y) {
 const __vgNumberFormats = new Map();
 function __vgFmtObj(d=0){ d=Number(d)||0; if(!__vgNumberFormats.has(d)) __vgNumberFormats.set(d,new Intl.NumberFormat('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d})); return __vgNumberFormats.get(d); }
 const fmt = (v,d=0) => v==null?'—':__vgFmtObj(d).format(v);
-const fmtEur = v => v==null?'—':'€ '+fmt(v);
+const fmtEur = v => v==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,0,true):'€ '+fmt(v));
+const curSym = () => window.VG?.market?.symbol?.() || '€';
 // Smart value formatter: auto M / K
 const fmtV = v => {
   if (v == null || isNaN(v)) return '—';
-  const abs = Math.abs(v);
-  const sign = v < 0 ? '-' : '';
+  if(window.VG?.market?.formatMoneyCompact) return window.VG.market.formatMoneyCompact(v,2);
+  const abs = Math.abs(v); const sign = v < 0 ? '-' : '';
   if (abs >= 1000000) return sign + '€' + fmt(abs/1000000, abs >= 10000000 ? 1 : 2) + 'M';
-  if (abs >= 1000)    return sign + '€' + fmt(abs/1000, abs >= 100000 ? 0 : 0) + 'K';
-  return sign + '€' + fmt(abs, 0);
+  if (abs >= 1000) return sign + '€' + fmt(abs/1000,0) + 'K';
+  return sign + '€' + fmt(abs,0);
 };
 const fmtPct = v => v==null?'—':(v>=0?'+':'')+fmt(v,1)+'%';
 const n = v => v||0;
@@ -561,9 +562,9 @@ function saveRegioes(r) {
   return Promise.resolve(false);
 }
 let REGIOES = loadRegioes();
-// Brasil — always excluded
-const BRASIL_HOTELS = ['COLLECTION AMAZONIA','COLLECTION AMAZÔNIA'];
-function isBrasil(h) { return BRASIL_HOTELS.some(b => h.toUpperCase().includes(b.toUpperCase().replace('Ô','O').replace('Ã','A'))); }
+// V31: deteção de mercado centralizada. Mantém a função global isBrasil por compatibilidade.
+const BRASIL_HOTELS = ['FORTALEZA','SALVADOR','CUMBUCO','RIO DE JANEIRO','TOUROS','MARES','PAULISTA','CABO','ECO RESORT DE ANGRA','ALAGOAS','COLLECTION SUNSET CUMBUCO','COLLECTION OURO PRETO','COLLECTION AMAZÔNIA'];
+function isBrasil(h) { if(window.VG?.market?.isBrasil)return window.VG.market.isBrasil(h); const n=String(h||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); return BRASIL_HOTELS.some(b=>n.includes(String(b).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase())); }
 let activeRegion = 'todos';
 
 function selectRegion(r) {
@@ -701,9 +702,9 @@ function buildKPIs(targetId) {
     {l:'Receita F&B',v:fmtV(fb26),s:`${YR_PREV}: ${fmtV(fb25)}  ${delta(varFb)}`,c:'kpi-blue'},
     {l:`GOP ${YR_CUR}`,v:fmtV(gop26),s:`Margem: ${fmt(gopPct26,1)}%  ${YR_PREV}: ${fmt(gopPct25,1)}%  ${delta(varGop)}`,c:'kpi-green'},
     {l:`Taxa Ocupação ${YR_CUR}`,v:fmt(occR26,1)+'%',s:`${YR_PREV}: ${fmt(occR25,1)}%  ${delta(varOcc)}`,c:''},
-    {l:`RevPAR ${YR_CUR}`,v:'€'+fmt(rp26,2),s:`${YR_PREV}: €${fmt(rp25,2)}  ${delta(varRp)}`,c:'kpi-green'},
-    {l:`ADR ${YR_CUR}`,v:'€'+fmt(a26,2),s:`${YR_PREV}: €${fmt(a25,2)}  ${delta(varAdr)}`,c:''},
-    {l:`TRevPAR ${YR_CUR}`,v:'€'+fmt(trp26,2),s:`${YR_PREV}: €${fmt(trp25,2)}  ${delta(varTrp)}`,c:''},
+    {l:`RevPAR ${YR_CUR}`,v:curSym()+fmt(rp26,2),s:`${YR_PREV}: ${curSym()}${fmt(rp25,2)}  ${delta(varRp)}`,c:'kpi-green'},
+    {l:`ADR ${YR_CUR}`,v:curSym()+fmt(a26,2),s:`${YR_PREV}: ${curSym()}${fmt(a25,2)}  ${delta(varAdr)}`,c:''},
+    {l:`TRevPAR ${YR_CUR}`,v:curSym()+fmt(trp26,2),s:`${YR_PREV}: ${curSym()}${fmt(trp25,2)}  ${delta(varTrp)}`,c:''},
     {l:`Dormidas ${YR_CUR}`,v:fmt(dorm26),s:`${YR_PREV}: ${fmt(dorm25)}  ${delta(varDorm)}`,c:'kpi-blue'},
     {l:'Hotéis Activos',v:hotels.length,s:`de ${RAW.hotel_list.length} total`,c:''},
     {l:`Custos Totais ${YR_CUR}`,v:fmtV(ctot26),s:`${YR_PREV}: ${fmtV(ctot25)}  ${deltaCost(varCtot)}`,c:'kpi-red'},
@@ -799,7 +800,7 @@ function buildChartsResumo() {
   dc('chartRevHotel','bar',lbl,[
     {label:YR_PREV,data:sorted15.map(h=>n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_PREV])),backgroundColor:c2025,borderColor:c2025b,borderWidth:1,borderRadius:3},
     {label:YR_CUR,data:sorted15.map(h=>n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR])),backgroundColor:c2026,borderColor:c2026b,borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v/1000)+'K'}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v/1000)+'K'}}}});
 
   let aloj=0,fb=0,outros=0;
   const y=currentYear=== YR_PREV?YR_PREV:YR_CUR;
@@ -816,7 +817,7 @@ function buildChartsResumo() {
   dc('chartRevpar','bar',lbl,[
     {label:'RevPAR '+YR_PREV,data:sorted15.map(h=>revpar(h,YR_PREV)),backgroundColor:c2025,borderColor:c2025b,borderWidth:1,borderRadius:3},
     {label:'RevPAR '+YR_CUR,data:sorted15.map(h=>revpar(h,YR_CUR)),backgroundColor:c2026,borderColor:c2026b,borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v,0)}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v,0)}}}});
 
   // GOP chart
   const gopSorted = [...hotels].filter(h=>gop(h,YR_CUR)!=null).sort((a,b)=>(gop(b,YR_CUR)||0)-(gop(a,YR_CUR)||0)).slice(0,15);
@@ -824,7 +825,7 @@ function buildChartsResumo() {
   dc('chartGOP','bar',gopLbl,[
     {label:'GOP '+YR_PREV,data:gopSorted.map(h=>gop(h,YR_PREV)),backgroundColor:c2025,borderColor:c2025b,borderWidth:1,borderRadius:3},
     {label:'GOP '+YR_CUR,data:gopSorted.map(h=>gop(h,YR_CUR)),backgroundColor:c2026,borderColor:c2026b,borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v/1000,0)+'K'}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v/1000,0)+'K'}}}});
 
   // GOP% chart
   const gopPctSorted = [...hotels].filter(h=>gop(h,YR_CUR)!=null && n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR])>0)
@@ -854,13 +855,13 @@ function buildChartsReceitas(){
   dc('chartRevAloj','bar',sa.map(h=>h.length>16?h.substring(0,14)+'…':h),[
     {label:'Aloj '+YR_PREV,data:sa.map(h=>n(RAW.hotels_rev[h]?.ALOJAMENTO?.[YR_PREV])),backgroundColor:'rgba(42,125,140,.55)',borderColor:'#2a7d8c',borderWidth:1,borderRadius:3},
     {label:'Aloj '+YR_CUR,data:sa.map(h=>n(RAW.hotels_rev[h]?.ALOJAMENTO?.[YR_CUR])),backgroundColor:'rgba(201,168,76,.65)',borderColor:'#c9a84c',borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v/1000)+'K'}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v/1000)+'K'}}}});
 
   const sf=[...hotels].sort((a,b)=>n(RAW.hotels_rev[b]?.ALIMENTACAO?.[YR_CUR])-n(RAW.hotels_rev[a]?.ALIMENTACAO?.[YR_CUR])).slice(0,15);
   dc('chartRevFB','bar',sf.map(h=>h.length>16?h.substring(0,14)+'…':h),[
     {label:'FB '+YR_PREV,data:sf.map(h=>n(RAW.hotels_rev[h]?.ALIMENTACAO?.[YR_PREV])),backgroundColor:'rgba(42,125,140,.55)',borderColor:'#2a7d8c',borderWidth:1,borderRadius:3},
     {label:'FB '+YR_CUR,data:sf.map(h=>n(RAW.hotels_rev[h]?.ALIMENTACAO?.[YR_CUR])),backgroundColor:'rgba(201,168,76,.65)',borderColor:'#c9a84c',borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v/1000)+'K'}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v/1000)+'K'}}}});
 
   const vd=hotels.filter(h=>n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_PREV])>0)
     .map(h=>({
@@ -901,7 +902,7 @@ function buildChartsReceitas(){
 // ==========================================================
 function buildChartsCustos(){
   const hotels=getActiveHotels();
-  const barOpts = {plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v/1000)+'K'}}}};
+  const barOpts = {plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v/1000)+'K'}}}};
 
   // 1. Pessoal 2025 vs 2026
   const sp=[...hotels].filter(h=>n(RAW.hotels_costs[h]?.PESSOAL?.[YR_CUR])>0)
@@ -933,7 +934,7 @@ function buildChartsCustos(){
   const cats=['BEBIDAS','COMIDAS','ENERGIA','MANUTENÇÃO','OPERACIONAIS','PESSOAL'];
   const cols=['#c9a84c','#2a7d8c','#e74c3c','#9b59b6','#3498db','#27ae60'];
   dc('chartCostStack','bar',lbl,cats.map((cat,i)=>({label:cat,data:sc.map(h=>n(RAW.hotels_costs[h]?.[cat]?.[YR_CUR])),backgroundColor:cols[i]+'aa',borderColor:cols[i],borderWidth:1})),
-    {plugins:{legend:{position:'right',labels:{padding:8}}},scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:9}}},y:{stacked:true,ticks:{callback:v=>'€'+fmt(v/1000)+'K'}}}});
+    {plugins:{legend:{position:'right',labels:{padding:8}}},scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:9}}},y:{stacked:true,ticks:{callback:v=>curSym()+fmt(v/1000)+'K'}}}});
 
   // 5. Rácio custos/receita (mantém)
   const sr=[...hotels].filter(h=>n(RAW.hotels_ops[h]?.['Receita Total']?.[YR_CUR])>5000)
@@ -962,7 +963,7 @@ function buildChartsKpis(){
   dc('chartADR','bar',sa.map(h=>h.length>16?h.substring(0,14)+'…':h),[
     {label:'ADR '+YR_PREV,data:sa.map(h=>adr(h,YR_PREV)),backgroundColor:'rgba(42,125,140,.55)',borderColor:'#2a7d8c',borderWidth:1,borderRadius:3},
     {label:'ADR '+YR_CUR,data:sa.map(h=>adr(h,YR_CUR)),backgroundColor:'rgba(201,168,76,.65)',borderColor:'#c9a84c',borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v,0)}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v,0)}}}});
 
   const sd=[...hotels].sort((a,b)=>n(RAW.hotels_ops[b]?.Dormidas?.[YR_CUR])-n(RAW.hotels_ops[a]?.Dormidas?.[YR_CUR])).slice(0,15);
   dc('chartDormidas','bar',sd.map(h=>h.length>16?h.substring(0,14)+'…':h),[
@@ -984,7 +985,7 @@ function buildChartsKpis(){
   dc('chartKpiRevpar','bar',lblr,[
     {label:'RevPAR '+YR_PREV,data:srev.map(h=>revpar(h,YR_PREV)),backgroundColor:'rgba(42,125,140,.55)',borderColor:'#2a7d8c',borderWidth:1,borderRadius:3},
     {label:'RevPAR '+YR_CUR,data:srev.map(h=>revpar(h,YR_CUR)),backgroundColor:'rgba(201,168,76,.65)',borderColor:'#c9a84c',borderWidth:1,borderRadius:3}
-  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>'€'+fmt(v,0)}}}});
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:v=>curSym()+fmt(v,0)}}}});
 
   // Force resize so charts render correctly after tab switch
   requestAnimationFrame(() => {
@@ -1009,16 +1010,16 @@ function buildMainTable(){
     <tr>
       <td><div class="td-hotel-name"><div class="hotel-dot"></div>${r[0]}</div></td>
       <td>${fmtEur(r[1])}</td><td>${fmtEur(r[2])}</td>
-      <td><span class="delta-badge ${r[3]>=0?'pos':'neg'}">${r[3]>=0?'+':''}€${fmt(r[3])}</span></td>
+      <td><span class="delta-badge ${r[3]>=0?'pos':'neg'}">${r[3]>=0?'+':''}${curSym()}${fmt(r[3])}</span></td>
       <td><span class="delta-badge ${(r[4]||0)>=0?'pos':'neg'}">${fmtPct(r[4])}</span></td>
       <td><div class="occ-bar-wrap"><div class="occ-bar"><div class="occ-fill" style="width:${r[5]??0}%"></div></div>${fmt(r[5],1)}%</div></td>
       <td><div class="occ-bar-wrap"><div class="occ-bar"><div class="occ-fill" style="width:${r[6]??0}%"></div></div>${fmt(r[6],1)}%</div></td>
-      <td>€${fmt(r[7],2)}</td><td>€${fmt(r[8],2)}</td>
-      <td>€${fmt(r[9],2)}</td><td>€${fmt(r[10],2)}</td>
-      <td><span class="delta-badge ${(r[11]||0)>=0?'pos':'neg'}">€${fmt(r[11])}</span></td>
-      <td><span class="delta-badge ${(r[12]||0)>=0?'pos':'neg'}">€${fmt(r[12])}</span></td>
+      <td>${curSym()}${fmt(r[7],2)}</td><td>${curSym()}${fmt(r[8],2)}</td>
+      <td>${curSym()}${fmt(r[9],2)}</td><td>${curSym()}${fmt(r[10],2)}</td>
+      <td><span class="delta-badge ${(r[11]||0)>=0?'pos':'neg'}">${curSym()}${fmt(r[11])}</span></td>
+      <td><span class="delta-badge ${(r[12]||0)>=0?'pos':'neg'}">${curSym()}${fmt(r[12])}</span></td>
       <td><span class="delta-badge ${(r[13]||0)>=0?'pos':'neg'}">${fmt(r[13],1)}%</span></td>
-      <td><span class="delta-badge ${(r[14]||0)>=0?'pos':'neg'}">€${fmt(r[14])}</span></td>
+      <td><span class="delta-badge ${(r[14]||0)>=0?'pos':'neg'}">${curSym()}${fmt(r[14])}</span></td>
     </tr>`).join('');
   document.querySelectorAll('#mainTable thead th').forEach((th,i)=>{
     th.className=''; if(i===sortCol) th.className=sortDir>0?'sort-asc':'sort-desc';
@@ -1035,10 +1036,10 @@ function buildRevTable(){
     const t25=n(op['Receita Total'][YR_PREV]),t26=n(op['Receita Total'][YR_CUR]),vP=t25>0?(t26-t25)/t25*100:null;
     return `<tr>
       <td><div class="td-hotel-name"><div class="hotel-dot"></div>${h}</div></td>
-      <td>€${fmt(n(r.ALOJAMENTO?.[YR_PREV]))}</td><td>€${fmt(n(r.ALOJAMENTO?.[YR_CUR]))}</td>
-      <td>€${fmt(n(r.ALIMENTACAO?.[YR_PREV]))}</td><td>€${fmt(n(r.ALIMENTACAO?.[YR_CUR]))}</td>
-      <td>€${fmt(n(r.DIVERSOS?.[YR_PREV]))}</td><td>€${fmt(n(r.DIVERSOS?.[YR_CUR]))}</td>
-      <td>€${fmt(t25)}</td><td>€${fmt(t26)}</td>
+      <td>${curSym()}${fmt(n(r.ALOJAMENTO?.[YR_PREV]))}</td><td>${curSym()}${fmt(n(r.ALOJAMENTO?.[YR_CUR]))}</td>
+      <td>${curSym()}${fmt(n(r.ALIMENTACAO?.[YR_PREV]))}</td><td>${curSym()}${fmt(n(r.ALIMENTACAO?.[YR_CUR]))}</td>
+      <td>${curSym()}${fmt(n(r.DIVERSOS?.[YR_PREV]))}</td><td>${curSym()}${fmt(n(r.DIVERSOS?.[YR_CUR]))}</td>
+      <td>${curSym()}${fmt(t25)}</td><td>${curSym()}${fmt(t26)}</td>
       <td><span class="delta-badge ${(vP||0)>=0?'pos':'neg'}">${fmtPct(vP)}</span></td>
     </tr>`;
   }).join('');
@@ -1057,11 +1058,11 @@ function buildCostTable(){
     const t25=totalCosts(h,YR_PREV),      t26=totalCosts(h,YR_CUR);
     return `<tr>
       <td><div class="td-hotel-name"><div class="hotel-dot"></div>${h}</div></td>
-      <td>€${fmt(p25)}</td><td>€${fmt(p26)}</td><td>${varBadge(varPct(p25,p26))}</td>
-      <td>€${fmt(co25)}</td><td>€${fmt(co26)}</td><td>${varBadge(varPct(co25,co26))}</td>
-      <td>€${fmt(b25)}</td><td>€${fmt(b26)}</td><td>${varBadge(varPct(b25,b26))}</td>
-      <td>€${fmt(e25)}</td><td>€${fmt(e26)}</td><td>${varBadge(varPct(e25,e26))}</td>
-      <td>€${fmt(t25)}</td><td><strong>€${fmt(t26)}</strong></td><td>${varBadge(varPct(t25,t26))}</td>
+      <td>${curSym()}${fmt(p25)}</td><td>${curSym()}${fmt(p26)}</td><td>${varBadge(varPct(p25,p26))}</td>
+      <td>${curSym()}${fmt(co25)}</td><td>${curSym()}${fmt(co26)}</td><td>${varBadge(varPct(co25,co26))}</td>
+      <td>${curSym()}${fmt(b25)}</td><td>${curSym()}${fmt(b26)}</td><td>${varBadge(varPct(b25,b26))}</td>
+      <td>${curSym()}${fmt(e25)}</td><td>${curSym()}${fmt(e26)}</td><td>${varBadge(varPct(e25,e26))}</td>
+      <td>${curSym()}${fmt(t25)}</td><td><strong>${curSym()}${fmt(t26)}</strong></td><td>${varBadge(varPct(t25,t26))}</td>
     </tr>`;
   }).join('');
 }
@@ -1116,17 +1117,17 @@ function buildKpiTable(){
     return `<tr>
       <td><div class="td-hotel-name"><div class="hotel-dot"></div>${h}</div></td>
       <td>${fmt(occ25,1)}%</td><td>${fmt(occ26,1)}%</td><td>${varBadge(varPct(occ25,occ26))}</td>
-      <td>€${fmt(adr25,2)}</td><td>€${fmt(adr26,2)}</td><td>${varBadge(varPct(adr25,adr26))}</td>
-      <td>€${fmt(rp25,2)}</td><td>€${fmt(rp26,2)}</td><td>${varBadge(varPct(rp25,rp26))}</td>
-      <td>€${fmt(trp25,2)}</td><td>€${fmt(trp26,2)}</td><td>${varBadge(varPct(trp25,trp26))}</td>
-      <td><span class="delta-badge ${(g25||0)>=0?'pos':'neg'}">€${fmt(g25)}</span></td>
-      <td><span class="delta-badge ${(g26||0)>=0?'pos':'neg'}">€${fmt(g26)}</span></td>
+      <td>${curSym()}${fmt(adr25,2)}</td><td>${curSym()}${fmt(adr26,2)}</td><td>${varBadge(varPct(adr25,adr26))}</td>
+      <td>${curSym()}${fmt(rp25,2)}</td><td>${curSym()}${fmt(rp26,2)}</td><td>${varBadge(varPct(rp25,rp26))}</td>
+      <td>${curSym()}${fmt(trp25,2)}</td><td>${curSym()}${fmt(trp26,2)}</td><td>${varBadge(varPct(trp25,trp26))}</td>
+      <td><span class="delta-badge ${(g25||0)>=0?'pos':'neg'}">${curSym()}${fmt(g25)}</span></td>
+      <td><span class="delta-badge ${(g26||0)>=0?'pos':'neg'}">${curSym()}${fmt(g26)}</span></td>
       <td>${varBadge(varPct(Math.abs(g25||0), Math.abs(g25||0) + ((g26||0)-(g25||0))))}</td>
       <td><span class="delta-badge ${(gp25||0)>=0?'pos':'neg'}">${fmt(gp25,1)}%</span></td>
       <td><span class="delta-badge ${(gp26||0)>=0?'pos':'neg'}">${fmt(gp26,1)}%</span></td>
       <td>${ppBadge((gp26||0)-(gp25||0))}</td>
-      <td><span class="delta-badge ${(gn25||0)>=0?'pos':'neg'}">€${fmt(gn25)}</span></td>
-      <td><span class="delta-badge ${(gn26||0)>=0?'pos':'neg'}">€${fmt(gn26)}</span></td>
+      <td><span class="delta-badge ${(gn25||0)>=0?'pos':'neg'}">${curSym()}${fmt(gn25)}</span></td>
+      <td><span class="delta-badge ${(gn26||0)>=0?'pos':'neg'}">${curSym()}${fmt(gn26)}</span></td>
       <td>${varBadge(varPct(Math.abs(gn25||0), Math.abs(gn25||0) + ((gn26||0)-(gn25||0))))}</td>
       <td>${fmt(dorm25)}</td><td>${fmt(dorm26)}</td><td>${varBadge(varPct(dorm25,dorm26))}</td>
     </tr>`;
@@ -1203,10 +1204,10 @@ function tblPdfKpiRows(hotels){
     return `<tr>
       <td class="hn">${h}</td>
       <td>${fmt(occ25,1)}%</td><td>${fmt(occ26,1)}%</td><td>${_tpBadge(_tpVar(occ25,occ26))}</td>
-      <td>€${fmt(adr25,2)}</td><td>€${fmt(adr26,2)}</td><td>${_tpBadge(_tpVar(adr25,adr26))}</td>
-      <td>€${fmt(rp25,2)}</td><td>€${fmt(rp26,2)}</td><td>${_tpBadge(_tpVar(rp25,rp26))}</td>
-      <td>€${fmt(trp25,2)}</td><td>€${fmt(trp26,2)}</td><td>${_tpBadge(_tpVar(trp25,trp26))}</td>
-      <td>€${fmt(g25)}</td><td>€${fmt(g26)}</td><td>${_tpBadge(gVar)}</td>
+      <td>${curSym()}${fmt(adr25,2)}</td><td>${curSym()}${fmt(adr26,2)}</td><td>${_tpBadge(_tpVar(adr25,adr26))}</td>
+      <td>${curSym()}${fmt(rp25,2)}</td><td>${curSym()}${fmt(rp26,2)}</td><td>${_tpBadge(_tpVar(rp25,rp26))}</td>
+      <td>${curSym()}${fmt(trp25,2)}</td><td>${curSym()}${fmt(trp26,2)}</td><td>${_tpBadge(_tpVar(trp25,trp26))}</td>
+      <td>${curSym()}${fmt(g25)}</td><td>${curSym()}${fmt(g26)}</td><td>${_tpBadge(gVar)}</td>
       <td>${fmt(gp25,1)}%</td><td>${fmt(gp26,1)}%</td><td>${_tpPP((gp26||0)-(gp25||0))}</td>
       <td>${fmt(dorm25)}</td><td>${fmt(dorm26)}</td><td>${_tpBadge(_tpVar(dorm25,dorm26))}</td>
     </tr>`;
@@ -1223,11 +1224,11 @@ function tblPdfCostRows(hotels){
     const t25=totalCosts(h,YR_PREV),    t26=totalCosts(h,YR_CUR);
     return `<tr>
       <td class="hn">${h}</td>
-      <td>€${fmt(p25)}</td><td>€${fmt(p26)}</td><td>${_tpBadge(_tpVar(p25,p26))}</td>
-      <td>€${fmt(co25)}</td><td>€${fmt(co26)}</td><td>${_tpBadge(_tpVar(co25,co26))}</td>
-      <td>€${fmt(b25)}</td><td>€${fmt(b26)}</td><td>${_tpBadge(_tpVar(b25,b26))}</td>
-      <td>€${fmt(e25)}</td><td>€${fmt(e26)}</td><td>${_tpBadge(_tpVar(e25,e26))}</td>
-      <td>€${fmt(t25)}</td><td><strong>€${fmt(t26)}</strong></td><td>${_tpBadge(_tpVar(t25,t26))}</td>
+      <td>${curSym()}${fmt(p25)}</td><td>${curSym()}${fmt(p26)}</td><td>${_tpBadge(_tpVar(p25,p26))}</td>
+      <td>${curSym()}${fmt(co25)}</td><td>${curSym()}${fmt(co26)}</td><td>${_tpBadge(_tpVar(co25,co26))}</td>
+      <td>${curSym()}${fmt(b25)}</td><td>${curSym()}${fmt(b26)}</td><td>${_tpBadge(_tpVar(b25,b26))}</td>
+      <td>${curSym()}${fmt(e25)}</td><td>${curSym()}${fmt(e26)}</td><td>${_tpBadge(_tpVar(e25,e26))}</td>
+      <td>${curSym()}${fmt(t25)}</td><td><strong>${curSym()}${fmt(t26)}</strong></td><td>${_tpBadge(_tpVar(t25,t26))}</td>
     </tr>`;
   }).join('');
 }
@@ -1245,11 +1246,11 @@ function tblPdfCostTotalsRow(hotels){
   });
   return `<tr class="tot">
     <td class="hn">TOTAL</td>
-    <td>€${fmt(p25)}</td><td>€${fmt(p26)}</td><td>${_tpBadge(_tpVar(p25,p26))}</td>
-    <td>€${fmt(co25)}</td><td>€${fmt(co26)}</td><td>${_tpBadge(_tpVar(co25,co26))}</td>
-    <td>€${fmt(b25)}</td><td>€${fmt(b26)}</td><td>${_tpBadge(_tpVar(b25,b26))}</td>
-    <td>€${fmt(e25)}</td><td>€${fmt(e26)}</td><td>${_tpBadge(_tpVar(e25,e26))}</td>
-    <td>€${fmt(t25)}</td><td><strong>€${fmt(t26)}</strong></td><td>${_tpBadge(_tpVar(t25,t26))}</td>
+    <td>${curSym()}${fmt(p25)}</td><td>${curSym()}${fmt(p26)}</td><td>${_tpBadge(_tpVar(p25,p26))}</td>
+    <td>${curSym()}${fmt(co25)}</td><td>${curSym()}${fmt(co26)}</td><td>${_tpBadge(_tpVar(co25,co26))}</td>
+    <td>${curSym()}${fmt(b25)}</td><td>${curSym()}${fmt(b26)}</td><td>${_tpBadge(_tpVar(b25,b26))}</td>
+    <td>${curSym()}${fmt(e25)}</td><td>${curSym()}${fmt(e26)}</td><td>${_tpBadge(_tpVar(e25,e26))}</td>
+    <td>${curSym()}${fmt(t25)}</td><td><strong>${curSym()}${fmt(t26)}</strong></td><td>${_tpBadge(_tpVar(t25,t26))}</td>
   </tr>`;
 }
 

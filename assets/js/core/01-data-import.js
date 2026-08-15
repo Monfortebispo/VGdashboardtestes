@@ -231,6 +231,7 @@ function pnlConfirmMonth(){
 
 // PASSO 3 — aplicar os dados conforme o tipo
 function pnlAplicar(data, fileName, tipo){
+  if (!window._vgMarketImportRouting && window.VG?.market?.routePnlImport?.(data,fileName,tipo)) return;
   const mesLabel = PNL_MESES[data.mes] || ('Mês ' + data.mes);
   const dcSource = tipo === 'acumulado' ? 'pnl_accum' : 'pnl_month';
   const dcBefore = typeof window.vgDataCenterCapture === 'function' ? window.vgDataCenterCapture(dcSource, data.mes) : null;

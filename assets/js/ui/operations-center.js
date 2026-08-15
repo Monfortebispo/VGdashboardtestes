@@ -27,6 +27,7 @@
   function pctVar(prev, cur){ prev=Number(prev); cur=Number(cur); return isFinite(prev) && prev !== 0 && isFinite(cur) ? (cur-prev)/Math.abs(prev)*100 : null; }
   function fmtMoney(v){
     if(v==null || !isFinite(Number(v))) return '—';
+    if(window.VG?.market?.formatMoneyCompact) return window.VG.market.formatMoneyCompact(v,1);
     const a=Math.abs(Number(v)), sign=Number(v)<0?'-':'';
     if(a>=1000000) return sign+'€'+(a/1000000).toLocaleString('pt-PT',{maximumFractionDigits:1})+'M';
     if(a>=1000) return sign+'€'+(a/1000).toLocaleString('pt-PT',{maximumFractionDigits:0})+'K';

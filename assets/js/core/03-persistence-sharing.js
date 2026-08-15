@@ -331,6 +331,8 @@ function setSharedSyncStatus(text, isWarning) {
 function sharedUrl(resource, key) {
   let u = window.SHARED_API_URL + '?resource=' + encodeURIComponent(resource);
   if (key !== undefined && key !== null) u += '&key=' + encodeURIComponent(key);
+  const market = window.VG?.market?.id?.() || 'iberia';
+  u += '&market=' + encodeURIComponent(market);
   return u;
 }
 
@@ -451,19 +453,26 @@ function sharedCurrentUserMeta(){
     return u ? {user:u.user||'', name:u.name||'', role:u.role||'', hotel:u.hotel||''} : null;
   } catch(e){ return null; }
 }
+function sharedLegacyMigrationAllowed(){
+  // V31: todos os dados locais históricos pertencem ao universo PT+ES.
+  // Nunca os migrar automaticamente para Brasil.
+  try { return (window.VG?.market?.id?.() || 'iberia') === 'iberia'; }
+  catch(e){ return true; }
+}
 
 function sharedRegionsValid(r){
   if(!sharedPlainObject(r)) return false;
-  return ['norte','lisboa','alentejo','algarve'].every(k => Array.isArray(r[k]));
+  const expected=Object.keys(window.VG?.market?.defaultRegions?.() || REGIOES_DEFAULT);
+  return expected.length>0 && expected.every(k => Array.isArray(r[k]));
 }
 
 async function sharedSaveRegions(r){
   try {
-    const payload = sharedClone(r || REGIOES_DEFAULT);
+    const payload = sharedClone(r || window.VG?.market?.defaultRegions?.() || REGIOES_DEFAULT);
     await sharedPost('settings','regions',{version:1, regions:payload, updatedAt:new Date().toISOString(), updatedBy:sharedCurrentUserMeta()});
     REGIOES = payload;
     SHARED_REGIONS_READY = true;
-    try { localStorage.removeItem('vg_regioes_custom'); } catch(e) {}
+    try { if(sharedLegacyMigrationAllowed()) localStorage.removeItem('vg_regioes_custom'); } catch(e) {}
     return true;
   } catch(e) {
     console.warn('Não foi possível guardar as regiões no servidor partilhado.', e);
@@ -475,8 +484,10 @@ async function sharedLoadRegions(force){
   if(SHARED_REGIONS_READY && !force) return true;
   let legacy = null;
   try {
-    const raw = localStorage.getItem('vg_regioes_custom');
-    if(raw) { const parsed=JSON.parse(raw); if(sharedRegionsValid(parsed)) legacy=parsed; }
+    if(sharedLegacyMigrationAllowed()){
+      const raw = localStorage.getItem('vg_regioes_custom');
+      if(raw) { const parsed=JSON.parse(raw); if(sharedRegionsValid(parsed)) legacy=parsed; }
+    }
   } catch(e) {}
   try {
     const res = await sharedGet('settings','regions');
@@ -488,14 +499,14 @@ async function sharedLoadRegions(force){
       try {
         // Só elimina a configuração local antiga quando coincide com a versão oficial.
         // Se diferir, mantém-na temporariamente para não perder uma possível alteração não migrada.
-        if(!legacy || JSON.stringify(legacy)===JSON.stringify(regions)) localStorage.removeItem('vg_regioes_custom');
+        if(sharedLegacyMigrationAllowed() && (!legacy || JSON.stringify(legacy)===JSON.stringify(regions))) localStorage.removeItem('vg_regioes_custom');
         else console.warn('Migração de regiões: existe uma configuração local diferente da versão partilhada; foi preservada para revisão.');
       } catch(e) {}
       return true;
     }
     // Primeira execução desta versão: publica a configuração local antiga, se existir;
     // caso contrário publica a configuração base.
-    REGIOES = sharedClone(legacy || REGIOES_DEFAULT);
+    REGIOES = sharedClone(legacy || window.VG?.market?.defaultRegions?.() || REGIOES_DEFAULT);
     return await sharedSaveRegions(REGIOES);
   } catch(e){
     if(legacy) REGIOES = sharedClone(legacy);
@@ -510,7 +521,7 @@ async function sharedSaveRevenueEvents(text){
     await sharedPost('settings','revenue-events',payload);
     RI_SHARED_EVENTS=payload.text;
     RI_SHARED_READY=true;
-    try { localStorage.removeItem('vg_ri_events'); } catch(e) {}
+    try { if(sharedLegacyMigrationAllowed()) localStorage.removeItem('vg_ri_events'); } catch(e) {}
     return true;
   } catch(e){
     console.warn('Não foi possível guardar os eventos de Revenue Intelligence.',e);
@@ -521,7 +532,7 @@ async function sharedSaveRevenueEvents(text){
 async function sharedLoadRevenueEvents(force){
   if(RI_SHARED_READY && !force) return true;
   let legacy='';
-  try { legacy=localStorage.getItem('vg_ri_events')||''; } catch(e) {}
+  try { if(sharedLegacyMigrationAllowed()) legacy=localStorage.getItem('vg_ri_events')||''; } catch(e) {}
   try {
     const res=await sharedGet('settings','revenue-events');
     const remote=res&&res.data;
@@ -529,7 +540,7 @@ async function sharedLoadRevenueEvents(force){
       RI_SHARED_EVENTS=typeof remote==='string'?remote:String(remote.text||'');
       RI_SHARED_READY=true;
       try {
-        if(!legacy || legacy===RI_SHARED_EVENTS) localStorage.removeItem('vg_ri_events');
+        if(sharedLegacyMigrationAllowed() && (!legacy || legacy===RI_SHARED_EVENTS)) localStorage.removeItem('vg_ri_events');
         else console.warn('Migração RI: existem eventos locais diferentes da versão partilhada; foram preservados para revisão.');
       } catch(e) {}
     } else if(legacy){
@@ -782,18 +793,20 @@ async function sharedLoadOperationalSettings(force){
   // Migração automática das Fichas antigas existentes neste navegador — sem
   // obrigar a abrir hotel a hotel. Só as chaves que forem confirmadas no servidor
   // são removidas do armazenamento local.
-  const legacyHotels=hsLegacyHotels();
+  const legacyHotels=sharedLegacyMigrationAllowed()?hsLegacyHotels():[];
   if(legacyHotels.length){
     try { await hsEnsureHotelsLoaded(legacyHotels); }
     catch(e){ console.warn('Migração automática das Fichas de Hotel incompleta.',e); }
   }
   try {
     let pendingLegacy=0;
-    if(localStorage.getItem('vg_regioes_custom')) pendingLegacy++;
-    if(localStorage.getItem('vg_ri_events')) pendingLegacy++;
-    for(let i=0;i<localStorage.length;i++){
-      const k=localStorage.key(i)||'';
-      if(k.startsWith('vg_hs_comment__')||k.startsWith('vg_hs_value__')||k.startsWith('vg_hs_director__')) pendingLegacy++;
+    if(sharedLegacyMigrationAllowed()){
+      if(localStorage.getItem('vg_regioes_custom')) pendingLegacy++;
+      if(localStorage.getItem('vg_ri_events')) pendingLegacy++;
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i)||'';
+        if(k.startsWith('vg_hs_comment__')||k.startsWith('vg_hs_value__')||k.startsWith('vg_hs_director__')) pendingLegacy++;
+      }
     }
     if(pendingLegacy && typeof showToast==='function') showToast(`⚠ ${pendingLegacy} dado(s) local(is) antigo(s) diferem ou ainda não foram confirmados no servidor; foram preservados.`, true);
   } catch(e) {}

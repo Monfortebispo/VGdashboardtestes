@@ -13,8 +13,8 @@
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const fmt=(v,d=1)=>n(v)==null?'—':Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
-  const eur=(v,d=0)=>n(v)==null?'—':'€ '+Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
-  const money=v=>{const x=n(v);if(x==null)return '—';const a=Math.abs(x),s=x<0?'-':'';if(a>=1000000)return `${s}€${fmt(a/1000000,a>=10000000?1:2)}M`;if(a>=1000)return `${s}€${fmt(a/1000,0)}K`;return `${s}€${fmt(a,0)}`;};
+  const eur=(v,d=0)=>n(v)==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,true):'€ '+Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d}));
+  const money=v=>window.VG?.market?.formatMoneyCompact?window.VG.market.formatMoneyCompact(v,2):(()=>{const x=n(v);if(x==null)return '—';const a=Math.abs(x),s=x<0?'-':'';if(a>=1000000)return `${s}€${fmt(a/1000000,a>=10000000?1:2)}M`;if(a>=1000)return `${s}€${fmt(a/1000,0)}K`;return `${s}€${fmt(a,0)}`;})();
   const pct=(v,d=1)=>n(v)==null?'—':`${fmt(v,d)}%`;
   const signPct=(v,d=1,suffix='%')=>n(v)==null?'—':`${v>=0?'+':''}${fmt(v,d)}${suffix}`;
   const shortHotel=h=>String(h||'').replace(/^COLLECTION\s+/,'C. ');

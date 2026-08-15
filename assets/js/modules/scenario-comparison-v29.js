@@ -18,7 +18,7 @@
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
   const fmt=(v,d=1)=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
-  const eur=(v,d=0)=>v==null?'—':'€ '+fmt(v,d);
+  const eur=(v,d=0)=>v==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,true):'€ '+fmt(v,d));
   const pct=(v,d=1)=>v==null?'—':fmt(v,d)+'%';
   const signed=(v,d=1,suffix='')=>v==null?'—':`${Number(v)>=0?'+':''}${fmt(v,d)}${suffix}`;
   const currentUser=()=>{try{return typeof window.vgAuthCurrent==='function'?window.vgAuthCurrent():null;}catch(e){return null;}};
@@ -198,4 +198,6 @@
   window.scenarioCompareSelect=selectScenario;
   window.scenarioComparePeriod=(h,m)=>setPeriod(h||state.hotel,m||state.month);
   window.scenarioCompareFromForecast=()=>openFromForecast({});
+  window.VG?.events?.on?.('market:before-change',()=>{state.rows=[];state.loaded=false;state.fetchedAt=0;state.loading=null;state.hotel='';state.selected.clear();});
+  window.VG?.events?.on?.('market:changed',()=>ensureLoaded(true).then(()=>{try{renderPage();}catch(e){}}));
 })();

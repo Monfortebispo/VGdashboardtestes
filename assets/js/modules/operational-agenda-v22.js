@@ -229,4 +229,6 @@
 
   window.VG.agenda={version:22,state,ensureLoaded,refresh,all:combined,filtered,buildModel,stats,openEditor,openById:openItem,canManage,canCreateHotel,TYPES};
   window.vgAgendaRefresh=refresh;window.vgAgendaNew=()=>openEditor(null);
+  window.VG?.events?.on?.('market:before-change',()=>{state.manual=[];state.loaded=false;state.fetchedAt=0;state.loading=null;state.hotel='';});
+  window.VG?.events?.on?.('market:changed',()=>refresh(true));
 })();

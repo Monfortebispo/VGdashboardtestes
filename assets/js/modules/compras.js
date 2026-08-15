@@ -6,7 +6,8 @@
 /* ====== REGIÕES: usa o mapa oficial do dashboard (editor de Regiões) ====== */
 const REG_LABEL={norte:'Norte e Centro',lisboa:'Lisboa & Ilhas',alentejo:'Alentejo',algarve:'Algarve'};
 const REG_OUTROS='Sede & Outros';
-const REG_LISTA=['Norte e Centro','Lisboa & Ilhas','Alentejo','Algarve',REG_OUTROS];
+const cdRegionLabel=k=>window.VG?.market?.regionLabel?.(k)||REG_LABEL[k]||k;
+const cdRegionList=()=>[...Object.keys((typeof REGIOES!=='undefined'&&REGIOES)||{}).map(cdRegionLabel),REG_OUTROS];
 const _norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
 let REG_BY_HOTEL=[];
 function cdRefreshRegioes(){
@@ -14,7 +15,7 @@ function cdRefreshRegioes(){
   if(!HOT)return;
   const R=(typeof REGIOES!=='undefined'&&REGIOES)?REGIOES:{};
   const m=new Map();
-  for(const k in REG_LABEL)for(const n of (R[k]||[]))m.set(_norm(n),REG_LABEL[k]);
+  for(const k of Object.keys(R))for(const n of (R[k]||[]))m.set(_norm(n),cdRegionLabel(k));
   for(let i=0;i<HOT.length;i++)REG_BY_HOTEL[i]=m.get(_norm(HOT[i]||''))||REG_OUTROS;
 }
 const regiaoDe=h=>REG_BY_HOTEL[h]||REG_OUTROS;
@@ -41,10 +42,11 @@ const mesLbl=im=>{const v=MESES[im];return MNOMES[v%100]+' '+Math.floor(v/100);}
 const mesLblCurto=im=>MNOMES[MESES[im]%100];
 const fmt0=new Intl.NumberFormat('pt-PT',{maximumFractionDigits:0});
 const fmt2=new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2});
-const eur=v=>fmt0.format(Math.round(v))+' €';
+const eur=v=>window.VG?.market?.formatMoney?window.VG.market.formatMoney(Math.round(v),0,true):fmt0.format(Math.round(v))+' €';
 const fmt1=new Intl.NumberFormat('pt-PT',{maximumFractionDigits:1});
-const eurAxis=v=>{const x=Math.abs(v);if(x>=1e6)return fmt1.format(v/1e6)+' M€';if(x>=1e3)return fmt0.format(v/1e3)+' k€';return fmt0.format(v)+' €';};
-const eur2=v=>fmt2.format(v)+' €';
+const eurAxis=v=>{if(window.VG?.market?.formatMoneyCompact)return window.VG.market.formatMoneyCompact(v,1);const x=Math.abs(v);if(x>=1e6)return fmt1.format(v/1e6)+' M€';if(x>=1e3)return fmt0.format(v/1e3)+' k€';return fmt0.format(v)+' €';};
+const eur2=v=>window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,2,true):fmt2.format(v)+' €';
+const cdSym=()=>window.VG?.market?.symbol?.()||'€';
 const pct=v=>fmt2.format(v*100).replace(',00','')+'%';
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const NAV=['#16324f','#c9a45c','#4a7ba6','#7e57c2','#1e7e4f','#b3392e','#b87514','#3f8e9b','#8a6d3b','#5c6bc0','#26a69a','#d4526e'];
@@ -155,7 +157,7 @@ function cdFillHeader(){
   if(!CD){meta.textContent='Sem extrato carregado.';return;}
   meta.textContent=`Fonte: ${CD.meta.fonte} · ${fmt0.format(CD.meta.linhas_origem)} movimentos · ${mesLbl(0)} – ${mesLbl(MESES.length-1)} · processado ${CD.meta.gerado}`;
   const fr=document.getElementById('cd_fRegiao');
-  fr.innerHTML='<option value="">Todas as regiões</option>'+REG_LISTA.map(r=>`<option>${r}</option>`).join('');
+  fr.innerHTML='<option value="">Todas as regiões</option>'+cdRegionList().map(r=>`<option>${r}</option>`).join('');
   cdFillHoteis();
   const de=document.getElementById('cd_fMesDe'),ate=document.getElementById('cd_fMesAte');
   de.innerHTML=MESES.map((m,i)=>`<option value="${i}">${mesLbl(i)}</option>`).join('');
@@ -451,12 +453,12 @@ function rPrecos(el){
     <h3>Oportunidades de poupança <small>— mesmo artigo comprado a preços diferentes entre unidades/fornecedores</small></h3>
     <div class="inline">
       <label>Qtd mínima</label><input type="number" id="cd_pMinQ" value="${s.minQ}" min="1">
-      <label>Valor mínimo do artigo</label><input type="number" id="cd_pMinV" value="${s.minV}" min="0" step="100"> €
+      <label>Valor mínimo do artigo</label><input type="number" id="cd_pMinV" value="${s.minV}" min="0" step="100"> ${cdSym()}
       <button class="btn" id="cd_pCalc">Recalcular</button>
       <button class="btn gold" id="cd_pExp">Exportar CSV</button>
     </div>
     <div id="cd_tPop"></div>
-    <div class="note">Poupança potencial = (preço médio pago − preço mínimo observado) × quantidade, por unidade. O preço mínimo é o melhor preço médio praticado em qualquer unidade/fornecedor no período do ficheiro. Excluídos artigos das famílias PESSOAL, ENERGIA e NÃO OPERACIONAIS e artigos com preço mediano acima de 250 €/un (faturas/serviços, não comparáveis); diferenças >3× são ignoradas. Valores indicativos — confirmar unidades de medida e condições antes de concluir.</div>
+    <div class="note">Poupança potencial = (preço médio pago − preço mínimo observado) × quantidade, por unidade. O preço mínimo é o melhor preço médio praticado em qualquer unidade/fornecedor no período do ficheiro. Excluídos artigos das famílias PESSOAL, ENERGIA e NÃO OPERACIONAIS. ${window.VG?.market?.id?.()==='brasil'?'No Brasil não é aplicado um limite absoluto de preço unitário até existir um limiar BR aprovado; diferenças >3× continuam a ser ignoradas.':'Em PT+ES, artigos com preço mediano acima de 250 €/un (faturas/serviços, não comparáveis) são excluídos; diferenças >3× são ignoradas.'} Valores indicativos — confirmar unidades de medida e condições antes de concluir.</div>
   </div>
   <div class="card">
     <h3>Comparador de preços por artigo</h3>
@@ -503,7 +505,7 @@ function rowsP(){
 }
 /* artigos não comparáveis em preço: famílias de pessoal/energia/não operacionais (qtd = lançamentos, não unidades) */
 const CM_EXCL=/PESSOAL|ENERGIA|NAO OPERACIONAIS/;
-const CM_CAP=250; // €/un: acima disto, tipicamente serviços/faturas
+const cmCap=()=>window.VG?.market?.id?.()==='brasil'?Infinity:250; // V31: limite absoluto só em EUR; no Brasil evita-se aplicar 250 BRL como se fossem 250 EUR
 let _artFamCache=null;
 function cmArtFam(){
   if(_artFamCache)return _artFamCache;
@@ -523,7 +525,7 @@ function calcOportunidades(){
     {const ps=lst.filter(r=>r[4]>=s.minQ).map(r=>r[3]/r[4]).filter(p=>p>0).sort((x,y)=>x-y);
      if(ps.length<2)continue;
      const med=ps[Math.floor((ps.length-1)/2)];
-     if(med>CM_CAP)continue;}
+     if(med>cmCap())continue;}
     let totV=0;for(const r of lst)totV+=r[3];
     if(totV<s.minV)continue;
     let pmin=Infinity,onde='';
@@ -740,7 +742,7 @@ function rAnos(el){
   document.getElementById('cd_yExp').onclick=()=>{
     const r=calcAnos();
     exportCSV(`homologo_${s.a}_vs_${s.b}.csv`,
-      ['Unidade',String(s.a),String(s.b),'Variação €','Variação %'],
+      ['Unidade',String(s.a),String(s.b),'Variação '+cdSym(),'Variação %'],
       r.hoteis.map(x=>[HOT[x.k],x.va.toFixed(2),x.vb.toFixed(2),(x.vb-x.va).toFixed(2),x.va?((x.vb-x.va)/Math.abs(x.va)*100).toFixed(1):'']));
   };
   drawAnos();
@@ -812,18 +814,18 @@ function drawAnos(){
     `<span class="clk" onclick="cdAnosFam(${x.k})">${esc(FAM[x.k])}</span>`,
     eur(x.va),eur(x.vb),`<b>${x.vb-x.va>0?'+':''}${eur(x.vb-x.va)}</b>`,pilV(x.va,x.vb)]);
   document.getElementById('cd_tYf').innerHTML=tabela(
-    [{t:'Família'},{t:s.a,n:1},{t:s.b,n:1},{t:'Δ €',n:1},{t:'Δ %',n:1}],linF,{maxH:340});
+    [{t:'Família'},{t:s.a,n:1},{t:s.b,n:1},{t:'Δ '+cdSym(),n:1},{t:'Δ %',n:1}],linF,{maxH:340});
   if(s.fam){
     const linG=r.grps.slice(0,60).map(x=>[esc(GRP[x.k]),eur(x.va),eur(x.vb),
       `<b>${x.vb-x.va>0?'+':''}${eur(x.vb-x.va)}</b>`,pilV(x.va,x.vb)]);
     document.getElementById('cd_tYg').innerHTML=
       `<h3 style="margin-top:14px">Grupos — ${esc(FAM[s.fam])}</h3>`+
-      tabela([{t:'Grupo'},{t:s.a,n:1},{t:s.b,n:1},{t:'Δ €',n:1},{t:'Δ %',n:1}],linG,{maxH:300});
+      tabela([{t:'Grupo'},{t:s.a,n:1},{t:s.b,n:1},{t:'Δ '+cdSym(),n:1},{t:'Δ %',n:1}],linG,{maxH:300});
   }else document.getElementById('cd_tYg').innerHTML='';
   const linH=r.hoteis.map(x=>[esc(HOT[x.k]),eur(x.va),eur(x.vb),
     `<b>${x.vb-x.va>0?'+':''}${eur(x.vb-x.va)}</b>`,pilV(x.va,x.vb)]);
   document.getElementById('cd_tYh').innerHTML=tabela(
-    [{t:'Unidade'},{t:s.a,n:1},{t:s.b,n:1},{t:'Δ €',n:1},{t:'Δ %',n:1}],linH,{maxH:700});
+    [{t:'Unidade'},{t:s.a,n:1},{t:s.b,n:1},{t:'Δ '+cdSym(),n:1},{t:'Δ %',n:1}],linH,{maxH:700});
 }
 
 /* ============ COMENTÁRIOS (análise narrativa por unidade) ============ */
@@ -838,8 +840,8 @@ function rComent(el){
       <label>Unidade</label><select id="cd_cmHotel"><option value="0">Todas (portefólio)</option></select>
       <label>Qtd mín.</label><input type="number" id="cd_cmMinQ" value="${s.minQ}" min="1">
       <label>Desvio preço ≥</label><input type="number" id="cd_cmDesv" value="${s.desvPct}" min="5" step="5"> %
-      <label>Impacto mín.</label><input type="number" id="cd_cmImp" value="${s.minImp}" min="0" step="50"> €
-      <label>Preço unit. máx.</label><input type="number" id="cd_cmMaxP" value="${s.maxP}" min="10" step="50"> €
+      <label>Impacto mín.</label><input type="number" id="cd_cmImp" value="${s.minImp}" min="0" step="50"> ${cdSym()}
+      <label>Preço unit. máx.</label><input type="number" id="cd_cmMaxP" value="${s.maxP}" min="10" step="50"> ${cdSym()}
       <button class="btn" id="cd_cmGo">Gerar</button>
       <button class="btn gold" id="cd_cmExp">Exportar TXT</button>
     </div>
@@ -1199,7 +1201,7 @@ function rAlertas(el){
     <h3>Variações anómalas <small>— ${mesLbl(ST.mesAte)} vs média dos meses anteriores no período</small></h3>
     <div class="inline">
       <label>Variação mínima</label><input type="number" id="cd_aLim" value="${s.lim}" min="5" step="5"> %
-      <label>Valor mínimo no mês</label><input type="number" id="cd_aMinV" value="${s.minV}" min="0" step="250"> €
+      <label>Valor mínimo no mês</label><input type="number" id="cd_aMinV" value="${s.minV}" min="0" step="250"> ${cdSym()}
       <button class="btn" id="cd_aGo">Recalcular</button>
       <button class="btn gold" id="cd_aExp">Exportar CSV</button>
     </div>
@@ -1243,7 +1245,7 @@ function drawAlertas(){
   const al=calcAlertas();
   if(ST.mesAte<=ST.mesDe){document.getElementById('cd_tAl').innerHTML='<div class="note">Alarga o filtro de meses (mínimo 2) para calcular variações.</div>';return;}
   document.getElementById('cd_tAl').innerHTML=
-    `<div class="note" style="margin-bottom:8px">${fmt0.format(al.length)} alertas (top 120 abaixo, ordenados por impacto em €)</div>`+
+    `<div class="note" style="margin-bottom:8px">${fmt0.format(al.length)} alertas (top 120 abaixo, ordenados por impacto em ${cdSym()})</div>`+
     tabela([{t:'Unidade'},{t:'Família'},{t:'Grupo'},{t:mesLbl(ST.mesAte),n:1},{t:'Média anterior',n:1},{t:'Variação',n:1},{t:'Impacto',n:1}],
     al.slice(0,120).map(a=>[esc(HOT[a.h]),esc(FAM[a.f]),esc(GRP[a.g]),eur(a.v),eur(a.med),
       a.novo?'<span class="pill warn">novo</span>':`<span class="pill ${a.var>0?'neg':'pos'}">${a.var>0?'+':''}${pct(a.var)}</span>`,
@@ -1609,6 +1611,7 @@ async function cdUploadInterno(inp){
     const a=novoAgg();
     const r=await lerXLSX(file,a,(p,msg)=>{st.textContent=`${msg} ${Math.round(p*100)}% · ${a.n.toLocaleString('pt-PT')} mov.`;});
     const dados=finalizar(a);
+    if(window.VG?.market?.ensureMarketForPurchases) await window.VG.market.ensureMarketForPurchases(dados);
     cdSetDataInterno(dados);
     st.textContent=`✓ ${a.n.toLocaleString('pt-PT')} movimentos · ${dados.meta.meses.length} meses · ${r.folhas} folha(s)`+(r.ignoradas?` · ${r.ignoradas} ignorada(s)`:'');
     if(r.repetidos&&r.repetidos.length){

@@ -184,7 +184,9 @@
 
   function hotelsForSetup(){
     const fromSelect=Array.from(document.querySelectorAll('#hsHotel option, select option')).map(function(o){return o.value;}).filter(Boolean);
-    return Array.from(new Set((HOTEL_LIST||[]).concat(fromSelect).filter(Boolean))).sort();
+    const marketHotels=window.VG?.market?.def?.()?.hotels||[];const rawHotels=(typeof RAW!=='undefined'&&RAW?.hotel_list)||[];
+    const base=marketHotels.length?marketHotels:(HOTEL_LIST||[]).concat(rawHotels,fromSelect);
+    return Array.from(new Set(base.filter(Boolean).filter(h=>!window.VG?.market||window.VG.market.isCurrentHotel(h)))).sort();
   }
   function fillHotelSelect(){const s=document.getElementById('vgNewHotel');if(!s)return;const val=s.value;s.innerHTML='<option value="*">Todos os hotéis</option>'+hotelsForSetup().map(function(h){return '<option value="'+esc(h)+'">'+esc(h)+'</option>';}).join('');if(val)s.value=val;}
   async function openSetup(){
@@ -205,20 +207,23 @@
     b.innerHTML=rows.slice(0,80).map(function(r){return '<tr><td>'+esc(r.serverTs||r.ts)+'</td><td>'+esc(r.name||r.user)+'</td><td>'+esc(r.hotel)+'</td><td>'+esc(r.action)+'</td><td>'+esc(r.detail)+'</td></tr>';}).join('');
   }
 
-  const regionNames={norte:'🔵 Norte e Centro',lisboa:'🟢 Lisboa & Ilhas',alentejo:'🟡 Alentejo',algarve:'🔴 Algarve'};
+  const legacyRegionNames={norte:'🔵 Norte e Centro',lisboa:'🟢 Lisboa & Ilhas',alentejo:'🟡 Alentejo',algarve:'🔴 Algarve'};
+  function setupRegionName(r){const x=window.VG?.market?.regionLabel?.(r)||legacyRegionNames[r]||r;const icons={cidade:'🏙️',resorts:'🏖️',collection:'◆'};return (icons[r]?icons[r]+' ':'')+x;}
   let editRegioes=null;
   function renderRegioesEditor(){
     const el=document.getElementById('vgRegioesEditor');if(!el)return;
     if(!editRegioes)editRegioes=JSON.parse(JSON.stringify(REGIOES));
     el.innerHTML=Object.keys(editRegioes).map(function(reg){
       const list=editRegioes[reg];
-      const items=list.map(function(h){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 6px;background:var(--surface-2);border-radius:4px;margin-bottom:3px;font-size:11px;gap:4px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(h)+'">'+esc(h)+'</span><select style="font-size:10px;padding:1px 3px;background:var(--surface-3);border:1px solid var(--border);color:var(--text-2);border-radius:3px" onchange="vgMoveHotel(\''+esc(h)+'\',\''+reg+'\',this.value)">'+Object.keys(editRegioes).map(function(r){return '<option value="'+r+'"'+(r===reg?' selected':'')+'>'+esc(regionNames[r]||r)+'</option>';}).join('')+'</select></div>';}).join('');
-      return '<div style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc(regionNames[reg]||reg)+' <span style="font-weight:400;color:var(--text-3)">('+list.length+')</span></div>'+(items||'<div style="font-size:11px;color:var(--text-3);font-style:italic">Sem hotéis</div>')+'</div>';
+      const items=list.map(function(h){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 6px;background:var(--surface-2);border-radius:4px;margin-bottom:3px;font-size:11px;gap:4px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(h)+'">'+esc(h)+'</span><select style="font-size:10px;padding:1px 3px;background:var(--surface-3);border:1px solid var(--border);color:var(--text-2);border-radius:3px" onchange="vgMoveHotel(\''+esc(h)+'\',\''+reg+'\',this.value)">'+Object.keys(editRegioes).map(function(r){return '<option value="'+r+'"'+(r===reg?' selected':'')+'>'+esc(setupRegionName(r))+'</option>';}).join('')+'</select></div>';}).join('');
+      return '<div style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc(setupRegionName(reg))+' <span style="font-weight:400;color:var(--text-3)">('+list.length+')</span></div>'+(items||'<div style="font-size:11px;color:var(--text-3);font-style:italic">Sem hotéis</div>')+'</div>';
     }).join('');
   }
   window.vgMoveHotel=function(hotel,fromReg,toReg){if(!editRegioes||fromReg===toReg)return;editRegioes[fromReg]=editRegioes[fromReg].filter(function(h){return h!==hotel;});if(!editRegioes[toReg].includes(hotel))editRegioes[toReg].push(hotel);editRegioes[toReg].sort();renderRegioesEditor();};
   window.vgSaveRegioes=async function(){if(!editRegioes)return;const ok=await saveRegioes(editRegioes);editRegioes=JSON.parse(JSON.stringify(REGIOES));const msg=document.getElementById('vgRegioesMsg');if(msg){msg.textContent=ok?'✓ Regiões partilhadas e guardadas para todos.':'⚠ Não foi possível sincronizar as regiões.';setTimeout(function(){if(msg)msg.textContent='';},3500);}if(typeof renderAll==='function')renderAll();};
-  window.vgResetRegioes=async function(){if(!confirm('Repor o mapeamento de regiões por defeito para todos os utilizadores?'))return;const defaults=JSON.parse(JSON.stringify(REGIOES_DEFAULT));const ok=await saveRegioes(defaults);editRegioes=JSON.parse(JSON.stringify(REGIOES));renderRegioesEditor();const msg=document.getElementById('vgRegioesMsg');if(msg){msg.textContent=ok?'↺ Regiões por defeito publicadas para todos.':'⚠ Não foi possível publicar a reposição.';setTimeout(function(){if(msg)msg.textContent='';},3500);}if(typeof renderAll==='function')renderAll();};
+  window.vgResetRegioes=async function(){if(!confirm('Repor o mapeamento de regiões por defeito para todos os utilizadores?'))return;const defaults=JSON.parse(JSON.stringify(window.VG?.market?.defaultRegions?.()||REGIOES_DEFAULT));const ok=await saveRegioes(defaults);editRegioes=JSON.parse(JSON.stringify(REGIOES));renderRegioesEditor();const msg=document.getElementById('vgRegioesMsg');if(msg){msg.textContent=ok?'↺ Regiões por defeito publicadas para todos.':'⚠ Não foi possível publicar a reposição.';setTimeout(function(){if(msg)msg.textContent='';},3500);}if(typeof renderAll==='function')renderAll();};
+
+  window.VG?.events?.on?.('market:changed',()=>{editRegioes=JSON.parse(JSON.stringify(typeof REGIOES!=='undefined'?REGIOES:{}));renderRegioesEditor();});
 
   async function renderSetup(force){
     const u=current();if(!u||!(u.role==='direcao'||u.role==='admin'))return;

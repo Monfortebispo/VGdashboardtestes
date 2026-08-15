@@ -24,12 +24,10 @@ const RD_REGIAO = {
   'COLLECTION DOURO':'Norte e Centro','COLLECTION FIGUEIRA DA FOZ':'Norte e Centro',
   'COLLECTION SERRA DA ESTRELA':'Norte e Centro','COLLECTION PONTE DE LIMA VINEYARDS':'Norte e Centro',
   'DOURO VINEYARDS':'Norte e Centro','PORTO':'Norte e Centro','PORTO RIBEIRA':'Norte e Centro',
-  // Brasil — EXCLUDED (filtered out in rdLoadFile)
-  // 'COLLECTION AMAZONIA': excluded
 };
 
 function rdGetRegiao(hotel) {
-  if (isBrasil(hotel)) return '__brasil__';
+  try{for(const [key,lista] of Object.entries(typeof REGIOES!=='undefined'?REGIOES:{})){if((lista||[]).includes(hotel))return window.VG?.market?.regionLabel?.(key)||key;}}catch(e){}
   return RD_REGIAO[hotel] || '';
 }
 
@@ -79,8 +77,8 @@ async function rdLoadFile(file) {
     for (let i = hdr+1; i < raw.length; i++) {
       const r = raw[i];
       if (!r || !r[iHotel]) continue;
-      // Exclude Brasil units
-      if (isBrasil((r[iHotel]||'').toString())) continue;
+      // V31: mantém apenas as linhas do mercado ativo; PT+ES e Brasil nunca se misturam.
+      if (window.VG?.market && !window.VG.market.isCurrentHotel((r[iHotel]||'').toString())) continue;
       let rawMes = r[iMes]?.toString().trim() || '';
       let rawAno = r[iAno]?.toString().replace('.0','').trim() || '';
       // Formato ID_MES = 202506 (YYYYMM) — extrai mês e ano

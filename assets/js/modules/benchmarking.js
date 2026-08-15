@@ -25,7 +25,7 @@
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function fmt(v,d=1){ return v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d}); }
   function pct(v,d=1){ return v==null?'—':`${fmt(v,d)}%`; }
-  function eur(v,d=2){ return v==null?'—':`€${fmt(v,d)}`; }
+  function eur(v,d=2){ return v==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,false):`€${fmt(v,d)}`); }
   function deltaClass(v,higher=true){ if(v==null||Math.abs(v)<0.0001)return 'neutral'; return (higher?v>0:v<0)?'good':'bad'; }
   function currentMonths(){
     try{
@@ -44,9 +44,9 @@
     try{ for(const [r,list] of Object.entries(REGIOES||{})) if((list||[]).includes(h)) return r; }catch(e){}
     return null;
   }
-  function regionName(r){return ({norte:'Norte e Centro',lisboa:'Lisboa & Ilhas',alentejo:'Alentejo',algarve:'Algarve'})[r]||'Sem região';}
+  function regionName(r){return window.VG?.market?.regionLabel?.(r)||({norte:'Norte e Centro',lisboa:'Lisboa & Ilhas',alentejo:'Alentejo',algarve:'Algarve'})[r]||'Sem região';}
   function allHotels(){
-    try{return (RAW?.hotel_list||[]).filter(h=>!(typeof isBrasil==='function'&&isBrasil(h)));}catch(e){return [];}
+    try{return (RAW?.hotel_list||[]).filter(h=>!window.VG?.market||window.VG.market.isCurrentHotel(h));}catch(e){return [];}
   }
   function regionHotels(h,excludeSelected=false){
     const r=hotelRegion(h); if(!r)return [];

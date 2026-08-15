@@ -1,6 +1,7 @@
 // ANÁLISE DE CUSTOS MODULE
 // ==========================================================
 let caCurrentTab = 'radar';
+function caSym(){return window.VG?.market?.symbol?.()||'€';}
 
 const CA_CATS = [
   { key:'PESSOAL',      label:'👥 Pessoal',      bench:35, warnAt:40, color:'#4a6fa5' },
@@ -220,7 +221,7 @@ function caRenderHotel() {
     { l:`Receita ${YR_CUR}`, v:plFmtE(r26), sub:`${YR_PREV}: ${plFmtE(r25)} ${rv!=null?(rv>=0?'<span style="color:#27ae60">+':'<span style="color:#ef4444">')+fmt(rv,1)+'%</span>':''}` },
     { l:`Custos Totais ${YR_CUR}`, v:plFmtE(c26T), sub:`${YR_PREV}: ${plFmtE(c25T)} — ${r26>0?fmt(c26T/r26*100,1)+'% da rec':'—'}` },
     { l:`GOP ${YR_CUR}`, v:plFmtE(gop26), sub:`Margem: ${r26>0&&gop26!=null?fmt(gop26/r26*100,1)+'%':'—'} · ${YR_PREV}: ${gop25!=null?plFmtE(gop25):'—'}`, color: gop26>=0?'#27ae60':'#ef4444' },
-    { l:`Ocupação ${YR_CUR}`, v:fmt(occ(h,YR_CUR)||0,1)+'%', sub:`ADR: €${fmt(adr(h,YR_CUR)||0,0)} · RevPAR: €${fmt(revpar(h,YR_CUR)||0,0)}` },
+    { l:`Ocupação ${YR_CUR}`, v:fmt(occ(h,YR_CUR)||0,1)+'%', sub:`ADR: ${caSym()}${fmt(adr(h,YR_CUR)||0,0)} · RevPAR: ${caSym()}${fmt(revpar(h,YR_CUR)||0,0)}` },
   ];
 
   let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px">
@@ -236,7 +237,7 @@ function caRenderHotel() {
     <th style="text-align:left">Rubrica</th>
     <th>Valor 2025</th><th>% Rec 2025</th>
     <th>Valor 2026</th><th>% Rec 2026</th>
-    <th>Variação €</th><th>Variação %</th>
+    <th>Variação ${caSym()}</th><th>Variação %</th>
     <th>vs Receita</th><th>Alerta</th>
   </tr></thead><tbody>`;
 

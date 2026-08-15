@@ -29,7 +29,7 @@
   function esc(v){return window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
   function fmt(v,d=1){return v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});}
   function pct(v,d=1){return v==null?'—':fmt(v,d)+'%';}
-  function eur(v,d=0){return v==null?'—':'€'+fmt(v,d);}
+  function eur(v,d=0){return v==null?'—':(window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,d,false):'€'+fmt(v,d));}
   function sign(v,d=1,suffix='%'){return v==null?'—':`${Number(v)>=0?'+':''}${fmt(v,d)}${suffix}`;}
   function median(values){const a=(values||[]).map(Number).filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const i=Math.floor(a.length/2);return a.length%2?a[i]:(a[i-1]+a[i])/2;}
   function mad(values,med){const m=med==null?median(values):med;if(m==null)return null;return median((values||[]).map(Number).filter(Number.isFinite).map(v=>Math.abs(v-m)));}

@@ -102,9 +102,9 @@ function buildContextKpiData() {
     { id:'gop_com_sede', label:'GOP COM SEDE', val: hasGopComSede ? fmtV(gopComSede26) : '—', sub: hasGopComSede ? `${fmt(gopComSedePct26,1)}% margem ${varTxt(gopComSede25,gopComSede26)}` : 'Carrega o Excel P&L' },
     { id:'gop_pct', label:'GOP % COM SEDE', val:fmt(hasGopComSede?gopComSedePct26:gopPct26,1)+'%', sub: `${YR_PREV}: ${fmt(hasGopComSede?gopComSedePct25:gopPct25,1)}% ${ppTxt(hasGopComSede?gopComSedePct25:gopPct25,hasGopComSede?gopComSedePct26:gopPct26)}` },
     { id:'occupancy', label:'Occupancy', val:fmt(occVal,1)+'%', sub: `${fmt(totOcup26,0)} quartos occ. ${ppTxt(occVal25,occVal)}` },
-    { id:'adr', label:'ADR', val:'€'+fmt(adrVal,0), sub: `RevPAR €${fmt(revparVal,0)} ${varTxt(adrVal25,adrVal)}` },
-    { id:'revpar', label:'RevPAR', val:'€'+fmt(revparVal,0), sub: `${YR_PREV}: €${fmt(revparVal25,0)} ${varTxt(revparVal25,revparVal)}` },
-    { id:'trevpar', label:'TRevPAR', val:'€'+fmt(trevparVal,0), sub: 'Receita total por quarto disponível' },
+    { id:'adr', label:'ADR', val:ctxSym()+fmt(adrVal,0), sub: `RevPAR ${ctxSym()}${fmt(revparVal,0)} ${varTxt(adrVal25,adrVal)}` },
+    { id:'revpar', label:'RevPAR', val:ctxSym()+fmt(revparVal,0), sub: `${YR_PREV}: ${ctxSym()}${fmt(revparVal25,0)} ${varTxt(revparVal25,revparVal)}` },
+    { id:'trevpar', label:'TRevPAR', val:ctxSym()+fmt(trevparVal,0), sub: 'Receita total por quarto disponível' },
     { id:'rec_aloj', label:'Receita Alojamento', val:fmtV(totAloj26), sub: varTxt(totAloj25,totAloj26) },
     { id:'rec_fb', label:'Receita F&B', val:fmtV(totFb26), sub: varTxt(totFb25,totFb26) },
     { id:'custos', label:'Custos Totais', val:fmtV(totCost26), sub: `${fmt(costPct26,1)}% da receita ${varTxt(totCost25,totCost26)}` },
@@ -138,6 +138,7 @@ function renderCtxKpiEditor(available, visibleIds) {
     <div class="ctx-editor-foot">A escolha fica guardada neste browser. Use + para acrescentar e − para retirar indicadores.</div>`;
 }
 
+const ctxSym=()=>window.VG?.market?.symbol?.()||'€';
 function updateContextPanel() {
   if (!RAW) return;
   const hotels = getActiveHotels();

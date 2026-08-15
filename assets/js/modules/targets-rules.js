@@ -145,7 +145,7 @@
       const r=rule(d.id,d.defaultValue);
       return `<div class="vg-rule-card" data-rule="${d.id}">
         <div class="vg-rule-head"><label><input type="checkbox" data-rule-enabled="${d.id}" ${r.enabled?'checked':''}/> ${esc(d.label)}</label><select data-rule-severity="${d.id}"><option value="red" ${r.severity==='red'?'selected':''}>Crítico</option><option value="orange" ${r.severity==='orange'?'selected':''}>Atenção</option></select></div>
-        <div class="vg-rule-value"><input type="number" step="0.1" data-rule-value="${d.id}" value="${r.value??''}"/><span>${esc(d.unit)}</span></div>
+        <div class="vg-rule-value"><input type="number" step="0.1" data-rule-value="${d.id}" value="${r.value??''}"/><span>${esc(d.id==='gop_neg'?(window.VG?.market?.symbol?.()||d.unit):d.unit)}</span></div>
         <div class="vg-rule-help">${esc(d.help)}</div>
       </div>`;
     }).join('');
@@ -242,4 +242,5 @@
   window.vgTargetFormChanged=readTargetIntoForm;
 
   window.VG?.events?.on?.('shared:refresh',()=>loadConfig(true));
+  window.VG?.events?.on?.('market:changed',()=>{loaded=false;loading=null;loadConfig(true).then(()=>{try{renderSetup(false);}catch(e){}});});
 })();

@@ -45,6 +45,7 @@ function plSumOps(field, year, hotels) {
 }
 function plFmtE(v) {
   if (v == null || isNaN(v)) return '—';
+  if(window.VG?.market?.formatMoneyCompact)return window.VG.market.formatMoneyCompact(v,2);
   const abs = Math.abs(v);
   const sign = v < -0.5 ? '-' : '';
   if (abs < 0.5) return '€0';
@@ -52,6 +53,7 @@ function plFmtE(v) {
   if (abs >= 1000) return sign + '€' + fmt(abs / 1000, 0) + 'K';
   return sign + '€' + fmt(abs, 0);
 }
+function plSym(){return window.VG?.market?.symbol?.()||'€';}
 function plVar(v25, v26) {
   if (v25 == null || v26 == null || isNaN(v25) || isNaN(v26) || Math.abs(v25) < 1) return '<span class="pl-pct">—</span>';
   const p = (v26 - v25) / Math.abs(v25) * 100;
@@ -193,9 +195,9 @@ function plBuildStmt() {
 
   html += sectionHdr('INDICADORES-CHAVE USALI');
   html += `<tr class="pl-indent1"><td>Occupancy (Taxa de Ocupação)</td><td>${fmt(occ25,1)}%</td><td></td><td>${fmt(occ26,1)}%</td><td></td><td>${plVar(occ25,occ26)}</td></tr>`;
-  html += `<tr class="pl-indent1"><td>ADR — Average Daily Rate</td><td>€${fmt(adr25,2)}</td><td></td><td>€${fmt(adr26,2)}</td><td></td><td>${plVar(adr25,adr26)}</td></tr>`;
-  html += `<tr class="pl-indent1"><td>RevPAR — Revenue per Available Room</td><td>€${fmt(revpar25,2)}</td><td></td><td>€${fmt(revpar26,2)}</td><td></td><td>${plVar(revpar25,revpar26)}</td></tr>`;
-  html += `<tr class="pl-indent1"><td>TRevPAR — Total Revenue per Available Room</td><td>€${fmt(trevpar25,2)}</td><td></td><td>€${fmt(trevpar26,2)}</td><td></td><td>${plVar(trevpar25,trevpar26)}</td></tr>`;
+  html += `<tr class="pl-indent1"><td>ADR — Average Daily Rate</td><td>${plSym()}${fmt(adr25,2)}</td><td></td><td>${plSym()}${fmt(adr26,2)}</td><td></td><td>${plVar(adr25,adr26)}</td></tr>`;
+  html += `<tr class="pl-indent1"><td>RevPAR — Revenue per Available Room</td><td>${plSym()}${fmt(revpar25,2)}</td><td></td><td>${plSym()}${fmt(revpar26,2)}</td><td></td><td>${plVar(revpar25,revpar26)}</td></tr>`;
+  html += `<tr class="pl-indent1"><td>TRevPAR — Total Revenue per Available Room</td><td>${plSym()}${fmt(trevpar25,2)}</td><td></td><td>${plSym()}${fmt(trevpar26,2)}</td><td></td><td>${plVar(trevpar25,trevpar26)}</td></tr>`;
   html += `<tr class="pl-indent1"><td>Labour Cost % (Custo Pessoal / Receita)</td><td>${fmt(labourPct25,1)}%</td><td></td><td>${fmt(labourPct26,1)}%</td><td></td><td>${plVar(labourPct25,labourPct26)}</td></tr>`;
   html += `<tr class="pl-indent1"><td>F&amp;B Cost % (Custo Directo / Receita F&amp;B)</td><td>${fmt(fbCostPct25,1)}%</td><td></td><td>${fmt(fbCostPct26,1)}%</td><td></td><td>${plVar(fbCostPct25,fbCostPct26)}</td></tr>`;
   html += `<tr class="pl-indent1"><td>GOP % (GOP / Receita Total)</td><td>${plPct(gop25,tot25)}</td><td></td><td>${plPct(gop26,tot26)}</td><td></td><td>${plVar(gop25/Math.max(1,tot25),gop26/Math.max(1,tot26))}</td></tr>`;
@@ -337,7 +339,7 @@ function plBuildBench() {
   }
   function cellEur(val, med) {
     const cls = val >= med ? 'pl-cell-good' : 'pl-cell-bad';
-    return `<td class="${cls}">€${fmt(val,0)}</td>`;
+    return `<td class="${cls}">${plSym()}${fmt(val,0)}</td>`;
   }
 
   const sorted = [...rows].sort((a,b)=>b.gopP-a.gopP);
@@ -360,7 +362,7 @@ function plBuildBench() {
     <td>${fmt(medGop,1)}%</td><td>${fmt(medPes,1)}%</td>
     <td>${fmt(medFb,1)}%</td><td>${fmt(medEne,1)}%</td>
     <td>${fmt(medMan,1)}%</td><td>${fmt(medOcc,1)}%</td>
-    <td>€${fmt(medAdr,0)}</td>
+    <td>${plSym()}${fmt(medAdr,0)}</td>
   </tr>`;
 
   sorted.forEach(r => {
@@ -476,9 +478,9 @@ function plBuildFlow() {
   sorted.forEach(r => {
     const tipo = r.mode === 'flow' ? 'Flow-through' : r.mode === 'leverage' ? 'Alavancagem negativa' : 'Sem variação';
     const title = r.mode === 'leverage'
-      ? `Por cada €1 perdido em receita, ${r.deltaGop < 0 ? 'perderam-se' : 'ganharam-se'} €${fmt(Math.abs(r.lev || 0),1)} de GOP.`
+      ? `Por cada ${plSym()}1 perdido em receita, ${r.deltaGop < 0 ? 'perderam-se' : 'ganharam-se'} ${plSym()}${fmt(Math.abs(r.lev || 0),1)} de GOP.`
       : r.mode === 'flow'
-        ? `Por cada €1 adicional de receita, €${fmt((r.ft || 0)/100,2)} chegaram ao GOP.`
+        ? `Por cada ${plSym()}1 adicional de receita, ${plSym()}${fmt((r.ft || 0)/100,2)} chegaram ao GOP.`
         : '';
     html += `<tr title="${title}">
       <td>${r.h.replace('COLLECTION ','C. ')}</td>
@@ -523,8 +525,8 @@ function plBuildFlow() {
             afterLabel:(ctx)=>{
               const r = topN[ctx.dataIndex];
               return r.mode === 'leverage'
-                ? `Por cada €1 perdido em receita: ${r.deltaGop < 0 ? '-' : '+'}€${fmt(Math.abs(r.lev||0),1)} GOP`
-                : `Por cada €1 adicional de receita: €${fmt((r.ft||0)/100,2)} GOP`;
+                ? `Por cada ${plSym()}1 perdido em receita: ${r.deltaGop < 0 ? '-' : '+'}${plSym()}${fmt(Math.abs(r.lev||0),1)} GOP`
+                : `Por cada ${plSym()}1 adicional de receita: ${plSym()}${fmt((r.ft||0)/100,2)} GOP`;
             }
           }
         }
