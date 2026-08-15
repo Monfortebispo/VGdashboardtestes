@@ -1392,7 +1392,8 @@ function refreshAll(){
   if(currentView === 'ocupacao') { if(typeof occRender==='function') occRender(); return; }
   if(currentView === 'instagram') { if(typeof igRender==='function') igRender(); return; }
   if(currentView === 'recdet') { if(typeof rdRender==='function') rdRender(); return; }
-  if(!RAW) return;
+  if(!RAW) { try{window.VG?.market?.syncMarketDataUi?.();}catch(e){} return; }
+  try{window.VG?.market?.syncMarketDataUi?.();}catch(e){}
   buildKPIs('kpiGrid');
   updateContextPanel();
   if(currentView==='resumo'){ if(typeof opsCenterRender==='function') opsCenterRender(); buildChartsResumo(); buildMainTable(); aiRenderGlobalInsights(); }
