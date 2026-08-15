@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.operations2?.version>=30)return;
+  if(window.VG.operations2?.version>=30.1)return;
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const money=v=>{const x=n(v);if(x==null)return '—';const a=Math.abs(x),s=x<0?'-':'';if(a>=1e6)return `${s}€${(a/1e6).toLocaleString('pt-PT',{maximumFractionDigits:2})}M`;if(a>=1000)return `${s}€${(a/1000).toLocaleString('pt-PT',{maximumFractionDigits:0})}K`;return `${s}€${a.toLocaleString('pt-PT',{maximumFractionDigits:0})}`;};
@@ -17,11 +17,16 @@
   function button(id,icon,label,handler){const b=document.createElement('button');b.className='sb-nav-btn';b.id='nav-'+id;b.innerHTML=`<span class="sb-nav-icon">${icon}</span> ${label}`;b.addEventListener('click',handler);return b;}
   function group(label,ids){const g=document.createElement('div');g.className='sb-nav-group v30-nav-group';g.innerHTML=`<div class="sb-nav-group-label">${label}</div>`;for(const id of ids){const el=document.getElementById('nav-'+id);if(el){el.style.display='';g.appendChild(el);}}return g;}
   function simplifyNavigation(){
-    const nav=document.querySelector('.sb-nav');if(!nav||nav.dataset.v30==='1')return;nav.dataset.v30='1';
+    const nav=document.querySelector('.sb-nav');if(!nav||nav.dataset.v30Version==='30.1')return;nav.dataset.v30='1';nav.dataset.v30Version='30.1';
     legacyHidden.forEach(id=>{const x=document.getElementById('nav-'+id);if(x)x.style.display='none';});
     let h360=document.getElementById('nav-hotel360');if(!h360){h360=button('hotel360','◉','Hotel 360º',()=>window.setView?.('hotel360'));}
     let rh=document.getElementById('nav-revenuehub');if(!rh){rh=button('revenuehub','◈','Revenue & Forecast',()=>window.setView?.('revenuehub'));}
     let act=document.getElementById('nav-actions-v30');if(!act){act=button('actions-v30','✓','Ações',()=>window.VG?.actions?.openBoard?.());}
+    // V30.1: preservar os botões ANTES de remover os grupos antigos.
+    // Na V30 os grupos eram eliminados primeiro, retirando também os botões do DOM;
+    // os novos grupos ficavam assim apenas com os títulos.
+    const preservedButtons=Array.from(nav.querySelectorAll('.sb-nav-btn'));
+    preservedButtons.forEach(el=>nav.appendChild(el));
     nav.querySelectorAll('.sb-nav-group').forEach(g=>g.remove());
     nav.appendChild(group('Início & Hotéis',['resumo','fichahotel']));
     document.getElementById('nav-fichahotel')?.after(h360);
@@ -70,7 +75,7 @@
   function refreshAllV30(){renderProfileHome();updateMobile();}
   function init(){simplifyNavigation();installAssistantTop();installSetViewRouter();updateMobile();setTimeout(refreshAllV30,250);setTimeout(refreshAllV30,1600);window.VG?.operationalScore?.ensureConfig?.(false).then(()=>renderProfileHome());}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-  window.VG.operations2={version:30,simplifyNavigation,renderProfileHome,refresh:refreshAllV30};
+  window.VG.operations2={version:30.1,simplifyNavigation,renderProfileHome,refresh:refreshAllV30};
   window.VG.events?.on?.('state:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('actions:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('score-config:ready',()=>renderProfileHome());

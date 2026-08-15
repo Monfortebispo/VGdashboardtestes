@@ -6,8 +6,8 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.hotel360?.version>=30)return;
-  const state={hotel:'',tab:'overview',hydrating:false};
+  if(window.VG.hotel360?.version>=30.2)return;
+  const state={hotel:'',tab:'overview',hydrating:false,hydrated:false};
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v||'').trim().toUpperCase();
@@ -78,23 +78,42 @@
   function reputation(m){const r=m.reputation;return `<section class="v30-panel"><header><strong>Reputação</strong><button onclick="setView('reputacao')">Abrir Reputação →</button></header>${r?`<div class="v30-forecast-strip"><div><span>GRI</span><strong>${pct(r.gri)}</strong></div><div><span>Avaliações</span><strong>${fmt(r.reviews,0)}</strong></div><div><span>Resposta</span><strong>${pct(r.response)}</strong></div><div><span>Período</span><strong>${esc(r.week||'—')}</strong></div></div>`:'<div class="v30-empty">Sem dados de reputação disponíveis.</div>'}</section>`;}
   function links(m,kind){if(kind==='documents')return `<section class="v30-panel"><header><strong>Documentos do hotel</strong><button onclick="VG.documents.openFor({hotel:'${esc(m.hotel)}'})">Abrir Gestão de Documentos →</button></header><div class="v30-empty">A Gestão de Documentos permanece como repositório operacional. O Hotel 360º usa-a como drill-down.</div></section>`;return `<section class="v30-panel"><header><strong>Ações do hotel</strong><button onclick="VG.actions.openBoard()">Abrir Gestão de Ações →</button></header>${objectivesHtml(m)}</section>`;}
   function tabContent(m){if(state.tab==='finance')return financial(m);if(state.tab==='revenue')return revenue(m);if(state.tab==='operation')return operation(m);if(state.tab==='reputation')return reputation(m);if(state.tab==='actions')return links(m,'actions');if(state.tab==='documents')return links(m,'documents');return overview(m);}
+  function selectHotel(h){if(h)state.hotel=String(h);render();}
+  function selectTab(tab){const allowed=new Set(['overview','finance','revenue','operation','reputation','actions','documents']);state.tab=allowed.has(tab)?tab:'overview';render();}
   function render(){
     const root=document.getElementById('hotel360Root');if(!root)return;const m=model();
     if(!m.available){root.innerHTML='<div class="v30-empty prominent">Carrega dados de P&amp;L para ativar o Hotel 360º.</div>';return;}
     const tabs=[['overview','Visão Executiva'],['finance','Financeiro'],['revenue','Revenue'],['operation','Operação'],['reputation','Reputação'],['actions','Ações'],['documents','Documentos']];
     root.innerHTML=`<header class="v30-page-head"><div><div class="v30-eyebrow">VG Operations 2.0</div><h2>Hotel 360º</h2><p>Leitura integrada do hotel. A Ficha do Hotel original mantém-se independente e inalterada.</p></div><div class="v30-head-controls"><label>Hotel<select id="v30Hotel360Hotel">${m.hotels.map(h=>`<option value="${esc(h)}" ${h===m.hotel?'selected':''}>${esc(h)}</option>`).join('')}</select></label><button onclick="setView('fichahotel')">📋 Ficha do Hotel</button></div></header><nav class="v30-tabs">${tabs.map(([id,l])=>`<button data-v30-tab="${id}" class="${state.tab===id?'active':''}">${l}</button>`).join('')}</nav><div id="v30Hotel360Content">${tabContent(m)}</div><div class="v30-trace">Hotel 360º agrega informação existente; não altera a Ficha do Hotel nem cria uma segunda fonte de P&amp;L.</div>`;
-    root.querySelector('#v30Hotel360Hotel')?.addEventListener('change',e=>{state.hotel=e.target.value;render();});
-    root.querySelectorAll('[data-v30-tab]').forEach(b=>b.addEventListener('click',()=>{state.tab=b.dataset.v30Tab;render();}));
+    root.querySelector('#v30Hotel360Hotel')?.addEventListener('change',e=>selectHotel(e.target.value));
+    root.querySelectorAll('[data-v30-tab]').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.v30Tab)));
     root.querySelectorAll('[data-recovery]').forEach(b=>b.addEventListener('click',()=>createRecovery(b.dataset.recovery)));
     root.querySelectorAll('[data-action-id]').forEach(b=>b.addEventListener('click',()=>window.VG?.actions?.openById?.(b.dataset.actionId)));
     root.querySelector('[data-v30-cmd="score-config"]')?.addEventListener('click',openScoreConfig);
     hydrate(m.hotel);
   }
-  async function hydrate(h){if(state.hydrating)return;state.hydrating=true;try{await Promise.allSettled([window.VG?.actions?.ensureLoaded?.(false),window.VG?.approvals?.ensureLoaded?.(false),window.VG?.documents?.ensureLoaded?.(false),window.VG?.operationalScore?.ensureConfig?.(false)]);if(typeof currentView!=='undefined'&&currentView==='hotel360'&&state.hotel===h)setTimeout(render,10);}finally{state.hydrating=false;}}
+  async function hydrate(h){
+    // V30.2: hidratar dependências uma única vez. Na V30/V30.1 cada render
+    // voltava a chamar hydrate() e, quando as Promises resolviam, agendava
+    // novo render em ~10 ms. Esse ciclo substituía continuamente o select
+    // e os botões de tabs, tornando-os praticamente impossíveis de usar.
+    if(state.hydrated||state.hydrating)return;
+    state.hydrating=true;
+    try{
+      await Promise.allSettled([
+        window.VG?.actions?.ensureLoaded?.(false),
+        window.VG?.approvals?.ensureLoaded?.(false),
+        window.VG?.documents?.ensureLoaded?.(false),
+        window.VG?.operationalScore?.ensureConfig?.(false)
+      ]);
+      state.hydrated=true;
+      if(typeof currentView!=='undefined'&&currentView==='hotel360'&&state.hotel===h)setTimeout(render,10);
+    }finally{state.hydrating=false;}
+  }
   function openFor(h,tab){if(h)state.hotel=h;if(tab)state.tab=tab;window.setView?.('hotel360');setTimeout(render,20);}
   function openScoreConfig(){if(!isDirection())return;const c=window.VG?.operationalScore?.getConfig?.();const labels=window.VG?.operationalScore?.LABELS||{};const wrap=document.createElement('div');wrap.className='v30-score-modal';wrap.innerHTML=`<div class="v30-score-dialog"><header><div><strong>Configurar Score Operacional</strong><small>Os pesos são normalizados para 100% e partilhados com toda a Direção.</small></div><button data-close>✕</button></header><div class="v30-score-form">${Object.entries(c?.weights||{}).map(([k,v])=>`<label>${esc(labels[k]||k)}<input type="number" min="0" max="100" step="1" data-weight="${esc(k)}" value="${fmt(v,0)}"></label>`).join('')}</div><footer><button data-close>Cancelar</button><button class="primary" data-save>Guardar pesos</button></footer></div>`;document.body.appendChild(wrap);wrap.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>wrap.remove());wrap.querySelector('[data-save]').onclick=async()=>{const w={};wrap.querySelectorAll('[data-weight]').forEach(i=>w[i.dataset.weight]=Number(i.value));try{await window.VG.operationalScore.saveWeights(w);wrap.remove();render();window.showToast?.('Pesos do Score atualizados.');}catch(e){window.showToast?.(e.message||String(e),true);}};}
 
-  window.VG.hotel360={version:30,state,model,causeAnalysis,objectives,recoveryActions,render,openFor,createRecovery};
+  window.VG.hotel360={version:30.2,state,model,causeAnalysis,objectives,recoveryActions,render,openFor,createRecovery,hydrate,selectHotel,selectTab};
   window.hotel360Render=render;
   window.VG.events?.on?.('state:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='hotel360')setTimeout(render,30);});
   window.VG.events?.on?.('actions:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='hotel360')setTimeout(render,30);});
