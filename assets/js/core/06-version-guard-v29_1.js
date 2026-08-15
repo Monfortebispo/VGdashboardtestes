@@ -6,7 +6,7 @@
 // ==========================================================
 (function(){
   'use strict';
-  const BUILD='31.0';
+  const BUILD='31.1';
   const SW_URL='/service-worker.js?vg='+encodeURIComponent(BUILD);
   window.__VG_APP_BUILD__=BUILD;
   window.__VG_SW_URL__=SW_URL;

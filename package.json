@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "31.0.0",
+  "version": "31.1.0",
   "private": true,
-  "description": "VG Operations v31: mercados PT+ES e Brasil separados, moeda contextual EUR/BRL e dados/Blobs isolados por mercado",
+  "description": "VG Operations v31.1: mercados PT+ES e Brasil separados, moeda contextual EUR/BRL e dados/Blobs isolados por mercado",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

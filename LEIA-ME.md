@@ -160,7 +160,14 @@ Direção/Admin pode alternar entre os dois mercados. Diretor/Assistente fica au
 
 ### PWA
 
-- Build guard: `31.0`;
-- Service worker: `vg-operations-shell-v31`;
+- Build guard: `31.1`;
+- Service worker: `vg-operations-shell-v31_1`;
 - API/Netlify continua network-only;
 - dados empresariais não entram no cache estático.
+
+
+## V31.1 — Correção do seletor de mercado
+- Corrige a montagem do seletor PT+ES / Brasil na barra superior.
+- A âncora `.theme-dots` é filha de `.topbar-right`; a V31 tentava usá-la como filho direto de `.topbar`, provocando `NotFoundError`.
+- O seletor é agora inserido em `.topbar-right`, antes dos temas, com fallback seguro.
+- Em mobile mostra apenas as bandeiras para preservar espaço.

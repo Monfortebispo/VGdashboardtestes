@@ -18,15 +18,15 @@ for(const f of ['service-worker.js','assets/js/ui/mobile-pwa.js','assets/js/core
 
 const guardTag=html.match(/<script[^>]+06-version-guard-v29_1\.js[^>]*><\/script>/i)?.[0]||'';
 assert(guardTag&&!/\bdefer\b/i.test(guardTag),'guard v29.1 deve executar antes dos restantes scripts');
-assert(guard.includes("const BUILD='31.0'")&&guard.includes("/service-worker.js?vg="),'guard deve declarar build e SW versionado');
+assert(guard.includes("const BUILD='31.1'")&&guard.includes("/service-worker.js?vg="),'guard deve declarar build e SW versionado');
 assert(guard.includes("updateViaCache:'none'")&&guard.includes("controllerchange"),'guard deve forçar verificação do SW e reagir à troca de controller');
 assert(guard.includes('vg-build-updating')&&guard.includes('A atualizar VG Operations'),'troca de versão deve ocultar temporariamente shell inconsistente');
 assert(guard.includes('documentManagementRender')&&guard.includes('approvalsRender')&&guard.includes('scenarioComparisonRender'),'guard deve diagnosticar módulos recentes');
-assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v31'"),'SW deve usar cache v30.3');
+assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v31_1'"),'SW deve usar cache v30.3');
 assert(sw.includes('recursos estáticos da própria aplicação são NETWORK-FIRST')||sw.includes('NETWORK-FIRST'),'SW deve usar rede primeiro para shell online');
 assert(!sw.includes('const cached=await caches.match(req, {ignoreSearch:true});\n      if (cached)'),'SW não pode manter estratégia cache-first antiga');
 assert(sw.includes("caches.match(req,{ignoreSearch:true})")&&sw.indexOf("caches.match(req,{ignoreSearch:true})")>sw.indexOf('catch (e)'),'cache deve ser apenas fallback offline');
-assert(mobile.includes("'/service-worker.js?vg=31.0'")&&mobile.includes("updateViaCache:'none'"),'cliente PWA deve manter URL/versionamento do guard');
+assert(mobile.includes("'/service-worker.js?vg=31.1'")&&mobile.includes("updateViaCache:'none'"),'cliente PWA deve manter URL/versionamento do guard');
 assert(docs.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Documentos deve mostrar shell antes da rede');
 assert(approvals.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Aprovações deve mostrar shell antes da rede');
 assert(scenarios.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Cenários deve mostrar shell antes da rede');
