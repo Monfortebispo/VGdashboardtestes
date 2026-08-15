@@ -171,3 +171,11 @@ Direção/Admin pode alternar entre os dois mercados. Diretor/Assistente fica au
 - A âncora `.theme-dots` é filha de `.topbar-right`; a V31 tentava usá-la como filho direto de `.topbar`, provocando `NotFoundError`.
 - O seletor é agora inserido em `.topbar-right`, antes dos temas, com fallback seguro.
 - Em mobile mostra apenas as bandeiras para preservar espaço.
+
+## V31.2 — Isolamento visual entre mercados
+
+- Ao trocar de PT+ES para Brasil (ou inverso), a UI derivada do mercado anterior é limpa imediatamente.
+- Se o mercado ativo ainda não tiver P&L, o Resumo, Ficha do Hotel, Hotel 360º e restantes vistas dependentes de P&L não mostram valores antigos.
+- O topo passa a 0 unidades e período “—”; o painel lateral de KPIs é ocultado enquanto não houver P&L do mercado ativo.
+- A mensagem de vazio identifica explicitamente o mercado ativo e garante que o mercado anterior não está a ser usado na análise.
+- A Ficha do Hotel continua byte-a-byte inalterada; a limpeza é feita externamente pelo runtime de mercados.

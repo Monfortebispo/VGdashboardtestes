@@ -219,3 +219,6 @@ O snapshot local continua compatível com os globais legados (`STORE`, `REP_STOR
 ### Permissões
 
 O frontend limita a seleção pelo hotel associado e o backend aplica a mesma regra. Recursos globais de autenticação/administração continuam globais; recursos operacionais e dados são market-scoped.
+
+### V31.2 — isolamento de estado visual
+O runtime `07-markets-v31.js` passa a tratar a troca de mercado como uma fronteira de estado também ao nível do DOM. Modelos derivados, cards, Ficha, Central, gráficos e contexto do mercado anterior são invalidados antes do restauro do novo banco. `02-navigation-kpis.js` sincroniza o estado de ausência de P&L mesmo quando `RAW` é nulo, evitando que o retorno antecipado de `refreshAll()` preserve HTML antigo.

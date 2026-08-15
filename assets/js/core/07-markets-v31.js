@@ -8,7 +8,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.market?.version>=31)return;
+  if(window.VG.market?.version>=31.2)return;
 
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
@@ -236,6 +236,57 @@
     updateSelector();
   }
   function updateSelector(){const um=userMarket();document.querySelectorAll('#vgMarketSwitch [data-market]').forEach(b=>{b.classList.toggle('active',b.dataset.market===id());b.disabled=!!um&&b.dataset.market!==um;b.style.display=!!um&&b.dataset.market!==um?'none':'';});document.documentElement.dataset.vgMarket=id();}
+  function marketHasPnl(){
+    try{return Object.keys(typeof STORE!=='undefined'&&STORE?STORE:{}).length>0 && !!RAW && Array.isArray(RAW.hotel_list) && RAW.hotel_list.length>0;}catch(e){return false;}
+  }
+  function marketHasAnyData(){
+    try{
+      if(Object.keys(typeof STORE!=='undefined'&&STORE?STORE:{}).length)return true;
+      if(Object.keys(typeof REP_STORE!=='undefined'&&REP_STORE?REP_STORE:{}).length)return true;
+      if((typeof OCC_SNAPSHOTS!=='undefined'&&OCC_SNAPSHOTS?.length)||(typeof PIU_SNAPSHOTS!=='undefined'&&PIU_SNAPSHOTS?.length))return true;
+      if((typeof IG_SNAPSHOTS!=='undefined'&&IG_SNAPSHOTS?.length)||(typeof RD_STORE!=='undefined'&&RD_STORE?.length))return true;
+      if(typeof cdGetData==='function'&&cdGetData())return true;
+    }catch(e){}
+    return false;
+  }
+  function resetMarketDerivedUi(){
+    // V31.2: nunca deixar no DOM uma leitura derivada do mercado anterior.
+    try{if(window.VG?.operations)window.VG.operations.lastModel=null;}catch(e){}
+    try{if(window.VG?.hotelPerformance){window.VG.hotelPerformance.lastModel=null;if(window.VG.hotelPerformance.state)window.VG.hotelPerformance.state.hotel='';}}catch(e){}
+    try{if(window.VG?.hotel360?.state){window.VG.hotel360.state.hotel='';window.VG.hotel360.state.hydrated=false;window.VG.hotel360.state.hydrating=false;}}catch(e){}
+    try{const hh=document.getElementById('headerHotels');if(hh)hh.textContent='0';const hm=document.getElementById('headerMes');if(hm)hm.textContent='—';}catch(e){}
+    const clear=id=>{const el=document.getElementById(id);if(el)el.innerHTML='';};
+    try{const h=document.getElementById('hsHotel');if(h)h.innerHTML='';const m=document.getElementById('hsMes');if(m)m.innerHTML='';const d=document.getElementById('hsDiretor');if(d)d.value='';}catch(e){}
+    ['hsCards','hsInsights','hsTableBody','hsHistory','opsStats','opsActionStats','opsHealth','kpiGrid','aiGlobalInsights','mainTableBody'].forEach(clear);
+    try{const note=document.getElementById('hsAcumNote');if(note){note.style.display='none';note.innerHTML='';}}catch(e){}
+    try{const st=document.getElementById('hsMonthStatus');if(st)st.textContent='Comentários: —';}catch(e){}
+    try{const meta=document.getElementById('opsMeta');if(meta)meta.textContent=`${def().label} · sem P&L carregado`;const pm=document.getElementById('opsPriorityMeta');if(pm)pm.textContent='Sem dados do mercado';const pr=document.getElementById('opsPriorities');if(pr)pr.innerHTML='<div class="ops-empty">Sem dados do mercado selecionado.</div>';const op=document.getElementById('opsOpportunities');if(op)op.innerHTML='<div class="ops-empty">Sem dados do mercado selecionado.</div>';const aw=document.getElementById('opsActionWatch');if(aw)aw.innerHTML='<div class="ops-empty">Sem dados do mercado selecionado.</div>';}catch(e){}
+    try{Object.values(typeof charts!=='undefined'?charts:{}).forEach(c=>{try{c?.destroy?.();}catch(_){}});if(typeof charts!=='undefined')Object.keys(charts).forEach(k=>delete charts[k]);}catch(e){}
+  }
+  function syncMarketDataUi(){
+    const hasPnl=marketHasPnl(),hasAny=marketHasAnyData();
+    document.body?.classList.toggle('vg-market-no-pnl',!hasPnl);
+    document.body?.classList.toggle('vg-market-empty',!hasAny);
+    document.documentElement.dataset.vgMarketHasPnl=hasPnl?'1':'0';
+    const hh=document.getElementById('headerHotels');if(hh&&!hasPnl)hh.textContent='0';
+    const hm=document.getElementById('headerMes');if(hm&&!hasPnl)hm.textContent='—';
+    const badge=document.getElementById('ctxRegionBadge');if(badge&&!hasPnl)badge.textContent=`${def().flag} ${def().label} · sem P&L`;
+    const ck=document.getElementById('ctxKpis');if(ck&&!hasPnl)ck.innerHTML='';
+    const cm=document.getElementById('ctxMeses');if(cm&&!hasPnl)cm.textContent='—';
+    const empty=document.getElementById('emptyState');
+    if(empty&&!hasPnl){
+      const h2=empty.querySelector('h2'),p=empty.querySelector('p');
+      if(h2)h2.textContent=`${def().label}: ainda sem P&L carregado`;
+      if(p)p.innerHTML=`Carrega o <strong style="color:var(--gold)">P&L de ${def().label}</strong> no painel lateral.<br>O mercado anterior permanece guardado e não é usado nesta análise.`;
+      const nonPnl=new Set(['agenda','compras','datacenter','governance','backup','documents','approvals','reputacao','ocupacao','instagram','revenuehub']);
+      empty.style.display=nonPnl.has(typeof currentView!=='undefined'?currentView:'resumo')?'none':'block';
+    }
+    if(hasPnl){
+      try{updateContextPanel();}catch(e){}
+      if(empty)empty.style.display='none';
+    }
+    return {hasPnl,hasAny};
+  }
   function updateCurrencyLabels(){
     document.querySelectorAll('[data-vg-currency-label]').forEach(el=>el.textContent=symbol());
     try{const defs=window.VG?.targetsRules?.RULE_DEFS;if(Array.isArray(defs)){const g=defs.find(x=>x.id==='gop_neg');if(g)g.unit=symbol();}}catch(e){}
@@ -246,6 +297,7 @@
     try{if(RAW){RAW.hotel_list=(RAW.hotel_list||[]).filter(isCurrentHotel);selectedHotels=new Set(RAW.hotel_list);initPills();activeRegion='todos';}}
     catch(e){}
     try{buildMesButtons();}catch(e){}try{applyMesSelection();}catch(e){}try{window.VG?.operations2?.renderProfileHome?.();}catch(e){}
+    try{syncMarketDataUi();}catch(e){}
     window.VG?.events?.emit?.('market:ui',{market:id(),definition:clone(def())});
   }
 
@@ -264,6 +316,7 @@
     if(!DEFINITIONS[next]||next===id()||state.switching)return false;state.switching=true;
     const prev=id();try{
       captureCurrentAndExtract();state.current=next;try{localStorage.setItem('vg_market_v31',next);}catch(e){}
+      resetMarketDerivedUi();
       resetSharedCaches();try{REGIOES=defaultRegions(next);activeRegion='todos';}catch(e){}
       updateSelector();applyRegionUi();window.VG?.events?.emit?.('market:before-change',{from:prev,to:next});
       if(state.bank[next]){baseRestore?baseRestore(filterSnapshot(state.bank[next],next)):restoreFromSnapshot(filterSnapshot(state.bank[next],next));}
@@ -276,7 +329,7 @@
       applyMarketUi();await refreshOperationalModules();
       try{await window.VG?.targetsRules?.load?.(true);}catch(e){}
       try{if(typeof sharedLoadRegions==='function')await sharedLoadRegions(true);}catch(e){}applyRegionUi();
-      try{refreshAll();}catch(e){}window.VG?.events?.emit?.('market:changed',{from:prev,to:next,market:next});
+      try{syncMarketDataUi();}catch(e){}try{refreshAll();}catch(e){}try{syncMarketDataUi();}catch(e){}window.VG?.events?.emit?.('market:changed',{from:prev,to:next,market:next});
       window.showToast?.(`${def(next).flag} Mercado alterado para ${def(next).label} · moeda ${def(next).currency}`);return true;
     }finally{state.switching=false;}
   }
@@ -306,7 +359,9 @@
 
   function init(){enforceUserMarket();installSnapshotRouting();installDynamicRegionFunctions();installMixedImportAdapters();ensureSelector();applyMarketUi();installFichaCurrencyAdapter();state.initialized=true;setTimeout(()=>{const before=id();enforceUserMarket();if(before!==id()){updateSelector();applyMarketUi();}},1200);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+  window.VG?.events?.on?.('state:changed',()=>setTimeout(()=>{try{syncMarketDataUi();}catch(e){}},0));
+  window.VG?.events?.on?.('market:before-change',()=>{try{resetMarketDerivedUi();}catch(e){}});
 
-  window.VG.market={version:31,state,DEFINITIONS,BR_HOTELS:BR_HOTELS.slice(),id,def,hotelMarket,isBrasil,isCurrentHotel,canonicalHotel,defaultRegions,regionLabels,regionLabel,currency,symbol,locale,formatNumber,formatMoney,formatMoneyCompact,moneyUnit,currentUser,isDirection,userMarket,enforceUserMarket,detectHotels,detectDataset,detectPurchases,filterSnapshot,mergeSnapshots,switchTo,routePnlImport,ensureMarketForPurchases,currentScopeLabel,applyMarketUi,ensureSelector};
+  window.VG.market={version:31.2,state,DEFINITIONS,BR_HOTELS:BR_HOTELS.slice(),id,def,hotelMarket,isBrasil,isCurrentHotel,canonicalHotel,defaultRegions,regionLabels,regionLabel,currency,symbol,locale,formatNumber,formatMoney,formatMoneyCompact,moneyUnit,currentUser,isDirection,userMarket,enforceUserMarket,detectHotels,detectDataset,detectPurchases,filterSnapshot,mergeSnapshots,switchTo,routePnlImport,ensureMarketForPurchases,currentScopeLabel,applyMarketUi,ensureSelector,marketHasPnl,marketHasAnyData,syncMarketDataUi,resetMarketDerivedUi};
   window.vgCurrencySymbol=()=>symbol();window.vgFormatMoney=(v,d=0,space=false)=>formatMoney(v,d,space);window.vgFormatMoneyCompact=(v,d=1)=>formatMoneyCompact(v,d);
 })();

@@ -16,7 +16,7 @@ assert(backend.includes('O seu perfil não tem acesso a este mercado'),'backend 
 assert(backend.includes('itemMarket(x)===marketId(market)'),'listas operacionais devem ser filtradas por mercado');
 
 const s=createSandbox();s.document.readyState='loading';load(marketRel,s);const api=s.window.VG.market;
-assert(api&&api.version===31,'API VG.market v31 deve existir');
+assert(api&&api.version>=31.2,'API VG.market v31.2 deve existir');
 assert.strictEqual(api.BR_HOTELS.length,13,'Brasil deve iniciar com 13 hotéis identificados no P&L');
 assert.strictEqual(api.hotelMarket('FORTALEZA'),'brasil');
 assert.strictEqual(api.hotelMarket('COLLECTION AMAZÔNIA'),'brasil');
