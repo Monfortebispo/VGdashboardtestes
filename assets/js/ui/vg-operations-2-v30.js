@@ -55,12 +55,28 @@
     };
   }
   function hideEmpty(){const e=document.getElementById('emptyState');if(e){e.style.display='none';e.classList.add('agenda-hidden');}}
+  function portfolioHotels(){
+    const hp=window.VG?.hotelPerformance;
+    try{
+      if(typeof getActiveHotels==='function'){const active=getActiveHotels();if(Array.isArray(active))return active.slice();}
+    }catch(e){}
+    try{
+      if(typeof RAW!=='undefined'&&Array.isArray(RAW?.hotel_list)&&typeof selectedHotels!=='undefined'&&selectedHotels?.has)return RAW.hotel_list.filter(h=>selectedHotels.has(h));
+    }catch(e){}
+    return hp?.allHotels?.()||[];
+  }
+  function portfolioScopeLabel(hotels){
+    const labels={todos:'Todos',norte:'Norte',lisboa:'Lisboa',alentejo:'Alentejo',algarve:'Algarve'};
+    try{if(typeof activeRegion!=='undefined'&&activeRegion&&labels[activeRegion])return labels[activeRegion];}catch(e){}
+    return `${hotels.length} unidade${hotels.length===1?'':'s'} selecionada${hotels.length===1?'':'s'}`;
+  }
   function buildDirectionHome(){
     const hp=window.VG?.hotelPerformance,sc=window.VG?.operationalScore;if(!hp?.buildModel)return '<div class="v30-home-empty">A preparar leitura executiva…</div>';
-    const hs=hp.allHotels?.()||[],models=hs.map(h=>hp.buildModel(h)).filter(x=>x.available);let critical=0,attention=0,stable=0,overdue=0,totalRisk=0,scores=[];
+    const hs=portfolioHotels(),models=hs.map(h=>hp.buildModel(h)).filter(x=>x.available);let critical=0,attention=0,stable=0,overdue=0,totalRisk=0,scores=[];
     for(const m of models){if(m.status?.level==='critical')critical++;else if(m.status?.level==='attention')attention++;else stable++;overdue+=m.actionInfo?.overdue?.length||0;const s=sc?.calculate?.(m);if(s?.available)scores.push(s.score);if(n(m.forecast?.revenueAtRisk)>0)totalRisk+=m.forecast.revenueAtRisk;}
     const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;const priority=models.slice().sort((a,b)=>(a.status?.level==='critical'?0:a.status?.level==='attention'?1:2)-(b.status?.level==='critical'?0:b.status?.level==='attention'?1:2)||(b.actionInfo?.overdue?.length||0)-(a.actionInfo?.overdue?.length||0)).slice(0,5);
-    return `<section class="v30-profile-home direction"><header><div><span>VG Operations 2.0</span><h2>Portefólio</h2><p>Onde a Direção deve atuar primeiro.</p></div><button onclick="VG.notifications.open()">🔔 Notificações</button></header><div class="v30-home-kpis"><article class="critical"><span>Críticos</span><strong>${critical}</strong></article><article class="attention"><span>Atenção</span><strong>${attention}</strong></article><article><span>Estáveis</span><strong>${stable}</strong></article><article><span>Receita em risco</span><strong>${money(totalRisk)}</strong></article><article><span>Ações vencidas</span><strong>${overdue}</strong></article><article><span>Score médio</span><strong>${avg==null?'—':avg+'/100'}</strong></article></div><div class="v30-home-priority"><strong>Prioridades do portefólio</strong>${priority.map(m=>{const s=sc?.calculate?.(m);return `<button data-v30-hotel="${esc(m.hotel)}"><span><b>${esc(m.hotel)}</b><small>${esc(m.status?.reasons?.[0]||m.status?.text||'')}</small></span><em>${s?.available?s.score+'/100':esc(m.status?.label||'—')}</em></button>`;}).join('')}</div></section>`;
+    const scope=portfolioScopeLabel(hs);
+    return `<section class="v30-profile-home direction"><header><div><span>VG Operations 2.0</span><h2>Portefólio${scope==='Todos'?'':` · ${esc(scope)}`}</h2><p>${hs.length} unidade${hs.length===1?'':'s'} no filtro atual · onde a Direção deve atuar primeiro.</p></div><button onclick="VG.notifications.open()">🔔 Notificações</button></header><div class="v30-home-kpis"><article class="critical"><span>Críticos</span><strong>${critical}</strong></article><article class="attention"><span>Atenção</span><strong>${attention}</strong></article><article><span>Estáveis</span><strong>${stable}</strong></article><article><span>Receita em risco</span><strong>${money(totalRisk)}</strong></article><article><span>Ações vencidas</span><strong>${overdue}</strong></article><article><span>Score médio</span><strong>${avg==null?'—':avg+'/100'}</strong></article></div><div class="v30-home-priority"><strong>Prioridades do portefólio</strong>${priority.length?priority.map(m=>{const s=sc?.calculate?.(m);return `<button data-v30-hotel="${esc(m.hotel)}"><span><b>${esc(m.hotel)}</b><small>${esc(m.status?.reasons?.[0]||m.status?.text||'')}</small></span><em>${s?.available?s.score+'/100':esc(m.status?.label||'—')}</em></button>`;}).join(''):'<div class="v30-home-ok">✓ Sem prioridades materiais no filtro atual.</div>'}</div></section>`;
   }
   function buildHotelHome(u){
     const hp=window.VG?.hotelPerformance,sc=window.VG?.operationalScore;if(!hp?.buildModel)return '<div class="v30-home-empty">A preparar hotel…</div>';const m=hp.buildModel(u.hotel);if(!m?.available)return '<div class="v30-home-empty">Sem dados suficientes para a unidade associada.</div>';const s=sc?.calculate?.(m),f=m.forecast||{},notifs=window.VG?.notifications?.items?.().filter(x=>!x.hotel||String(x.hotel).toUpperCase()===String(m.hotel).toUpperCase()).slice(0,3)||[];
@@ -75,7 +91,7 @@
   function refreshAllV30(){renderProfileHome();updateMobile();}
   function init(){simplifyNavigation();installAssistantTop();installSetViewRouter();updateMobile();setTimeout(refreshAllV30,250);setTimeout(refreshAllV30,1600);window.VG?.operationalScore?.ensureConfig?.(false).then(()=>renderProfileHome());}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-  window.VG.operations2={version:30.1,simplifyNavigation,renderProfileHome,refresh:refreshAllV30};
+  window.VG.operations2={version:30.1,simplifyNavigation,renderProfileHome,refresh:refreshAllV30,portfolioHotels,portfolioScopeLabel,buildDirectionHome};
   window.VG.events?.on?.('state:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('actions:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('score-config:ready',()=>renderProfileHome());

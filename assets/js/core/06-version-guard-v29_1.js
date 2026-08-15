@@ -1,5 +1,5 @@
 // ==========================================================
-// VG OPERATIONS v30 — COERÊNCIA DE VERSÃO / PWA
+// VG OPERATIONS v30.3 — COERÊNCIA DE VERSÃO / PWA
 // Garante que o HTML atual não corre com JS/CSS de um shell antigo.
 // Este ficheiro tem nome versionado de propósito: um SW antigo não o
 // consegue servir da cache e é obrigado a ir buscá-lo à rede.

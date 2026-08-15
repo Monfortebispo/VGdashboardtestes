@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.revenueHub?.version>=30)return;
+  if(window.VG.revenueHub?.version>=30.3)return;
   const state={tab:'current',mounted:false};
   const MAP={current:'revenueint',forecast:'forecast',scenarios:'scenariocompare'};
   const LABEL={current:'Situação atual',forecast:'Forecast',scenarios:'Cenários'};
@@ -16,8 +16,15 @@
     if(state.mounted)return;const root=document.getElementById('revenueHubRoot');if(!root)return;
     for(const [tab,id] of Object.entries(MAP)){
       const p=panel(tab),s=source(id);if(!p||!s)continue;
-      while(s.firstChild)p.appendChild(s.firstChild);
-      s.innerHTML=`<div class="v30-legacy-note">Integrado em Revenue &amp; Forecast · ${LABEL[tab]}</div>`;
+      // V30.3: preservar o wrapper original (#view-revenueint/#view-forecast/
+      // #view-scenariocompare). Os estilos históricos são intencionalmente
+      // scoped a estes IDs; mover apenas os filhos retirava todo o layout.
+      s.classList.remove('tab-content','active');
+      s.classList.add('v30-embedded-view');
+      s.dataset.v30Embedded=tab;
+      s.removeAttribute?.('hidden');
+      s.style.display='';
+      if(s.parentNode!==p)p.appendChild(s);
     }
     state.mounted=true;
   }
@@ -37,5 +44,5 @@
   function tabForLegacy(v){return v==='forecast'?'forecast':v==='scenariocompare'?'scenarios':'current';}
   function init(){const root=document.getElementById('revenueHubRoot');if(!root)return;root.querySelectorAll('[data-rh-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.rhTab)));mount();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-  window.VG.revenueHub={version:30,state,mount,render,setTab,open,tabForLegacy};
+  window.VG.revenueHub={version:30.3,state,mount,render,setTab,open,tabForLegacy};
 })();

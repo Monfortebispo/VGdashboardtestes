@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.hotel360?.version>=30.2)return;
+  if(window.VG.hotel360?.version>=30.3)return;
   const state={hotel:'',tab:'overview',hydrating:false,hydrated:false};
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -29,22 +29,43 @@
     let hotel=h||state.hotel;const u=user();if(u&&['diretor','assistente'].includes(u.role)&&u.hotel&&u.hotel!=='*')hotel=u.hotel;
     const m=hp.buildModel(hotel);if(m?.hotel)state.hotel=m.hotel;return m;
   }
+  function costConvention(h,cy,py){
+    const anchors=[cost(h,'TOTAIS',cy),cost(h,'TOTAIS',py)].filter(v=>v!=null&&Math.abs(v)>0.5);
+    if(!anchors.length)return 1;
+    return anchors.reduce((a,b)=>a+b,0)<0?-1:1;
+  }
+  function expenseAmount(raw,sign){const x=n(raw);if(x==null)return null;return sign<0?-x:x;}
+  function expenseImpact(prevRaw,curRaw,sign){
+    const prev=expenseAmount(prevRaw,sign),cur=expenseAmount(curRaw,sign);
+    if(prev==null||cur==null)return null;
+    // Impacto no GOP: gastar menos é positivo; gastar mais é negativo.
+    return prev-cur;
+  }
   function causeAnalysis(h){
     const cy=year(),py=prevYear();const gCur=gop(h,cy),gPrev=gop(h,py),revCur=op(h,'Receita Total',cy),revPrev=op(h,'Receita Total',py);
     if(gCur==null||gPrev==null)return {available:false,items:[],text:'Sem dois períodos comparáveis para decompor a variação do GOP.'};
-    const items=[];const push=(id,label,impact,source)=>{if(n(impact)!=null&&Math.abs(impact)>0.5)items.push({id,label,impact:Number(impact),source});};
-    push('revenue','Receita total',(revCur??0)-(revPrev??0),'P&L · Receita Total');
+    const sign=costConvention(h,cy,py);
+    const items=[];
+    const push=(id,label,impact,source,detail='')=>{if(n(impact)!=null&&Math.abs(impact)>0.5)items.push({id,label,impact:Number(impact),source,detail});};
+    const revImpact=(revCur??0)-(revPrev??0);
+    push('revenue','Receita total',revImpact,'P&L · Receita Total',revImpact>=0?'Receita superior ao ano anterior':'Receita inferior ao ano anterior');
     const cats=[['personnel','Pessoal','PESSOAL'],['energy','Energia','ENERGIA'],['maintenance','Manutenção','MANUTENÇÃO'],['food','Comidas','COMIDAS'],['beverage','Bebidas','BEBIDAS'],['operational','Operacionais','OPERACIONAIS'],['marketing','Marketing','MARKETING']];
-    let selectedDelta=0;
-    for(const [id,label,key] of cats){const d=(cost(h,key,cy)??0)-(cost(h,key,py)??0);selectedDelta+=d;push(id,label,-d,`P&L · ${key}`);}
-    const totalDelta=(cost(h,'TOTAIS',cy)??0)-(cost(h,'TOTAIS',py)??0);push('othercosts','Outros custos',-(totalDelta-selectedDelta),'P&L · restante custo total');
-    const gopDelta=gCur-gPrev;const explained=items.reduce((s,x)=>s+x.impact,0);push('reconciliation','Sede / reconciliação',gopDelta-explained,'Reconciliação para GOP com sede');
+    let selectedImpact=0;
+    for(const [id,label,key] of cats){
+      const impact=expenseImpact(cost(h,key,py),cost(h,key,cy),sign);
+      if(impact!=null)selectedImpact+=impact;
+      push(id,label,impact,`P&L · ${key}`,impact==null?'':impact>=0?'Custo inferior ao ano anterior':'Custo superior ao ano anterior');
+    }
+    const totalImpact=expenseImpact(cost(h,'TOTAIS',py),cost(h,'TOTAIS',cy),sign);
+    if(totalImpact!=null){const otherImpact=totalImpact-selectedImpact;push('othercosts','Outros custos',otherImpact,'P&L · restante custo total',otherImpact>=0?'Custo inferior ao ano anterior':'Custo superior ao ano anterior');}
+    const gopDelta=gCur-gPrev;const explained=items.reduce((sum,x)=>sum+x.impact,0);
+    push('reconciliation','Sede / reconciliação',gopDelta-explained,'Reconciliação para GOP com sede','Residual necessário para reconciliar a ponte com o GOP oficial');
     items.sort((a,b)=>Math.abs(b.impact)-Math.abs(a.impact));
     const occCur=window.VG?.hotelPerformance?.metric?.(h,'occupancy',cy),occPrev=window.VG?.hotelPerformance?.metric?.(h,'occupancy',py),adrCur=window.VG?.hotelPerformance?.metric?.(h,'adr',cy),adrPrev=window.VG?.hotelPerformance?.metric?.(h,'adr',py);
     const occD=n(occCur)!=null&&n(occPrev)!=null?occCur-occPrev:null,adrD=n(adrCur)!=null&&n(adrPrev)!=null&&adrPrev!==0?(adrCur-adrPrev)/Math.abs(adrPrev)*100:null;
     let text=`O GOP com sede ${gopDelta>=0?'melhorou':'deteriorou-se'} ${money(Math.abs(gopDelta))} face a ${py}.`;
     if(occD!=null||adrD!=null)text+=` Ocupação ${occD==null?'sem comparação':`${occD>=0?'subiu':'desceu'} ${fmt(Math.abs(occD),1)} p.p.`}; ADR ${adrD==null?'sem comparação':`${adrD>=0?'subiu':'desceu'} ${fmt(Math.abs(adrD),1)}%`}.`;
-    return {available:true,gopDelta,items,text,method:'Ponte explicativa: ΔReceita − ΔCustos por família + residual de reconciliação até ao GOP com sede.'};
+    return {available:true,gopDelta,items,text,costSign:sign,method:'Ponte explicativa do impacto no GOP: ΔReceita + poupança/aumento de custos por família + residual de reconciliação. Verde melhora o GOP; vermelho deteriora.'};
   }
   function objectives(m){
     if(!m?.available)return [];
@@ -68,7 +89,7 @@
     return `<section class="v30-score ${s.status}"><div class="v30-score-main"><span>Score Operacional</span><strong>${s.score}<small>/100</small></strong><em>${esc(s.statusLabel)}</em></div><div class="v30-score-dims">${dims}</div>${isDirection()?'<button class="v30-soft-btn" data-v30-cmd="score-config">Configurar pesos</button>':''}</section>`;
   }
   function kpiCards(m){return (m.kpis||[]).slice(0,8).map(k=>`<article class="v30-kpi"><span>${esc(k.label)}</span><strong>${esc(k.display)}</strong><small class="${n(k.delta)!=null&&k.delta<0&&!k.lower?'bad':n(k.delta)!=null&&k.delta>0&&k.lower?'bad':'good'}">${esc(k.deltaDisplay||'—')} vs ${esc(m.prevYear)}</small></article>`).join('');}
-  function causeHtml(m){const c=causeAnalysis(m.hotel);if(!c.available)return `<div class="v30-empty">${esc(c.text)}</div>`;return `<div class="v30-cause-summary"><strong>${esc(c.text)}</strong><small>${esc(c.method)}</small></div><div class="v30-cause-list">${c.items.slice(0,8).map(x=>`<div class="v30-cause-row ${x.impact<0?'bad':'good'}"><span>${esc(x.label)}<small>${esc(x.source)}</small></span><strong>${signedMoney(x.impact)}</strong></div>`).join('')}</div>`;}
+  function causeHtml(m){const c=causeAnalysis(m.hotel);if(!c.available)return `<div class="v30-empty">${esc(c.text)}</div>`;return `<div class="v30-cause-summary"><strong>${esc(c.text)}</strong><small>${esc(c.method)}</small></div><div class="v30-cause-legend"><span class="good">● Impacto positivo no GOP</span><span class="bad">● Impacto negativo no GOP</span></div><div class="v30-cause-list">${c.items.slice(0,8).map(x=>`<div class="v30-cause-row ${x.impact<0?'bad':'good'}"><span>${esc(x.label)}<small>${esc(x.source)}${x.detail?' · '+esc(x.detail):''}</small></span><strong>${signedMoney(x.impact)}</strong></div>`).join('')}</div>`;}
   function objectivesHtml(m){const obs=objectives(m);if(!obs.length)return '<div class="v30-good-box">✓ Não existem gaps face às metas explícitas disponíveis.</div>';
     return `<div class="v30-objectives">${obs.map(o=>{const ra=recoveryActions(m,o);const unit=['forecastOcc','occupancy','gopMargin','costRatio','personnelRatio'].includes(o.id)?' p.p.':o.id==='adr'||o.id==='revpar'?' €':'%';return `<article><div><span>${esc(o.label)}</span><strong>Gap ${fmt(o.gap,1)}${unit}</strong><small>${fmt(o.current,1)} → meta ${fmt(o.target,1)} · ${esc(o.source)}</small></div><div>${ra.linked.length?`<button data-action-id="${esc(ra.linked[0].id)}">${ra.linked.length} ação(ões) · abrir</button>`:`<button class="primary" data-recovery="${esc(o.id)}">Criar ação de recuperação</button>`}</div></article>`;}).join('')}</div>`;}
   function overview(m){const s=m.status||{},risk=m.risks?.[0],opp=m.opportunities?.[0],a=m.actionInfo||{};return `${scoreCard(m)}<section class="v30-hero ${esc(s.level||'good')}"><div><span>Situação</span><strong>${esc(s.label||'—')}</strong><small>${esc(s.text||'')}</small></div><div><span>Onde atuar primeiro</span><strong>${esc(risk?.title||'Manter acompanhamento')}</strong><small>${esc(risk?.detail||'Sem prioridade material identificada.')}</small></div><div><span>Maior oportunidade</span><strong>${esc(opp?.title||'Sem oportunidade material')}</strong><small>${esc(opp?.detail||'')}</small></div><div><span>Execução</span><strong>${a.active?.length||0} ações</strong><small>${a.overdue?.length||0} fora do prazo</small></div></section><section class="v30-kpi-grid">${kpiCards(m)}</section><div class="v30-two"><section class="v30-panel"><header><div><strong>Análise automática de causa</strong><small>Explica a variação do GOP com dados P&amp;L</small></div></header>${causeHtml(m)}</section><section class="v30-panel"><header><div><strong>Objetivos &amp; plano de recuperação</strong><small>Meta → gap → ação</small></div></header>${objectivesHtml(m)}</section></div>`;}
@@ -113,7 +134,7 @@
   function openFor(h,tab){if(h)state.hotel=h;if(tab)state.tab=tab;window.setView?.('hotel360');setTimeout(render,20);}
   function openScoreConfig(){if(!isDirection())return;const c=window.VG?.operationalScore?.getConfig?.();const labels=window.VG?.operationalScore?.LABELS||{};const wrap=document.createElement('div');wrap.className='v30-score-modal';wrap.innerHTML=`<div class="v30-score-dialog"><header><div><strong>Configurar Score Operacional</strong><small>Os pesos são normalizados para 100% e partilhados com toda a Direção.</small></div><button data-close>✕</button></header><div class="v30-score-form">${Object.entries(c?.weights||{}).map(([k,v])=>`<label>${esc(labels[k]||k)}<input type="number" min="0" max="100" step="1" data-weight="${esc(k)}" value="${fmt(v,0)}"></label>`).join('')}</div><footer><button data-close>Cancelar</button><button class="primary" data-save>Guardar pesos</button></footer></div>`;document.body.appendChild(wrap);wrap.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>wrap.remove());wrap.querySelector('[data-save]').onclick=async()=>{const w={};wrap.querySelectorAll('[data-weight]').forEach(i=>w[i.dataset.weight]=Number(i.value));try{await window.VG.operationalScore.saveWeights(w);wrap.remove();render();window.showToast?.('Pesos do Score atualizados.');}catch(e){window.showToast?.(e.message||String(e),true);}};}
 
-  window.VG.hotel360={version:30.2,state,model,causeAnalysis,objectives,recoveryActions,render,openFor,createRecovery,hydrate,selectHotel,selectTab};
+  window.VG.hotel360={version:30.3,state,model,causeAnalysis,costConvention,expenseAmount,expenseImpact,objectives,recoveryActions,render,openFor,createRecovery,hydrate,selectHotel,selectTab};
   window.hotel360Render=render;
   window.VG.events?.on?.('state:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='hotel360')setTimeout(render,30);});
   window.VG.events?.on?.('actions:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='hotel360')setTimeout(render,30);});
