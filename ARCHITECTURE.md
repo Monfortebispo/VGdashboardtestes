@@ -169,3 +169,7 @@ A V30 usa recursos já existentes:
 - `settings-score-v30` através do recurso genérico `settings`;
 - Ações para planos de recuperação;
 - modelos e endpoints já existentes para restantes dados.
+
+
+## V30.1 — Correção da navegação
+A reconstrução do menu preserva agora todos os botões antes de remover os grupos antigos. Isto corrige os grupos vazios vistos na V30. A Ficha do Hotel permanece independente e o respetivo módulo não foi alterado.

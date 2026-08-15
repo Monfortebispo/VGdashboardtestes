@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "30.0.0",
+  "version": "30.2.0",
   "private": true,
-  "description": "VG Dashboard Operações — v30: VG Operations 2.0 — simplificação, Hotel 360, Score, causa, planos e Home por perfil",
+  "description": "VG Dashboard Operações — v30.2: correção de interação do Hotel 360º e estabilidade da navegação, preservando a Ficha do Hotel",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

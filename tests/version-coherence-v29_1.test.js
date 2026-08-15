@@ -22,7 +22,7 @@ assert(guard.includes("const BUILD='30.0'")&&guard.includes("/service-worker.js?
 assert(guard.includes("updateViaCache:'none'")&&guard.includes("controllerchange"),'guard deve forçar verificação do SW e reagir à troca de controller');
 assert(guard.includes('vg-build-updating')&&guard.includes('A atualizar VG Operations'),'troca de versão deve ocultar temporariamente shell inconsistente');
 assert(guard.includes('documentManagementRender')&&guard.includes('approvalsRender')&&guard.includes('scenarioComparisonRender'),'guard deve diagnosticar módulos recentes');
-assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v30'"),'SW deve usar cache v30');
+assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v30_2'"),'SW deve usar cache v30.2');
 assert(sw.includes('recursos estáticos da própria aplicação são NETWORK-FIRST')||sw.includes('NETWORK-FIRST'),'SW deve usar rede primeiro para shell online');
 assert(!sw.includes('const cached=await caches.match(req, {ignoreSearch:true});\n      if (cached)'),'SW não pode manter estratégia cache-first antiga');
 assert(sw.includes("caches.match(req,{ignoreSearch:true})")&&sw.indexOf("caches.match(req,{ignoreSearch:true})")>sw.indexOf('catch (e)'),'cache deve ser apenas fallback offline');

@@ -107,3 +107,7 @@ O backend `dashboard-sessao.js` permanece inalterado face à V29.1. A nova confi
 O pacote é entregue completo e em dois lotes com menos de 100 ficheiros cada para upload pelo GitHub no browser.
 
 Não é necessária a eliminação manual de ficheiros da V29.1: a V30 preserva os módulos legados necessários por compatibilidade e apenas simplifica a navegação visível.
+
+
+## V30.1 — Correção da navegação
+A reconstrução do menu preserva agora todos os botões antes de remover os grupos antigos. Isto corrige os grupos vazios vistos na V30. A Ficha do Hotel permanece independente e o respetivo módulo não foi alterado.
