@@ -1,0 +1,59 @@
+VG OPERATIONS / DASHBOARD — VALIDAÇÃO V33.0
+Data da validação: 2026-08-16
+Versão do pacote: 33.0.0
+
+1. ÂMBITO DA V33.0
+- Integração nativa dos novos domínios na Dashboard principal, sem iframe nem aplicações paralelas.
+- Reputação & Guest Experience: visão executiva, semanal, semestral e hotel.
+- Reputação semestral: parser nativo dos 6 ficheiros ReviewPro (Painel, Resultados, Concorrência, Respostas, Semântica Resultados e Semântica Menções).
+- Receita Detalhada: Hotel > PdV > Família > Subfamília > Grupo > Artigo > Quantidade > VB > VN.
+- Compras & A&B: performance, stock/compras, fichas técnicas, consumo teórico e inteligência cruzada.
+- Fichas Técnicas & Receituário: cocktails/bebidas, Massa Fina, Brasil e fichas técnicas de produtos.
+- Housekeeping / Inventário Têxtil: stock teórico, movimentos, quebras, campanhas, necessidades e catálogo.
+- Relações cruzadas entre receita detalhada, receitas técnicas, A&B, stock, ocupação/forecast e reputação.
+
+2. DADOS DE REFERÊNCIA INCORPORADOS
+- Reputação semanal: 310 relatórios do export vg_reputation.
+- Fichas/receitas normalizadas: 215.
+- Fichas técnicas de produtos: 38.
+- Matriz de preços/custos de bebidas: 43 variantes.
+- Receita detalhada de referência: 1 snapshot ALBACORA, 693 linhas.
+- O período da Receita Detalhada não é inventado quando não existe no ficheiro fonte.
+- Housekeeping: 50 hotéis, 25 categorias têxteis, 13 tipos de cama, 121 linhas categoria/cama/medida e parâmetros vestido 100% para 32 hotéis.
+
+3. REGRAS FUNCIONAIS AUDITADAS
+- Geografia e permissões do utilizador são aplicadas nos novos módulos.
+- Normalização/aliases de hotéis para evitar duplicação de unidades com nomes diferentes.
+- Dados semanais e semestrais de reputação permanecem metodologicamente separados.
+- Menções semestrais detalhadas permanecem apenas na sessão; o resumo semestral é persistido. A interface pede reimportação do ficheiro para recuperar o detalhe de menções.
+- A&B reconhece folhas RESUMO - INDICADORES, RÁCIOS MÊS A MÊS, DADOS DIVERSOS, INVENTÁRIO INICIAL, COMPRAS, INVENTÁRIO FINAL, RESUMO GERAL, detalhe mensal e acumulados.
+- Stock A&B: Inventário Inicial + Compras - Inventário Final.
+- Housekeeping: Stock Teórico = Base + Entradas/Ajustes positivos - Quebras/Ajustes negativos.
+- Causas obrigatórias de quebra: Fim de vida, Mancha/nódoa, Desaparecido/roubo, Dano de lavagem, Outro.
+- Campanhas Housekeeping: contagem física fica pendente; diferenças exigem justificação; apenas a aprovação da Direção gera o acerto de stock; adjustmentId evita lançamento duplicado.
+- Par-stock oficial permanece separado da recomendação dinâmica baseada em forecast/ocupação.
+- Persistência partilhada adicionada para Reputação Semestral, Compras & A&B e Housekeeping, com integração no backup/recuperação.
+
+4. CORREÇÕES ADICIONAIS
+- PDF Resumo: coluna de variação absoluta de Receita recebeu cabeçalho próprio (Δ €).
+- PDF KPIs: cabeçalhos revistos para corresponder exatamente a todas as colunas de valores e variações.
+- PDF Reputação: cabeçalhos revistos para corresponder às colunas reais.
+- Cabeçalho do PDF inclui identificação/logótipo Vila Galé no conteúdo impresso.
+- Instagram: ausência de dados atuais deixa de ser interpretada como zero/quebra catastrófica; passa a apresentar Sem dados.
+
+5. AUDITORIA TÉCNICA FINAL
+- Regressão automatizada: 48/48 suites aprovadas; Deploy autorizado.
+- Sintaxe JavaScript: todos os ficheiros de assets/js, netlify/functions e tests aprovados por node --check.
+- JSON: seed V33 e manifest validados por parser JSON.
+- index.html: 613 IDs; 0 IDs duplicados.
+- Referências locais no index.html: 101; 0 referências em falta.
+- HTTP estático local: 200 para index.html, JS V33, CSS V33 e seed V33.
+- Ficha do Hotel preservada byte-for-byte na lógica protegida.
+  SHA256: 2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7
+- Service Worker atualizado para shell v33.
+
+6. LIMITAÇÃO DO AMBIENTE DE TESTE
+- O ambiente de execução bloqueia a abertura de 127.0.0.1 em Chromium headless por política da organização. Por isso, a validação visual end-to-end no browser não pôde ser executada neste container.
+- Esta limitação é externa à aplicação. Foram concluídos com sucesso os testes de regressão, sintaxe, estrutura, referências, dados e HTTP estático acima descritos.
+
+RESULTADO: V33.0 aprovada nos controlos automatizados e estáticos definidos para entrega.

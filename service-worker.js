@@ -1,7 +1,7 @@
-// VG Operations v32.5 — service worker
+// VG Operations v33.0 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v32-5';
-// Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-4.
+const CACHE_NAME = 'vg-operations-shell-v33';
+// Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-5.
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",
   "/assets/css/audit-governance.css",
@@ -19,6 +19,8 @@ const STATIC_ASSETS = [
   "/assets/css/global-search.css",
   "/assets/css/notifications-v21.css",
   "/assets/css/operational-agenda-v22.css",
+  "/assets/css/operational-summary-pdf-v32_6.css",
+  "/assets/css/operations-domains-v33.css",
   "/assets/css/hotel-performance-v23.css",
   "/assets/css/automatic-reports-v24.css",
   "/assets/css/analytical-assistant-v25.css",
@@ -61,6 +63,8 @@ const STATIC_ASSETS = [
   "/assets/js/modules/operational-agenda-v22.js",
   "/assets/js/modules/hotel-performance-v23.js",
   "/assets/js/modules/operational-score-v28.js",
+  "/assets/js/modules/operational-summary-pdf-v32_6.js",
+  "/assets/js/modules/operations-domains-v33.js",
   "/assets/js/modules/hotel-360-v30.js",
   "/assets/js/modules/revenue-hub-v30.js",
   "/assets/js/modules/automatic-reports-v24.js",

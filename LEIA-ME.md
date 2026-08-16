@@ -222,3 +222,16 @@ As diligências de cobrança não são escritas no Excel. Ficam na VG Operations
 - O tema azul escuro mantém o contraste original.
 - Reputação e Instagram voltam ao menu lateral numa área própria `Qualidade & Comunicação`.
 - Os módulos e respetivos dados não foram recriados: já existiam; o acesso tinha sido ocultado pela simplificação V30.
+
+
+## V33 — Plataforma Integrada
+
+A V33 absorve os principais domínios operacionais que existiam em ferramentas separadas sem usar iframes. A Dashboard passa a ter Receita Detalhada, Compras & A&B, Fichas Técnicas/Receituário, Housekeeping/Inventário Têxtil e uma área unificada de Reputação semanal/semestral.
+
+- `assets/js/modules/operations-domains-v33.js` contém a orquestração dos novos domínios.
+- `assets/data/operations-seed-v33.json` inclui os dados de referência fornecidos para Reputação semanal, receituário PT/BR, fichas técnicas, exemplo de receita detalhada e catálogo/parametrização têxtil.
+- Reputação mantém a vista semanal ReviewPro existente e acrescenta visão executiva, importação semestral e ficha por hotel.
+- Receita Detalhada aceita mapas ao nível Hotel → PdV → Família → Subfamília → Grupo → Artigo. Se o ficheiro não identificar período, não é inventado um mês/ano.
+- Compras & A&B lê o mapa mensal do Departamento de Compras, rácios, resumo geral, inventários/compras e cruza vendas, receituário e reputação.
+- Housekeeping preserva inventário permanente, quebras por causa, campanhas físicas, par-stock por índice × vestido 100% e sugestão dinâmica ligada ao forecast de ocupação.
+- O export PDF do dashboard foi corrigido para alinhar todos os cabeçalhos com as colunas efetivamente impressas e usa identidade Vila Galé no cabeçalho.

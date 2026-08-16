@@ -12,6 +12,7 @@ assert(aa.includes("if(k.id==='revenue')return `${v>=0?'+':''}${fmt(v,1)}%`;"),'
 assert(aa.includes("if(k.id==='adr'||k.id==='revpar')return eur(v,2);"),'metas ADR e RevPAR devem aparecer em moeda');
 assert(aa.includes('Meta:targetDisplay(x)'),'visão geral do hotel deve usar meta formatada');
 assert(aa.includes("'Meta / referência':targetDisplay(k)"),'resposta de KPI individual deve usar meta formatada');
-assert(sw.includes('vg-operations-shell-v32-5'),'cache PWA deve avançar para V32.5');
-assert(pkg.version==='32.5.0','package deve identificar V32.5');
+const cache=sw.match(/vg-operations-shell-v(\d+)(?:-(\d+))?/),cm=Number(cache?.[1]||0),cn=Number(cache?.[2]||0);
+assert(cm>32||(cm===32&&cn>=5),'cache PWA deve manter versão V32.5 ou superior');
+const pv=String(pkg.version).split('.').map(Number);assert(pv[0]>32||(pv[0]===32&&pv[1]>=5),'package deve identificar V32.5 ou superior');
 console.log('✓ V32.5: PDF City Ledger com contraste fixo e metas do Assistente formatadas');

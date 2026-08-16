@@ -334,7 +334,7 @@ function isRecoverableBusinessKey(key) {
   let k = String(key || "");
   if (k.startsWith("market/brasil/")) k = k.slice("market/brasil/".length);
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
-  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/","ops-cityledger-email-templates"].some(p => k.startsWith(p));
+  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/","ops-housekeeping-","ops-ab-","ops-reputation-semester-","ops-cityledger-email-templates"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
   let k=String(key||""); if(k.startsWith("market/brasil/")) k=k.slice("market/brasil/".length);
@@ -348,6 +348,9 @@ function recoveryCategoryForKey(key) {
   if (k.startsWith("ops-approval/")) return "Aprovações";
   if (k.startsWith("ops-scenario/")) return "Cenários";
   if (k.startsWith("ops-cityledger-snapshot/") || k.startsWith("ops-cityledger-data/") || k.startsWith("ops-cityledger-diligence/") || k.startsWith("ops-cityledger-email-templates")) return "City Ledger";
+  if (k.startsWith("ops-housekeeping-")) return "Housekeeping / Inventário Têxtil";
+  if (k.startsWith("ops-ab-")) return "Compras & A&B";
+  if (k.startsWith("ops-reputation-semester-")) return "Reputação Semestral";
   if (k.startsWith("mesacum-")) return "P&L acumulado";
   if (k.startsWith("mes-")) return "P&L mensal";
   if (k.startsWith("hotelxlsx-")) return "Fichas técnicas";
@@ -415,7 +418,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"33"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -537,13 +540,16 @@ async function listGovernanceAudit(store) {
   })) : [];
   return verified.concat(legacy).sort((a,b) => String(b.serverTs || "").localeCompare(String(a.serverTs || ""))).slice(0, AUDIT_EVENT_LIMIT);
 }
-function auditedGeneric(resource) { return ["settings","targets-rules","hotelsheet","notas","index"].includes(resource); }
+function auditedGeneric(resource) { return ["settings","targets-rules","hotelsheet","notas","index","ops-housekeeping","ops-ab","ops-reputation-semester"].includes(resource); }
 function genericAuditDescriptor(resource, key) {
   if (resource === "settings") return { category:"Configuração", action:key === "regions" ? "Regiões atualizadas" : "Configuração atualizada", severity:"warning" };
   if (resource === "targets-rules") return { category:"Metas & Regras", action:"Metas e regras atualizadas", severity:"warning" };
   if (resource === "hotelsheet") return { category:"Comentários Fecho do Mês", action:"Comentários Fecho do Mês atualizada", severity:"info", hotel:key };
   if (resource === "notas") return { category:"Dados", action:"Notas partilhadas atualizadas", severity:"info" };
   if (resource === "index") return { category:"Dados", action:"Publicação partilhada concluída", severity:"info" };
+  if (resource === "ops-housekeeping") return { category:"Housekeeping", action:"Inventário têxtil atualizado", severity:"info" };
+  if (resource === "ops-ab") return { category:"Compras & A&B", action:"Análise A&B atualizada", severity:"info" };
+  if (resource === "ops-reputation-semester") return { category:"Reputação", action:"Análise semestral atualizada", severity:"info" };
   return { category:"Sistema", action:"Dados atualizados", severity:"info" };
 }
 
@@ -802,7 +808,7 @@ exports.handler = async (event) => {
     if (resource === "recovery-list" && event.httpMethod === "GET") {
       if (!isDirection(authUser)) return forbidden("Backup & Recuperação está reservado à Direção.");
       const rows = await listRecoverySnapshots(store);
-      return ok({ data: rows.map(x=>({ id:x.id,kind:x.kind,createdAt:x.createdAt,user:x.user,name:x.name,note:x.note,items:x.items,sizeBytes:x.sizeBytes,resourceCounts:x.resourceCounts,sourceSnapshotId:x.sourceSnapshotId,appVersion:x.appVersion })), total:rows.length, updatedAt:new Date().toISOString() });
+      return ok({ data: rows.map(x=>({ id:x.id,kind:x.kind,createdAt:x.createdAt,user:x.user,name:x.name,note:x.note,items:x.items,sizeBytes:x.sizeBytes,resourceCounts:x.resourceCounts,sourceSnapshotId:x.sourceSnapshotId,appVersion:x.appVersion,buildVersion:x.buildVersion })), total:rows.length, updatedAt:new Date().toISOString() });
     }
     if (resource === "recovery-create" && event.httpMethod === "POST") {
       if (!isDirection(authUser)) return forbidden("Apenas a Direção pode criar snapshots de recuperação.");

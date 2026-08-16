@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.operations2?.version>=30.2)return;
+  if(window.VG.operations2?.buildVersion>=33)return;
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const money=v=>window.VG?.market?.formatMoneyCompact?window.VG.market.formatMoneyCompact(v,2):(()=>{const x=n(v);if(x==null)return '—';const a=Math.abs(x),s=x<0?'-':'';if(a>=1e6)return `${s}€${(a/1e6).toLocaleString('pt-PT',{maximumFractionDigits:2})}M`;if(a>=1000)return `${s}€${(a/1000).toLocaleString('pt-PT',{maximumFractionDigits:0})}K`;return `${s}€${a.toLocaleString('pt-PT',{maximumFractionDigits:0})}`;})();
@@ -16,12 +16,16 @@
 
   function button(id,icon,label,handler){const b=document.createElement('button');b.className='sb-nav-btn';b.id='nav-'+id;b.innerHTML=`<span class="sb-nav-icon">${icon}</span> ${label}`;b.addEventListener('click',handler);return b;}
   function group(label,ids){const g=document.createElement('div');g.className='sb-nav-group v30-nav-group';g.innerHTML=`<div class="sb-nav-group-label">${label}</div>`;for(const id of ids){const el=document.getElementById('nav-'+id);if(el){el.style.display='';g.appendChild(el);}}return g;}
+  const v32MenuCompatibility=['receitas','custos','pl','unitEconomics','compras']; // ordem canónica V32 preservada para compatibilidade
   function simplifyNavigation(){
-    const nav=document.querySelector('.sb-nav');if(!nav||nav.dataset.v30Version==='30.2')return;nav.dataset.v30='1';nav.dataset.v30Version='30.2';
+    const nav=document.querySelector('.sb-nav');if(!nav||nav.dataset.v30Version==='30.3')return;nav.dataset.v30='1';nav.dataset.v30Version='30.3';
     legacyHidden.forEach(id=>{const x=document.getElementById('nav-'+id);if(x)x.style.display='none';});
     let h360=document.getElementById('nav-hotel360');if(!h360){h360=button('hotel360','◉','Hotel 360º',()=>window.setView?.('hotel360'));}
     let rh=document.getElementById('nav-revenuehub');if(!rh){rh=button('revenuehub','◈','Revenue & Forecast',()=>window.setView?.('revenuehub'));}
     let act=document.getElementById('nav-actions-v30');if(!act){act=button('actions-v30','✓','Ações',()=>window.VG?.actions?.openBoard?.());}
+    let rd33=document.getElementById('nav-receitasdet');if(!rd33){rd33=button('receitasdet','↗','Receita Detalhada',()=>window.setView?.('receitasdet'));}
+    let ab33=document.getElementById('nav-ab');if(!ab33){ab33=button('ab','◫','Compras & A&B',()=>window.setView?.('ab'));}
+    let hk33=document.getElementById('nav-housekeeping');if(!hk33){hk33=button('housekeeping','▦','Housekeeping',()=>window.setView?.('housekeeping'));}
     // V30.1: preservar os botões ANTES de remover os grupos antigos.
     // Na V30 os grupos eram eliminados primeiro, retirando também os botões do DOM;
     // os novos grupos ficavam assim apenas com os títulos.
@@ -31,7 +35,8 @@
     nav.appendChild(group('Início & Hotéis',['resumo','hoteis','fichahotel']));
     document.getElementById('nav-fichahotel')?.after(h360);
     nav.appendChild(group('Gestão',['agenda','approvals','cityledger']));document.getElementById('nav-agenda')?.before(act);
-    nav.appendChild(group('Análise',['receitas','custos','pl','unitEconomics','compras','benchmark','anomalies']));document.getElementById('nav-pl')?.after(rh);
+    nav.appendChild(group('Análise',['receitas','receitasdet','custos','pl','unitEconomics','benchmark','anomalies']));document.getElementById('nav-pl')?.after(rh);
+    nav.appendChild(group('Compras & Operação',['ab','compras','housekeeping']));
     nav.appendChild(group('Qualidade & Comunicação',['reputacao','instagram']));
     nav.appendChild(group('Suporte',['documents','automaticreports']));
     nav.appendChild(group('Administração',['datacenter','governance','backup','upload']));
@@ -46,13 +51,14 @@
     if(window.__VG_V30_ORIGINAL_SET_VIEW__||typeof window.setView!=='function')return;
     const original=window.setView.bind(window);window.__VG_V30_ORIGINAL_SET_VIEW__=original;
     window.setView=function(v){
+      if(v==='recdet')v='receitasdet';
       if(v==='hotelperformance'){
         const h=window.VG?.hotelPerformance?.state?.hotel||window.VG?.hotel360?.state?.hotel||'';if(h&&window.VG?.hotel360)window.VG.hotel360.state.hotel=h;original('hotel360');hideEmpty();setTimeout(()=>window.VG?.hotel360?.render?.(),15);return;
       }
       if(['revenueint','forecast','scenariocompare'].includes(v)){
         const tab=window.VG?.revenueHub?.tabForLegacy?.(v)||(v==='forecast'?'forecast':v==='scenariocompare'?'scenarios':'current');if(window.VG?.revenueHub)window.VG.revenueHub.state.tab=tab;original('revenuehub');hideEmpty();setTimeout(()=>window.VG?.revenueHub?.render?.(),15);return;
       }
-      original(v);if(v==='hotel360'){hideEmpty();setTimeout(()=>window.VG?.hotel360?.render?.(),15);}if(v==='revenuehub'){hideEmpty();setTimeout(()=>window.VG?.revenueHub?.render?.(),15);}if(v==='resumo')setTimeout(renderProfileHome,20);
+      original(v);if(v==='hotel360'){hideEmpty();setTimeout(()=>window.VG?.hotel360?.render?.(),15);}if(v==='revenuehub'){hideEmpty();setTimeout(()=>window.VG?.revenueHub?.render?.(),15);}if(['receitasdet','ab','housekeeping','reputacao'].includes(v)){hideEmpty();setTimeout(()=>window.VG?.domains33?.refresh?.(v),20);}if(v==='resumo')setTimeout(renderProfileHome,20);
     };
   }
   function hideEmpty(){const e=document.getElementById('emptyState');if(e){e.style.display='none';e.classList.add('agenda-hidden');}}
@@ -92,11 +98,15 @@
     const more=document.getElementById('vgMobileMore');if(!more)return;more.querySelectorAll('[data-view="hotelperformance"]').forEach(b=>{b.dataset.view='hotel360';b.querySelector('span')?.childNodes?.forEach?.(()=>{});const s=b.querySelector('span');if(s)s.innerHTML='Hotel 360º<small>Visão integrada da unidade</small>';});
     more.querySelectorAll('[data-view="forecast"],[data-view="scenariocompare"],[data-view="revenueint"]').forEach((b,i)=>{if(i===0){b.dataset.view='revenuehub';const s=b.querySelector('span');if(s)s.innerHTML='Revenue & Forecast<small>Situação, forecast e cenários</small>';}else b.style.display='none';});
     more.querySelectorAll('[data-view="alertas"]').forEach(b=>b.style.display='none');
+    const addMobile=(view,icon,title,detail)=>{if(more.querySelector(`[data-view="${view}"]`))return;const b=document.createElement('button');b.type='button';b.dataset.view=view;b.innerHTML=`<b>${icon}</b><span>${title}<small>${detail}</small></span>`;b.addEventListener('click',()=>{window.setView?.(view);document.getElementById('vgMobileMorePanel')?.classList.remove('open');});more.appendChild(b);};
+    addMobile('receitasdet','↗','Receita Detalhada','PdV, família, grupo e artigo');
+    addMobile('ab','◫','Compras & A&B','Custos, stock, fichas técnicas e inteligência');
+    addMobile('housekeeping','▦','Housekeeping','Inventário têxtil, quebras e campanhas');
   }
   function refreshAllV30(){renderProfileHome();updateMobile();}
   function init(){simplifyNavigation();installAssistantTop();installSetViewRouter();updateMobile();setTimeout(refreshAllV30,250);setTimeout(refreshAllV30,1600);window.VG?.operationalScore?.ensureConfig?.(false).then(()=>renderProfileHome());}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-  window.VG.operations2={version:30.2,simplifyNavigation,renderProfileHome,refresh:refreshAllV30,portfolioHotels,portfolioScopeLabel,buildDirectionHome};
+  window.VG.operations2={version:30.3,buildVersion:33,simplifyNavigation,renderProfileHome,refresh:refreshAllV30,portfolioHotels,portfolioScopeLabel,buildDirectionHome};
   window.VG.events?.on?.('state:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('actions:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('score-config:ready',()=>renderProfileHome());
