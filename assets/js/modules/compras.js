@@ -49,7 +49,7 @@ const eur2=v=>window.VG?.market?.formatMoney?window.VG.market.formatMoney(v,2,tr
 const cdSym=()=>window.VG?.market?.symbol?.()||'€';
 const pct=v=>fmt2.format(v*100).replace(',00','')+'%';
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const NAV=['#16324f','#c9a45c','#4a7ba6','#7e57c2','#1e7e4f','#b3392e','#b87514','#3f8e9b','#8a6d3b','#5c6bc0','#26a69a','#d4526e'];
+const NAV=['#06b6d4','#7c3aed','#c8a94d','#2563eb','#16a34a','#dc2626','#d97706','#0891b2','#64748b','#4f46e5','#0d9488','#db2777'];
 const cor=i=>NAV[i%NAV.length];
 
 const charts={};
@@ -201,13 +201,13 @@ function rGeral(el){
   </div>`;
 
   const mm=mesesAtivos();
-  plot('cd_cGm',{type:'bar',data:{labels:mm.map(mesLbl),datasets:[{label:'Custo',data:mm.map(i=>porMes[i]),backgroundColor:'#16324f',borderRadius:5}]},
+  plot('cd_cGm',{type:'bar',data:{labels:mm.map(mesLbl),datasets:[{label:'Custo',data:mm.map(i=>porMes[i]),backgroundColor:'#2563eb',borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>eur(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>eurAxis(v)}}}}});
   const tf=topN(porFam,11);
   plot('cd_cGf',{type:'doughnut',data:{labels:tf.map(x=>FAM[x[0]]),datasets:[{data:tf.map(x=>x[1]),backgroundColor:tf.map((_,i)=>cor(i))}]},
     options:{maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:11,font:{size:11}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${eur(c.parsed)} (${pct(c.parsed/total)})`}}}}});
   const th=topN(porHotel,12);
-  plot('cd_cGh',{type:'bar',data:{labels:th.map(x=>HOT[x[0]]),datasets:[{data:th.map(x=>x[1]),backgroundColor:'#c9a45c',borderRadius:4}]},
+  plot('cd_cGh',{type:'bar',data:{labels:th.map(x=>HOT[x[0]]),datasets:[{data:th.map(x=>x[1]),backgroundColor:'#06b6d4',borderRadius:4}]},
     options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>eur(c.parsed.x)}}},scales:{x:{ticks:{callback:v=>eurAxis(v)}}}}});
   const tg=topN(porGrp,15),mx=tg.length?tg[0][1]:0;
   document.getElementById('cd_tGg').innerHTML=tabela(
@@ -273,7 +273,7 @@ function drawHotelDetail(){
     <div class="kpi"><div class="l">${mesLbl(ST.mesAte)}</div><div class="v">${eur(ult)}</div>
       <div class="s">${varM===null?'':`<span class="pill ${varM>0?'neg':'pos'}">${varM>0?'+':''}${pct(varM)} vs ${mesLblCurto(ST.mesAte-1)}</span>`}</div></div>
     <div class="kpi"><div class="l">Média mensal</div><div class="v">${eur(tot/Math.max(1,mm.length))}</div></div>`;
-  plot('cd_cHm',{type:'line',data:{labels:mm.map(mesLbl),datasets:[{label:'Custo',data:mm.map(i=>serie[i]),borderColor:'#16324f',backgroundColor:'rgba(22,50,79,.08)',fill:true,tension:.3,pointRadius:4}]},
+  plot('cd_cHm',{type:'line',data:{labels:mm.map(mesLbl),datasets:[{label:'Custo',data:mm.map(i=>serie[i]),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.3,pointRadius:4}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>eur(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>eurAxis(v)}}}}});
 
   // breadcrumb + tabela de drill
@@ -435,7 +435,7 @@ function drawFornDetail(){
     </div>
     <h3 style="font-size:12.5px;color:var(--navy);margin-top:12px">Top artigos <small style="color:var(--mut)">(todo o ficheiro, todos os meses)</small></h3>
     ${tabela([{t:'Artigo'},{t:'Valor',n:1},{t:'Qtd',n:1},{t:'P. médio',n:1}],ta.map(([a,o])=>[esc(ART[a]),eur2(o[0]),fmt2.format(o[1]),o[1]>0?eur2(o[0]/o[1]):'—']),{maxH:240})}`;
-  plot('cd_cFm',{type:'bar',data:{labels:mm.map(mesLbl),datasets:[{data:mm.map(i=>serie[i]),backgroundColor:'#c9a45c',borderRadius:4}]},
+  plot('cd_cFm',{type:'bar',data:{labels:mm.map(mesLbl),datasets:[{data:mm.map(i=>serie[i]),backgroundColor:'#06b6d4',borderRadius:4}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>eur(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>eurAxis(v)}}}}});
 }
 
@@ -625,7 +625,7 @@ function rTransf(el){
     <div class="card"><h3>Balanço por unidade</h3><div id="cd_tTb"></div></div>
   </div>
   <div class="note" style="margin-top:10px">Nota: o filtro global de hotel/região não se aplica a este separador (os fluxos envolvem sempre duas unidades); o filtro de meses aplica-se.</div>`;
-  plot('cd_cTm',{type:'bar',data:{labels:mm.map(mesLbl),datasets:[{data:mm.map(i=>serie[i]),backgroundColor:'#16324f',borderRadius:5}]},
+  plot('cd_cTm',{type:'bar',data:{labels:mm.map(mesLbl),datasets:[{data:mm.map(i=>serie[i]),backgroundColor:'#2563eb',borderRadius:5}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>eur(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>eurAxis(v)}}}}});
   const tg=topN(porGrp,15),mxg=tg.length?tg[0][1]:0;
   document.getElementById('cd_tTg').innerHTML=tabela([{t:'Grupo'},{t:'Valor',n:1},{t:''}],
@@ -806,8 +806,8 @@ function drawAnos(){
     <div class="card"><h3>Por unidade</h3><div id="cd_tYh"></div></div>
   </div>`;
   plot('cd_cYm',{type:'bar',data:{labels:mm.map(m=>MNOMES[m]),datasets:[
-      {label:String(s.a),data:mm.map(m=>r.mesA[m]),backgroundColor:'#9fb2c4',borderRadius:4},
-      {label:String(s.b),data:mm.map(m=>r.mesB[m]),backgroundColor:'#16324f',borderRadius:4}]},
+      {label:String(s.a),data:mm.map(m=>r.mesA[m]),backgroundColor:'#94a3b8',borderRadius:4},
+      {label:String(s.b),data:mm.map(m=>r.mesB[m]),backgroundColor:'#2563eb',borderRadius:4}]},
     options:{maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${eur(c.parsed.y)}`}}},
       scales:{y:{ticks:{callback:v=>eurAxis(v)}}}}});
   const linF=r.fams.map(x=>[

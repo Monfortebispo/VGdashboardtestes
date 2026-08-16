@@ -1,6 +1,6 @@
 // ==========================================================
 // VG OPERATIONS 2.0 / V30 — HOTEL 360º
-// Nova visão agregada. A Ficha do Hotel original permanece intacta.
+// Nova visão agregada. A Comentários Fecho do Mês original permanece intacta.
 // Inclui Score V28, causa estimada e objetivos/planos de recuperação.
 // ==========================================================
 (function(){
@@ -106,7 +106,7 @@
     const root=document.getElementById('hotel360Root');if(!root)return;const m=model();
     if(!m.available){root.innerHTML='<div class="v30-empty prominent">Carrega dados de P&amp;L para ativar o Hotel 360º.</div>';return;}
     const tabs=[['overview','Visão Executiva'],['finance','Financeiro'],['revenue','Revenue'],['efficiency','Eficiência'],['operation','Operação'],['reputation','Reputação'],['actions','Ações'],['documents','Documentos']];
-    root.innerHTML=`<header class="v30-page-head"><div><div class="v30-eyebrow">VG Operations 2.0</div><h2>Hotel 360º</h2><p>Leitura integrada do hotel. A Ficha do Hotel original mantém-se independente e inalterada.</p></div><div class="v30-head-controls"><label>Hotel<select id="v30Hotel360Hotel">${m.hotels.map(h=>`<option value="${esc(h)}" ${h===m.hotel?'selected':''}>${esc(h)}</option>`).join('')}</select></label><button onclick="setView('fichahotel')">📋 Ficha do Hotel</button></div></header><nav class="v30-tabs">${tabs.map(([id,l])=>`<button data-v30-tab="${id}" class="${state.tab===id?'active':''}">${l}</button>`).join('')}</nav><div id="v30Hotel360Content">${tabContent(m)}</div><div class="v30-trace">Hotel 360º agrega informação existente; não altera a Ficha do Hotel nem cria uma segunda fonte de P&amp;L.</div>`;
+    root.innerHTML=`<header class="v30-page-head"><div><div class="v30-eyebrow">VG Operations 2.0</div><h2>Hotel 360º</h2><p>Leitura integrada do hotel. A Comentários Fecho do Mês original mantém-se independente e inalterada.</p></div><div class="v30-head-controls"><label>Hotel<select id="v30Hotel360Hotel">${m.hotels.map(h=>`<option value="${esc(h)}" ${h===m.hotel?'selected':''}>${esc(h)}</option>`).join('')}</select></label><button onclick="setView('fichahotel')">📋 Comentários Fecho do Mês</button></div></header><nav class="v30-tabs">${tabs.map(([id,l])=>`<button data-v30-tab="${id}" class="${state.tab===id?'active':''}">${l}</button>`).join('')}</nav><div id="v30Hotel360Content">${tabContent(m)}</div><div class="v30-trace">Hotel 360º agrega informação existente; não altera a Comentários Fecho do Mês nem cria uma segunda fonte de P&amp;L.</div>`;
     root.querySelector('#v30Hotel360Hotel')?.addEventListener('change',e=>selectHotel(e.target.value));
     root.querySelectorAll('[data-v30-tab]').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.v30Tab)));
     root.querySelectorAll('[data-recovery]').forEach(b=>b.addEventListener('click',()=>createRecovery(b.dataset.recovery)));

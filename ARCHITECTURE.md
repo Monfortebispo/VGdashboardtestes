@@ -241,3 +241,8 @@ O runtime `07-markets-v31.js` passa a tratar a troca de mercado como uma frontei
 - Agregados de portefólio são ponderados: soma do numerador / soma da atividade, nunca média simples entre hotéis.
 - Semântica de variação: em custos unitários menos é melhor; em receita/GOP unitários mais é melhor.
 - Respeita integralmente o mercado ativo e a moeda contextual (EUR/BRL).
+
+
+## V32.3 — Email de cobrança sem integração externa
+
+O City Ledger mantém o envio real fora do sistema. O cliente apenas compõe o email, gera o PDF e abre `mailto:`. O registo de envio é uma ação explícita do utilizador. A API grava a diligência usando o utilizador autenticado (`createdBy`, `createdByName`, `createdByRole`) obtido da sessão server-side. Para âmbito multi-hotel é criada uma diligência por hotel, ligada pelo mesmo `emailBatchId`. Os 3 templates são guardados por Geografia em `ops-cityledger-email-templates` e integram Backup & Recuperação.

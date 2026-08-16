@@ -106,8 +106,8 @@ function setView(v) {
   // A página Agenda & Tempo não depende do carregamento do Excel; por isso não deve reservar espaço para o empty state.
   const empty = document.getElementById('emptyState');
   if (empty) {
-    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare') empty.style.display = 'none';
-    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare');
+    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare' || v === 'hoteis') empty.style.display = 'none';
+    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare' || v === 'hoteis');
   }
   requestAnimationFrame(() => { if(window.VG?.performance?.resizeVisibleCharts) window.VG.performance.resizeVisibleCharts(); else Object.values(charts).forEach(c => c?.resize?.()); });
 }

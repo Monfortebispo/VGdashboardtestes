@@ -219,15 +219,41 @@ function hoteisRegiao(btn, regiao) {
   hoteisFiltrar();
 }
 
+function hoteisCurrentMarket() {
+  try { return window.VG?.market?.id?.() || 'iberia'; } catch(e) { return 'iberia'; }
+}
+function hoteisMarketOf(sk) {
+  const d = HOTEIS_XLSX[sk];
+  const nome = d?.nome || sk;
+  try { return window.VG?.market?.hotelMarket?.(nome) || 'iberia'; } catch(e) { return 'iberia'; }
+}
+function hoteisRegionOf(sk) {
+  const s = HOTEIS_STATIC[sk];
+  if (s?.regiao) return s.regiao;
+  return hoteisCurrentMarket()==='brasil' ? 'Brasil' : 'PT + ES';
+}
+function hoteisSyncHeader() {
+  const el = document.getElementById('hoteisTitle');
+  if (!el) return;
+  const def = window.VG?.market?.def?.();
+  const label = def?.label || (hoteisCurrentMarket()==='brasil'?'Brasil':'PT + ES');
+  el.textContent = `🏨 Hotéis — características e fichas técnicas · ${label}`;
+  const rf = document.getElementById('hotelRegiaoFilter');
+  if (rf) rf.style.display = hoteisCurrentMarket()==='brasil' ? 'none' : 'flex';
+}
+
 function hoteisFiltrar() {
+  hoteisSyncHeader();
   const q = (document.getElementById('hotelSearchFilter')?.value || '').toLowerCase();
-  const sheetKeys = Object.keys(HOTEIS_STATIC);
+  const currentMarket = hoteisCurrentMarket();
+  const sheetKeys = [...new Set([...Object.keys(HOTEIS_STATIC), ...Object.keys(HOTEIS_XLSX)])];
   const filtered = sheetKeys.filter(sk => {
-    const s = HOTEIS_STATIC[sk];
+    if (hoteisMarketOf(sk) !== currentMarket) return false;
     const d = HOTEIS_XLSX[sk];
     const nome = d?.nome || sk;
-    const matchR = !hoteisFiltroRegiao || s.regiao === hoteisFiltroRegiao;
-    const matchQ = !q || nome.toLowerCase().includes(q) || s.regiao.toLowerCase().includes(q) || (d?.morada||'').toLowerCase().includes(q);
+    const regiao = hoteisRegionOf(sk);
+    const matchR = currentMarket==='brasil' || !hoteisFiltroRegiao || regiao === hoteisFiltroRegiao;
+    const matchQ = !q || nome.toLowerCase().includes(q) || regiao.toLowerCase().includes(q) || (d?.morada||'').toLowerCase().includes(q);
     return matchR && matchQ;
   });
   hoteisRender(filtered);
@@ -235,11 +261,11 @@ function hoteisFiltrar() {
 
 function hoteisRender(sheetKeys) {
   const grid = document.getElementById('hoteisGrid');
-  if (!sheetKeys.length) { grid.innerHTML = '<div style="color:var(--text-3);padding:20px;font-size:13px">Nenhum hotel encontrado.</div>'; return; }
+  if (!sheetKeys.length) { const def=window.VG?.market?.def?.(); grid.innerHTML = `<div class="ht-empty-state"><strong>Sem fichas de hotel para ${def?.label||'a geografia selecionada'}.</strong><span>Quando existirem fichas técnicas desta geografia, serão apresentadas aqui. Os dados de outras geografias não são misturados.</span></div>`; return; }
   const stars = n => '★'.repeat(n||4) + '<span style="opacity:.2">★</span>'.repeat(5-(n||4));
 
   grid.innerHTML = sheetKeys.map(sk => {
-    const s = HOTEIS_STATIC[sk];
+    const s = HOTEIS_STATIC[sk] || {regiao:hoteisRegionOf(sk),url:''};
     const d = HOTEIS_XLSX[sk];
     const nome = d?.nome || sk.replace('VG ','Vila Galé ').replace('VGC ','Vila Galé Collection ');
     const estrelas = s.estrelas || d?.estrelas || 4;
@@ -340,6 +366,7 @@ function hoteisRender(sheetKeys) {
 function hoteisInit() {
   hoteisFiltrar();
 }
+try{window.VG?.events?.on?.('market:changed',()=>{hoteisFiltroRegiao='';hoteisFiltrar();});}catch(e){}
 
 // ── Persistence ───────────────────────────────────────────
 const _htBuild = buildSessionSnapshot;

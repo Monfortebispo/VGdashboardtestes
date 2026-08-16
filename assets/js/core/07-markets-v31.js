@@ -229,7 +229,7 @@
     // NotFoundError e impedindo totalmente a montagem do controlo.
     const host=topbar.querySelector('.topbar-right')||topbar;
     const wrap=document.createElement('div');wrap.id='vgMarketSwitch';wrap.className='vg-market-switch';
-    wrap.innerHTML=`<span>Mercado</span><div>${Object.values(DEFINITIONS).map(m=>`<button type="button" data-market="${m.id}"><span class="vg-market-flag">${m.flag}</span><span class="vg-market-label">${m.label}</span></button>`).join('')}</div>`;
+    wrap.innerHTML=`<span>Geografia</span><div>${Object.values(DEFINITIONS).map(m=>`<button type="button" data-market="${m.id}"><span class="vg-market-flag">${m.flag}</span><span class="vg-market-label">${m.label}</span></button>`).join('')}</div>`;
     const anchor=host.querySelector('.theme-dots');
     if(anchor&&anchor.parentNode===host)host.insertBefore(wrap,anchor);else host.appendChild(wrap);
     wrap.querySelectorAll('[data-market]').forEach(b=>b.addEventListener('click',()=>switchTo(b.dataset.market)));
@@ -260,7 +260,7 @@
     ['hsCards','hsInsights','hsTableBody','hsHistory','opsStats','opsActionStats','opsHealth','kpiGrid','aiGlobalInsights','mainTableBody'].forEach(clear);
     try{const note=document.getElementById('hsAcumNote');if(note){note.style.display='none';note.innerHTML='';}}catch(e){}
     try{const st=document.getElementById('hsMonthStatus');if(st)st.textContent='Comentários: —';}catch(e){}
-    try{const meta=document.getElementById('opsMeta');if(meta)meta.textContent=`${def().label} · sem P&L carregado`;const pm=document.getElementById('opsPriorityMeta');if(pm)pm.textContent='Sem dados do mercado';const pr=document.getElementById('opsPriorities');if(pr)pr.innerHTML='<div class="ops-empty">Sem dados do mercado selecionado.</div>';const op=document.getElementById('opsOpportunities');if(op)op.innerHTML='<div class="ops-empty">Sem dados do mercado selecionado.</div>';const aw=document.getElementById('opsActionWatch');if(aw)aw.innerHTML='<div class="ops-empty">Sem dados do mercado selecionado.</div>';}catch(e){}
+    try{const meta=document.getElementById('opsMeta');if(meta)meta.textContent=`${def().label} · sem P&L carregado`;const pm=document.getElementById('opsPriorityMeta');if(pm)pm.textContent='Sem dados da geografia';const pr=document.getElementById('opsPriorities');if(pr)pr.innerHTML='<div class="ops-empty">Sem dados da geografia selecionado.</div>';const op=document.getElementById('opsOpportunities');if(op)op.innerHTML='<div class="ops-empty">Sem dados da geografia selecionado.</div>';const aw=document.getElementById('opsActionWatch');if(aw)aw.innerHTML='<div class="ops-empty">Sem dados da geografia selecionado.</div>';}catch(e){}
     try{Object.values(typeof charts!=='undefined'?charts:{}).forEach(c=>{try{c?.destroy?.();}catch(_){}});if(typeof charts!=='undefined')Object.keys(charts).forEach(k=>delete charts[k]);}catch(e){}
   }
   function syncMarketDataUi(){
@@ -277,8 +277,8 @@
     if(empty&&!hasPnl){
       const h2=empty.querySelector('h2'),p=empty.querySelector('p');
       if(h2)h2.textContent=`${def().label}: ainda sem P&L carregado`;
-      if(p)p.innerHTML=`Carrega o <strong style="color:var(--gold)">P&L de ${def().label}</strong> no painel lateral.<br>O mercado anterior permanece guardado e não é usado nesta análise.`;
-      const nonPnl=new Set(['agenda','compras','datacenter','governance','backup','documents','approvals','reputacao','ocupacao','instagram','revenuehub']);
+      if(p)p.innerHTML=`Carrega o <strong style="color:var(--gold)">P&L de ${def().label}</strong> no painel lateral.<br>A geografia anterior permanece guardada e não é usada nesta análise.`;
+      const nonPnl=new Set(['agenda','compras','datacenter','governance','backup','documents','approvals','reputacao','ocupacao','instagram','revenuehub','hoteis']);
       empty.style.display=nonPnl.has(typeof currentView!=='undefined'?currentView:'resumo')?'none':'block';
     }
     if(hasPnl){
@@ -312,7 +312,7 @@
   }
 
   async function switchTo(next,opts={}){
-    const um=userMarket();if(um&&next!==um){window.showToast?.('O seu perfil está associado a uma unidade de outro mercado.',true);return false;}
+    const um=userMarket();if(um&&next!==um){window.showToast?.('O seu perfil está associado a uma unidade de outra geografia.',true);return false;}
     if(!DEFINITIONS[next]||next===id()||state.switching)return false;state.switching=true;
     const prev=id();try{
       captureCurrentAndExtract();state.current=next;try{localStorage.setItem('vg_market_v31',next);}catch(e){}
@@ -322,7 +322,7 @@
       if(state.bank[next]){baseRestore?baseRestore(filterSnapshot(state.bank[next],next)):restoreFromSnapshot(filterSnapshot(state.bank[next],next));}
       else{
         const side=state.bank[next];baseRestore?baseRestore(emptySnapshot()):restoreFromSnapshot(emptySnapshot());
-        let loaded=false;try{loaded=await fetchSharedData(false);}catch(e){console.warn('V31 fetch mercado',e);}
+        let loaded=false;try{loaded=await fetchSharedData(false);}catch(e){console.warn('V31 fetch geografia',e);}
         const remote=baseBuild?filterSnapshot(baseBuild(),next):emptySnapshot();state.bank[next]=side?mergeSnapshots(remote,side,next):remote;state.loaded[next]=!!loaded;
         if(side){baseRestore?baseRestore(state.bank[next]):restoreFromSnapshot(state.bank[next]);}
       }
@@ -330,7 +330,7 @@
       try{await window.VG?.targetsRules?.load?.(true);}catch(e){}
       try{if(typeof sharedLoadRegions==='function')await sharedLoadRegions(true);}catch(e){}applyRegionUi();
       try{syncMarketDataUi();}catch(e){}try{refreshAll();}catch(e){}try{syncMarketDataUi();}catch(e){}window.VG?.events?.emit?.('market:changed',{from:prev,to:next,market:next});
-      window.showToast?.(`${def(next).flag} Mercado alterado para ${def(next).label} · moeda ${def(next).currency}`);return true;
+      window.showToast?.(`${def(next).flag} Geografia alterada para ${def(next).label} · moeda ${def(next).currency}`);return true;
     }finally{state.switching=false;}
   }
 
