@@ -78,3 +78,57 @@ body.vg-interface-modern #view-compras .btn:not(.gold){background:#0f172a!import
 
 /* Texto secundário: nunca usar contraste tão baixo que pareça desativado. */
 body.vg-interface-modern{--text-2:#526174;--text-3:#718096}
+
+
+/* V32.4 — contraste explícito nos dois temas claros do cabeçalho.
+   O tema escuro mantém o tratamento original. */
+body.theme-erp .vg-notif-trigger,
+body.theme-erp .vg-search-top-trigger,
+body.theme-erp .v30-top-assistant,
+body.theme-vilagale .vg-notif-trigger,
+body.theme-vilagale .vg-search-top-trigger,
+body.theme-vilagale .v30-top-assistant{
+  background:rgba(255,255,255,.88)!important;
+  border-color:var(--border)!important;
+  color:var(--text-1)!important;
+  box-shadow:0 5px 14px rgba(15,23,42,.05)!important;
+}
+body.theme-erp .vg-notif-trigger-label,
+body.theme-erp .vg-search-label,
+body.theme-erp .v30-top-assistant span,
+body.theme-vilagale .vg-notif-trigger-label,
+body.theme-vilagale .vg-search-label,
+body.theme-vilagale .v30-top-assistant span{
+  color:var(--text-1)!important;
+  opacity:1!important;
+}
+body.theme-erp .vg-search-top-trigger svg,
+body.theme-vilagale .vg-search-top-trigger svg{color:var(--text-2)!important;opacity:1!important}
+body.theme-erp .vg-search-top-trigger .vg-search-key,
+body.theme-vilagale .vg-search-top-trigger .vg-search-key{
+  color:var(--text-2)!important;
+  background:var(--surface-2)!important;
+  border-color:var(--border)!important;
+  opacity:1!important;
+}
+body.theme-erp #onlineUsersWrap,
+body.theme-vilagale #onlineUsersWrap{
+  background:rgba(255,255,255,.76)!important;
+  border-color:var(--border)!important;
+}
+body.theme-erp #onlineCount,
+body.theme-erp #onlineUsersWrap span:last-child,
+body.theme-vilagale #onlineCount,
+body.theme-vilagale #onlineUsersWrap span:last-child{
+  color:var(--text-2)!important;
+  opacity:1!important;
+}
+body.theme-erp .vg-notif-trigger:hover,
+body.theme-erp .vg-search-top-trigger:hover,
+body.theme-erp .v30-top-assistant:hover,
+body.theme-vilagale .vg-notif-trigger:hover,
+body.theme-vilagale .vg-search-top-trigger:hover,
+body.theme-vilagale .v30-top-assistant:hover{
+  background:var(--surface-2)!important;
+  color:var(--text-1)!important;
+}

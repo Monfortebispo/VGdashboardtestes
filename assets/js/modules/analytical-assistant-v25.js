@@ -57,12 +57,18 @@
   }
   function metricValue(m,id){return kpi(m,id)?.value??null;}
   function metricDelta(m,id){return kpi(m,id)?.delta??null;}
+  function targetDisplay(k){
+    const v=n(k?.target?.value);if(v==null)return '—';
+    if(k.id==='revenue')return `${v>=0?'+':''}${fmt(v,1)}%`;
+    if(k.id==='adr'||k.id==='revpar')return eur(v,2);
+    return pct(v,1);
+  }
 
   function hotelOverview(h){
     const m=model(h);if(!m?.available)return answer('empty','Sem dados suficientes',`Não existem dados suficientes para analisar ${h}.`,[],[trace('Dados','Performance Hotel V23')]);
     const mainRisk=m.risks?.[0],mainOpp=m.opportunities?.[0],f=m.forecast||{};
     const summary=`${h} está em estado ${String(m.status?.label||'indeterminado').toLowerCase()}. ${mainRisk?`Prioridade: ${mainRisk.title}.`:''} ${mainOpp?`Oportunidade: ${mainOpp.title}.`:''}`.replace(/\s+/g,' ').trim();
-    const rows=(m.kpis||[]).map(x=>({Indicador:x.label,Valor:x.display,'Δ vs ano anterior':x.deltaDisplay||'—',Região:x.region==null?'—':(x.id==='adr'||x.id==='revpar'?eur(x.region,2):pct(x.region)),Meta:x.target?.value==null?'—':String(x.target.value)}));
+    const rows=(m.kpis||[]).map(x=>({Indicador:x.label,Valor:x.display,'Δ vs ano anterior':x.deltaDisplay||'—',Região:x.region==null?'—':(x.id==='adr'||x.id==='revpar'?eur(x.region,2):pct(x.region)),Meta:targetDisplay(x)}));
     if(f.available)rows.push({Indicador:`Forecast ${f.monthLabel||''}`,Valor:pct(f.forecast),'Δ vs ano anterior':f.gap==null?'—':`${pp(f.gap)} vs meta`,Região:'—',Meta:f.target==null?'—':pct(f.target)});
     return answer('hotel',`Como está ${h}?`,summary,rows,[trace('KPIs','P&L / VG.kpi'),trace('Estado e riscos','Performance Hotel V23'),trace('Forecast','Revenue Intelligence / Forecast V12'),trace('Metas','Metas & Regras V9')],{hotel:h,open:{view:'hotelperformance',hotel:h}});
   }
@@ -149,7 +155,7 @@
 
   function metricForHotel(h,def){
     const m=model(h),k=kpi(m,def.id);if(!m?.available||!k)return null;
-    return answer('metric',`${def.label} — ${h}`,`${def.label}: ${def.format(k.value)}. Variação face a ${prevYear()}: ${k.deltaDisplay||'—'}.`,[{Hotel:h,Indicador:def.label,Valor:def.format(k.value),'Δ vs ano anterior':k.deltaDisplay||'—','Meta / referência':k.target?.value==null?'—':String(k.target.value),Estado:m.status?.label||'—'}],[trace(def.label,'Performance Hotel V23 / KPI canónico'),trace('Comparação','Ano anterior e Metas & Regras')],{hotel:h,open:{view:'hotelperformance',hotel:h}});
+    return answer('metric',`${def.label} — ${h}`,`${def.label}: ${def.format(k.value)}. Variação face a ${prevYear()}: ${k.deltaDisplay||'—'}.`,[{Hotel:h,Indicador:def.label,Valor:def.format(k.value),'Δ vs ano anterior':k.deltaDisplay||'—','Meta / referência':targetDisplay(k),Estado:m.status?.label||'—'}],[trace(def.label,'Performance Hotel V23 / KPI canónico'),trace('Comparação','Ano anterior e Metas & Regras')],{hotel:h,open:{view:'hotelperformance',hotel:h}});
   }
 
   async function interpret(question){
