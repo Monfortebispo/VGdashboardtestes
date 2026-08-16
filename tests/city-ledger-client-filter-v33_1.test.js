@@ -9,8 +9,8 @@ assert(js.includes('data-cl-client-clear')&&js.includes('Todos os clientes'),'de
 assert(js.includes('data-cl-clear-filters')&&js.includes('clearFilters(false)'),'deve existir limpeza global de filtros');
 assert(js.includes("state.filterHotel=e.target.value;state.filterClient='';state.filterClients=[]"),'mudar hotel deve limpar seleção de entidades');
 assert(css.includes('.cl-client-filter')&&css.includes('.cl-clear-filters'),'UI do filtro multi-entidade deve estar estilizada');
-assert(js.includes("release:'33.1'"),'City Ledger deve identificar a revisão 33.1');
-console.log('✓ City Ledger V33.1: filtro multi-entidade + limpeza rápida auditados');
+assert(js.includes("release:'34.0'"),'City Ledger deve identificar a revisão 34.0');
+console.log('✓ City Ledger V34.0: filtro multi-entidade + limpeza rápida auditados');
 
 const vm=require('vm');
 const sandbox={console,URL,Date,setTimeout,clearTimeout,window:{VG:{util:{escapeHtml:v=>String(v)},market:{id:()=> 'iberia',def:()=>({label:'PT + ES',symbol:'€',currency:'EUR',locale:'pt-PT'}),canonicalHotel:h=>h,hotelMarket:()=> 'iberia'}},vgAuthCurrent:()=>({role:'direcao',name:'Teste'})},document:{readyState:'complete',addEventListener:()=>{}},currentView:'resumo'};
@@ -28,4 +28,4 @@ api.state.filterClients=['iberia|B'];assert.deepStrictEqual(Array.from(api.filte
 api.state.filterClient='iberia|A';assert.deepStrictEqual(Array.from(api.filteredRows(),r=>r.accountingDocument),['FT1'],'seleção direta/legacy deve sobrepor uma seleção múltipla anterior');api.state.filterClient='';
 assert.strictEqual(api.clientOptionsForHotel().length,2,'lista de clientes deve respeitar o hotel selecionado');
 api.clearFilters(false);assert.strictEqual(api.state.filterHotel,'');assert.strictEqual(api.state.filterClients.length,0);assert.strictEqual(api.filteredRows().length,3,'limpar filtros deve recuperar todas as entidades e hotéis');
-console.log('✓ City Ledger V33.1 runtime sintético: multi-seleção e limpeza funcionais');
+console.log('✓ City Ledger V34.0 runtime sintético: multi-seleção e limpeza funcionais');

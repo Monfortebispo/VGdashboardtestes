@@ -1,0 +1,14 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const pkg=require('../package.json'),html=read('index.html'),sw=read('service-worker.js');
+const hk=read('integrated/housekeeping/index.html'),ab=read('integrated/custos-ab/index.html');
+assert.strictEqual(pkg.version,'34.0.0','V34.0 deve estar identificada no package');
+assert(html.includes('V34.0 · Integrado')&&html.includes('operationalSummaryPdfOpen()'),'build e acesso ao PDF acumulado devem estar visíveis');
+assert(sw.includes("vg-operations-shell-v34-0")&&sw.includes('/integrated/housekeeping/index.html')&&sw.includes('/integrated/custos-ab/index.html'),'PWA deve incluir os micro-módulos V34');
+for(const label of ['Painel','Inventário','Projeção de compra','Relatório executivo','Comparação campanhas','Análise de quebras','Mapa de quebras','Valorização financeira','Alertas de rutura','Campanhas de inventário','Utilizadores & acessos','Catálogo de roupas','Registo de alterações']) assert(hk.includes(label),`Housekeeping original em falta: ${label}`);
+assert(hk.includes('abrirModoGovernanta')&&hk.includes('activateIntegratedSession')&&hk.includes('vgAuthCurrent'),'Housekeeping deve preservar modo Governanta e reutilizar sessão da Dashboard');
+assert(fs.existsSync(path.join(root,'netlify/functions/hk-store.js')),'backend Housekeeping deve estar incluído');
+for(const label of ['Resumo','Evolução Mensal','Sub-Famílias','Detalhe Artigos','Análise Hotel','Inventário Artigos','Receitas','Stock & Internos','Comentários','Sugestão de Encomenda','Excessos de Stock','Previsão (€ e unidades)','Previsto vs. Real','Roomnights','Carregar Dados','Setup']) assert(ab.includes(label),`Custos A&B original em falta: ${label}`);
+assert(ab.includes('activateIntegratedSession')&&ab.includes('vgAuthCurrent')&&ab.includes("const API_URL = '/api/shared'"),'Custos A&B deve reutilizar sessão e backend original');
+assert(fs.existsSync(path.join(root,'netlify/functions/custos-ab-store.js')),'backend Custos A&B deve estar incluído');
+console.log('✓ V34: paridade funcional dos módulos originais Housekeeping e Custos A&B auditada');

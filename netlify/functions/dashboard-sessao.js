@@ -418,7 +418,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"33.1"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"34.0"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);

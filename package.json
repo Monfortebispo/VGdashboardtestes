@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "33.1.0",
+  "version": "34.0.0",
   "private": true,
-  "description": "VG Operations v33.1: integração operacional visível + filtro multi-entidade City Ledger + auditoria de deploy",
+  "description": "VG Operations v34.0: integração funcional completa de Reputação, A&B, Housekeeping têxtil, receitas detalhadas e PDFs auditados",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

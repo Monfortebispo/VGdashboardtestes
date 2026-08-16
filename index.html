@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- VG Operations 2.0 · v33.1 · 2026-08-16 -->
+<!-- VG Operations 2.0 · v34.0 · 2026-08-16 -->
 
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Vila Galé — Dashboard Operações · V33.1</title>
-<meta name="vg-build" content="33.1"/>
+<title>Vila Galé — Dashboard Operações · V34.0</title>
+<meta name="vg-build" content="34.0"/>
 <meta name="theme-color" content="#071a2b"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -180,7 +180,7 @@
 </div>
 </div>
 <div class="topbar-right">
-<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V33.1 · Integrado</div>
+<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V34.0 · Integrado</div>
 <div id="onlineUsersWrap" style="display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 10px;cursor:pointer" title="Utilizadores online agora" onclick="onlineShowDetail()">
   <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 6px #4ade80"></span>
   <span id="onlineCount" style="font-size:11px;font-weight:700;color:#e2e8f0">—</span>
@@ -530,6 +530,7 @@
 <!-- /CENTRAL DE OPERAÇÕES v8.1 -->
 <!-- Filtro de Região -->
 <div class="section-title">KPIs Consolidados
+      <button id="opsPdfAccumBtn" onclick="operationalSummaryPdfOpen()" title="Gerar Resumo Operacional acumulado Janeiro → mês escolhido" style="margin-left:auto;background:var(--surface-2);color:var(--text-1);border:1px solid var(--border);padding:6px 12px;border-radius:8px;font-family:var(--font);font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px">📄 PDF acumulado</button>
       <button onclick="waShareResumo()" style="margin-left:auto;background:#25D366;color:#fff;border:none;padding:6px 14px;border-radius:8px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:.3px">
 <svg fill="currentColor" height="13" viewbox="0 0 24 24" width="13"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.558 4.14 1.535 5.879L.057 23.077a.75.75 0 00.921.921l5.198-1.478A11.953 11.953 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.75 9.75 0 01-4.964-1.356l-.356-.212-3.685 1.048 1.048-3.685-.212-.356A9.75 9.75 0 1112 21.75z"></path></svg>
         Partilhar no WhatsApp
@@ -2159,6 +2160,8 @@
 <link rel="stylesheet" href="assets/css/logo-fix.css">
 <link rel="stylesheet" href="assets/css/uniformizacao-v32_2.css">
 <link id="vg-domains-v33-css" rel="stylesheet" href="assets/css/operations-domains-v33.css">
+<link id="vg-operational-summary-pdf-css" rel="stylesheet" href="assets/css/operational-summary-pdf-v32_6.css">
+<script id="vg-operational-summary-pdf" src="assets/js/modules/operational-summary-pdf-v32_6.js" defer></script>
 <script id="vg-domains-v33" src="assets/js/modules/operations-domains-v33.js" defer></script>
 <script id="vg-mobile-pwa" src="assets/js/ui/mobile-pwa.js" defer></script>
 <script id="vg-global-search-v19" src="assets/js/ui/global-search.js" defer></script>
