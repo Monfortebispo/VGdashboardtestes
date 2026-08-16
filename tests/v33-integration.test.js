@@ -1,18 +1,18 @@
 const fs=require('fs'),path=require('path'),assert=require('assert'),crypto=require('crypto');
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const pkg=require('../package.json'),html=read('index.html'),js=read('assets/js/modules/operations-domains-v33.js'),css=read('assets/css/operations-domains-v33.css'),nav=read('assets/js/ui/vg-operations-2-v30.js'),search=read('assets/js/ui/global-search.js'),pdf=read('assets/js/modules/pdf-export.js'),ig=read('assets/js/modules/instagram.js'),server=read('netlify/functions/dashboard-sessao.js'),sw=read('service-worker.js'),seed=require('../assets/data/operations-seed-v33.json');
-assert.strictEqual(pkg.version,'33.0.0','package deve identificar V33.0');
+assert.strictEqual(pkg.version,'33.1.0','package deve identificar V33.1');
 for(const id of ['view-receitasdet','view-ab','view-housekeeping'])assert(html.includes(`id="${id}"`),`view V33 em falta: ${id}`);
 assert(html.includes('operations-domains-v33.js')&&html.includes('operations-domains-v33.css'),'index deve carregar módulo/CSS V33');
-assert(nav.includes("button('receitasdet'")&&nav.includes("button('ab'")&&nav.includes("button('housekeeping'"),'navegação deve criar os três novos domínios');
-assert(nav.includes("group('Compras & Operação',['ab','compras','housekeeping'])")&&nav.includes("group('Qualidade & Comunicação',['reputacao','instagram'])"),'grupos operacionais devem estar integrados');
+assert((nav.includes("button('receitasdet'")||html.includes('id="nav-receitasdet"'))&&(nav.includes("button('ab'")||html.includes('id="nav-ab"'))&&(nav.includes("button('housekeeping'")||html.includes('id="nav-housekeeping"')),'navegação deve expor os três novos domínios');
+assert(nav.includes("group('Operação Integrada',['receitasdet','ab','housekeeping','reputacao'])")&&nav.includes("group('Qualidade & Comunicação',['instagram'])"),'grupos operacionais V33.1 devem estar visíveis e integrados');
 assert(search.includes("title:'Receita Detalhada'")&&search.includes("title:'Compras & A&B'")&&search.includes("title:'Housekeeping"),'pesquisa global deve encontrar novos domínios');
 
 // Reputação: melhor dos três mundos.
 for(const token of ['Visão Executiva','Semanal','Semestral','Hotel','Executivo','Unidades','Departamentos','Semântica','Concorrência','Respostas','Menções','Comparar'])assert(js.includes(token),`reputação integrada deve incluir ${token}`);
 for(const role of ['Indexes Evolution','My Establishments','Reviews / Competition','Reviews Management Responses','Semantic / Results','Reviews / Results'])assert(js.includes(role),`reconhecimento semestral deve cobrir ${role}`);
 assert(js.includes("window.VG.shared.get(resource,'state')")&&js.includes("ops-reputation-semester")&&js.includes("ops-ab")&&js.includes("ops-housekeeping"),'novos domínios devem restaurar estado partilhado');
-assert(server.includes('ops-reputation-semester-')&&server.includes('ops-ab-')&&server.includes('ops-housekeeping-')&&server.includes('buildVersion:"33"'),'backup/auditoria deve conhecer recursos V33');
+assert(server.includes('ops-reputation-semester-')&&server.includes('ops-ab-')&&server.includes('ops-housekeeping-')&&server.includes('buildVersion:"33.1"'),'backup/auditoria deve conhecer recursos V33');
 
 // Housekeeping: inventário permanente, causas, par-stock e aprovação DO.
 for(const c of ['Fim de vida','Mancha/nódoa','Desaparecido/roubo','Dano de lavagem','Outro'])assert(js.includes(c),`causa HK em falta: ${c}`);
@@ -42,7 +42,8 @@ assert(pdf.includes('Rank VG')&&pdf.includes('pdf-logo')&&pdf.includes('alt="Vil
 assert(ig.includes('Sem dados')&&ig.includes('growthValid'),'Instagram deve distinguir ausência de dados de queda real para zero');
 
 // PWA e Ficha Hotel protegida.
-assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v33'")&&sw.includes('/assets/js/modules/operations-domains-v33.js'),'PWA V33 deve cachear o módulo integrado');
+assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v33-1'")&&sw.includes('/assets/js/modules/operations-domains-v33.js'),'PWA V33.1 deve cachear o módulo integrado');
 const ficha=read('assets/js/modules/ficha-hotel.js');assert.strictEqual(crypto.createHash('sha256').update(ficha).digest('hex'),'2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7','Ficha do Hotel deve permanecer byte-a-byte inalterada');
 assert(css.includes('.od-subtabs')&&css.includes('.od-toolbar'),'UI semestral deve ter navegação/filtros próprios');
-console.log('✓ V33: integração Reputação, Receita Detalhada, Compras & A&B, Fichas Técnicas, Housekeeping, PDFs e persistência auditada');
+assert(html.includes('V33.1 · Integrado')&&nav.includes('Novos módulos já disponíveis'),'V33.1 deve ser imediatamente identificável após deploy');
+console.log('✓ V33.1: integração visível, Reputação, Receita Detalhada, Compras & A&B, Fichas Técnicas, Housekeeping, PDFs e persistência auditada');

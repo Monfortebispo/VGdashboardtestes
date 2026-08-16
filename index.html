@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<!-- VG Operations 2.0 · v32.2 · 2026-08-16 -->
+<!-- VG Operations 2.0 · v33.1 · 2026-08-16 -->
 
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Vila Galé — Dashboard Operações</title>
+<title>Vila Galé — Dashboard Operações · V33.1</title>
+<meta name="vg-build" content="33.1"/>
 <meta name="theme-color" content="#071a2b"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -179,6 +180,7 @@
 </div>
 </div>
 <div class="topbar-right">
+<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V33.1 · Integrado</div>
 <div id="onlineUsersWrap" style="display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 10px;cursor:pointer" title="Utilizadores online agora" onclick="onlineShowDetail()">
   <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 6px #4ade80"></span>
   <span id="onlineCount" style="font-size:11px;font-weight:700;color:#e2e8f0">—</span>
@@ -235,6 +237,9 @@
 <button class="sb-nav-btn" id="nav-costanalysis" onclick="setView('costanalysis')"><span class="sb-nav-icon">🔬</span> Análise de Custos</button>
 <button class="sb-nav-btn" id="nav-cua" onclick="setView('cua')"> <span class="sb-nav-icon">⚡</span> Custo / Actividade</button>
 <button class="sb-nav-btn" id="nav-compras" onclick="setView('compras')"> <span class="sb-nav-icon">🧾</span> Compras &amp; Artigos</button>
+<button class="sb-nav-btn" id="nav-receitasdet" onclick="setView('receitasdet')"><span class="sb-nav-icon">↗</span> Receita Detalhada</button>
+<button class="sb-nav-btn" id="nav-ab" onclick="setView('ab')"><span class="sb-nav-icon">◫</span> Compras &amp; A&amp;B</button>
+<button class="sb-nav-btn" id="nav-housekeeping" onclick="setView('housekeeping')"><span class="sb-nav-icon">▦</span> Housekeeping &amp; Têxtil</button>
 <button class="sb-nav-btn" id="nav-benchmark" onclick="setView('benchmark')"> <span class="sb-nav-icon">◎</span> Benchmarking</button>
 <button class="sb-nav-btn" id="nav-anomalies" onclick="setView('anomalies')"> <span class="sb-nav-icon">⚠</span> Deteção de Anomalias</button>
 <button class="sb-nav-btn" id="nav-compare" onclick="setView('compare')"> <span class="sb-nav-icon">⚖️</span> Comparar Hotéis</button>
@@ -247,7 +252,7 @@
 <!-- QUALIDADE & INFO -->
 <div class="sb-nav-group">
 <div class="sb-nav-group-label">Qualidade &amp; Info</div>
-<button class="sb-nav-btn" id="nav-reputacao" onclick="setView('reputacao')"><span class="sb-nav-icon">★</span>  Reputação</button>
+<button class="sb-nav-btn" id="nav-reputacao" onclick="setView('reputacao')"><span class="sb-nav-icon">★</span> Reputação &amp; Guest Experience</button>
 <button class="sb-nav-btn" id="nav-instagram" onclick="setView('instagram')"><span class="sb-nav-icon">📱</span> Instagram</button>
 <button class="sb-nav-btn" id="nav-agenda" onclick="setView('agenda')"> <span class="sb-nav-icon">📅</span> Agenda Operacional</button>
 <button class="sb-nav-btn" id="nav-hoteis" onclick="setView('hoteis')"> <span class="sb-nav-icon">🏨</span> Hotéis</button>

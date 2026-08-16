@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.operations2?.buildVersion>=33)return;
+  if(window.VG.operations2?.buildVersion>=33.1)return;
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
   const money=v=>window.VG?.market?.formatMoneyCompact?window.VG.market.formatMoneyCompact(v,2):(()=>{const x=n(v);if(x==null)return '—';const a=Math.abs(x),s=x<0?'-':'';if(a>=1e6)return `${s}€${(a/1e6).toLocaleString('pt-PT',{maximumFractionDigits:2})}M`;if(a>=1000)return `${s}€${(a/1000).toLocaleString('pt-PT',{maximumFractionDigits:0})}K`;return `${s}€${a.toLocaleString('pt-PT',{maximumFractionDigits:0})}`;})();
@@ -18,7 +18,7 @@
   function group(label,ids){const g=document.createElement('div');g.className='sb-nav-group v30-nav-group';g.innerHTML=`<div class="sb-nav-group-label">${label}</div>`;for(const id of ids){const el=document.getElementById('nav-'+id);if(el){el.style.display='';g.appendChild(el);}}return g;}
   const v32MenuCompatibility=['receitas','custos','pl','unitEconomics','compras']; // ordem canónica V32 preservada para compatibilidade
   function simplifyNavigation(){
-    const nav=document.querySelector('.sb-nav');if(!nav||nav.dataset.v30Version==='30.3')return;nav.dataset.v30='1';nav.dataset.v30Version='30.3';
+    const nav=document.querySelector('.sb-nav');if(!nav||nav.dataset.v30Version==='30.4')return;nav.dataset.v30='1';nav.dataset.v30Version='30.4';
     legacyHidden.forEach(id=>{const x=document.getElementById('nav-'+id);if(x)x.style.display='none';});
     let h360=document.getElementById('nav-hotel360');if(!h360){h360=button('hotel360','◉','Hotel 360º',()=>window.setView?.('hotel360'));}
     let rh=document.getElementById('nav-revenuehub');if(!rh){rh=button('revenuehub','◈','Revenue & Forecast',()=>window.setView?.('revenuehub'));}
@@ -36,8 +36,9 @@
     document.getElementById('nav-fichahotel')?.after(h360);
     nav.appendChild(group('Gestão',['agenda','approvals','cityledger']));document.getElementById('nav-agenda')?.before(act);
     nav.appendChild(group('Análise',['receitas','receitasdet','custos','pl','unitEconomics','benchmark','anomalies']));document.getElementById('nav-pl')?.after(rh);
-    nav.appendChild(group('Compras & Operação',['ab','compras','housekeeping']));
-    nav.appendChild(group('Qualidade & Comunicação',['reputacao','instagram']));
+    nav.appendChild(group('Operação Integrada',['receitasdet','ab','housekeeping','reputacao']));
+    nav.appendChild(group('Compras',['compras']));
+    nav.appendChild(group('Qualidade & Comunicação',['instagram']));
     nav.appendChild(group('Suporte',['documents','automaticreports']));
     nav.appendChild(group('Administração',['datacenter','governance','backup','upload']));
     const legacy=document.createElement('div');legacy.id='v30LegacyNav';legacy.hidden=true;for(const id of legacyHidden){const x=document.getElementById('nav-'+id);if(x)legacy.appendChild(x);}nav.appendChild(legacy);
@@ -93,7 +94,8 @@
     const hp=window.VG?.hotelPerformance,sc=window.VG?.operationalScore;if(!hp?.buildModel)return '<div class="v30-home-empty">A preparar hotel…</div>';const m=hp.buildModel(u.hotel);if(!m?.available)return '<div class="v30-home-empty">Sem dados suficientes para a unidade associada.</div>';const s=sc?.calculate?.(m),f=m.forecast||{},notifs=window.VG?.notifications?.items?.().filter(x=>!x.hotel||String(x.hotel).toUpperCase()===String(m.hotel).toUpperCase()).slice(0,3)||[];
     return `<section class="v30-profile-home hotel"><header><div><span>VG Operations 2.0</span><h2>${esc(m.hotel)}</h2><p>${esc(u.name||u.user||'')} · ${esc(m.status?.label||'')}</p></div><button data-v30-hotel="${esc(m.hotel)}">Abrir Hotel 360º →</button></header><div class="v30-home-kpis"><article class="${esc(s?.status||'')}"><span>Score</span><strong>${s?.available?s.score+'/100':'—'}</strong></article><article><span>Situação</span><strong>${esc(m.status?.label||'—')}</strong></article><article><span>Ações abertas</span><strong>${m.actionInfo?.active?.length||0}</strong></article><article class="critical"><span>Vencidas</span><strong>${m.actionInfo?.overdue?.length||0}</strong></article><article><span>Forecast OCC</span><strong>${n(f.forecast)==null?'—':f.forecast.toLocaleString('pt-PT',{maximumFractionDigits:1})+'%'}</strong></article><article><span>Gap meta</span><strong>${n(f.gap)==null?'—':(f.gap>=0?'+':'')+f.gap.toLocaleString('pt-PT',{maximumFractionDigits:1})+' p.p.'}</strong></article></div><div class="v30-home-priority"><strong>Assuntos que precisam de atenção</strong>${notifs.length?notifs.map(x=>`<button onclick="VG.notifications.open()"><span><b>${esc(x.title)}</b><small>${esc(x.detail||'')}</small></span><em>${x.level==='urgent'?'URGENTE':'VER'}</em></button>`).join(''):`<div class="v30-home-ok">✓ Sem notificações prioritárias neste momento.</div>`}</div></section>`;
   }
-  function renderProfileHome(){const root=document.getElementById('v30ProfileHomeRoot');if(!root)return;const u=user();if(!u){root.innerHTML='';return;}root.innerHTML=direction()?buildDirectionHome():buildHotelHome(u);root.querySelectorAll('[data-v30-hotel]').forEach(b=>b.addEventListener('click',()=>window.VG?.hotel360?.openFor?.(b.dataset.v30Hotel)));}
+  function integratedLauncher(){return `<section class="v33-integrated-launcher"><header><div><span>V33.1 · Operação Integrada</span><strong>Novos módulos já disponíveis</strong><small>Reputação semanal/semestral, Receita Detalhada, Compras &amp; A&amp;B e Housekeeping têxtil.</small></div><em>ATIVO</em></header><div class="v33-launch-grid"><button data-v33-open="reputacao"><b>★</b><span>Reputação &amp; Guest Experience<small>Executiva · semanal · semestral · hotel</small></span></button><button data-v33-open="receitasdet"><b>↗</b><span>Receita Detalhada<small>PdV · família · grupo · artigo</small></span></button><button data-v33-open="ab"><b>◫</b><span>Compras &amp; A&amp;B<small>Custos · stock · fichas · inteligência</small></span></button><button data-v33-open="housekeeping"><b>▦</b><span>Housekeeping &amp; Têxtil<small>Inventário · quebras · campanhas · compras</small></span></button></div></section>`;}
+  function renderProfileHome(){const root=document.getElementById('v30ProfileHomeRoot');if(!root)return;const u=user();if(!u){root.innerHTML='';return;}root.innerHTML=(direction()?buildDirectionHome():buildHotelHome(u))+integratedLauncher();root.querySelectorAll('[data-v30-hotel]').forEach(b=>b.addEventListener('click',()=>window.VG?.hotel360?.openFor?.(b.dataset.v30Hotel)));root.querySelectorAll('[data-v33-open]').forEach(b=>b.addEventListener('click',()=>window.setView?.(b.dataset.v33Open)));}
   function updateMobile(){
     const more=document.getElementById('vgMobileMore');if(!more)return;more.querySelectorAll('[data-view="hotelperformance"]').forEach(b=>{b.dataset.view='hotel360';b.querySelector('span')?.childNodes?.forEach?.(()=>{});const s=b.querySelector('span');if(s)s.innerHTML='Hotel 360º<small>Visão integrada da unidade</small>';});
     more.querySelectorAll('[data-view="forecast"],[data-view="scenariocompare"],[data-view="revenueint"]').forEach((b,i)=>{if(i===0){b.dataset.view='revenuehub';const s=b.querySelector('span');if(s)s.innerHTML='Revenue & Forecast<small>Situação, forecast e cenários</small>';}else b.style.display='none';});
@@ -106,7 +108,7 @@
   function refreshAllV30(){renderProfileHome();updateMobile();}
   function init(){simplifyNavigation();installAssistantTop();installSetViewRouter();updateMobile();setTimeout(refreshAllV30,250);setTimeout(refreshAllV30,1600);window.VG?.operationalScore?.ensureConfig?.(false).then(()=>renderProfileHome());}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-  window.VG.operations2={version:30.3,buildVersion:33,simplifyNavigation,renderProfileHome,refresh:refreshAllV30,portfolioHotels,portfolioScopeLabel,buildDirectionHome};
+  window.VG.operations2={version:30.4,buildVersion:33.1,simplifyNavigation,renderProfileHome,refresh:refreshAllV30,portfolioHotels,portfolioScopeLabel,buildDirectionHome};
   window.VG.events?.on?.('state:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('actions:changed',()=>{if(typeof currentView!=='undefined'&&currentView==='resumo')setTimeout(renderProfileHome,50);});
   window.VG.events?.on?.('score-config:ready',()=>renderProfileHome());

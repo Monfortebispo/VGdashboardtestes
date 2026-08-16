@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "33.0.0",
+  "version": "33.1.0",
   "private": true,
-  "description": "VG Operations v33.0: plataforma integrada com Reputação semanal/semestral, Receita Detalhada, Compras & A&B, Fichas Técnicas e Housekeeping têxtil",
+  "description": "VG Operations v33.1: integração operacional visível + filtro multi-entidade City Ledger + auditoria de deploy",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

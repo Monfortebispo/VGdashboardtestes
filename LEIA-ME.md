@@ -224,6 +224,15 @@ As diligências de cobrança não são escritas no Excel. Ficam na VG Operations
 - Os módulos e respetivos dados não foram recriados: já existiam; o acesso tinha sido ocultado pela simplificação V30.
 
 
+
+### V33.1 — integração visível + City Ledger multi-entidade
+
+- O detalhe do City Ledger por hotel passa a ter filtro compacto de Clientes / Entidades com seleção múltipla por checkbox.
+- `Todos os clientes` / `Limpar seleção` e `Limpar filtros` permitem regressar imediatamente à visão completa.
+- Os módulos integrados ficam explicitamente visíveis no grupo `Operação Integrada` e num lançador no Resumo.
+- O topo da aplicação mostra `V33.1 · Integrado`, permitindo confirmar visualmente que o deploy atualizado está ativo.
+- Service Worker / version guard foram incrementados para 33.1 para evitar HTML/JS antigos após deploy.
+
 ## V33 — Plataforma Integrada
 
 A V33 absorve os principais domínios operacionais que existiam em ferramentas separadas sem usar iframes. A Dashboard passa a ter Receita Detalhada, Compras & A&B, Fichas Técnicas/Receituário, Housekeeping/Inventário Têxtil e uma área unificada de Reputação semanal/semestral.
