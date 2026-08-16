@@ -30,8 +30,8 @@
     nav.querySelectorAll('.sb-nav-group').forEach(g=>g.remove());
     nav.appendChild(group('Início & Hotéis',['resumo','fichahotel']));
     document.getElementById('nav-fichahotel')?.after(h360);
-    nav.appendChild(group('Gestão',['agenda','approvals']));document.getElementById('nav-agenda')?.before(act);
-    nav.appendChild(group('Análise',['receitas','custos','pl','compras','benchmark','anomalies']));document.getElementById('nav-pl')?.after(rh);
+    nav.appendChild(group('Gestão',['agenda','approvals','cityledger']));document.getElementById('nav-agenda')?.before(act);
+    nav.appendChild(group('Análise',['receitas','custos','pl','unitEconomics','compras','benchmark','anomalies']));document.getElementById('nav-pl')?.after(rh);
     nav.appendChild(group('Suporte',['documents','automaticreports']));
     nav.appendChild(group('Administração',['datacenter','governance','backup','upload']));
     const legacy=document.createElement('div');legacy.id='v30LegacyNav';legacy.hidden=true;for(const id of legacyHidden){const x=document.getElementById('nav-'+id);if(x)legacy.appendChild(x);}nav.appendChild(legacy);

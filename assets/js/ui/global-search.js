@@ -8,10 +8,10 @@
   if(window.VG.search?.version>=19) return;
 
   const state={open:false,filter:'all',query:'',items:[],results:[],selected:0,builtAt:0,hydrating:false,hydrated:false,governanceHydrated:false};
-  const FILTERS=[['all','Tudo'],['hotel','Hotéis'],['kpi','KPIs'],['action','Ações'],['agenda','Agenda'],['signal','Alertas'],['purchase','Compras'],['comment','Comentários'],['document','Documentos'],['approval','Aprovações'],['scenario','Cenários'],['data','Dados']];
-  const ICON={assistant:'✦',report:'📄',performance:'◉',hotel:'🏨',kpi:'◫',action:'✓',event:'📅',alert:'🔔',anomaly:'⚠',target:'🎯',article:'🧾',supplier:'🚚',comment:'💬',data:'🗄️',governance:'🛡️',document:'🗂️',approval:'✅',scenario:'⚖️'};
-  const KIND={assistant:'Assistente Analítico',report:'Relatório',performance:'Performance',hotel:'Hotel',kpi:'KPI',action:'Ação',event:'Agenda',alert:'Alerta',anomaly:'Anomalia',target:'Meta',article:'Artigo',supplier:'Fornecedor',comment:'Comentário',data:'Dados',governance:'Auditoria',document:'Documento',approval:'Aprovação',scenario:'Cenário'};
-  const GROUP={assistant:'hotel',report:'hotel',performance:'hotel',hotel:'hotel',kpi:'kpi',action:'action',event:'agenda',alert:'signal',anomaly:'signal',target:'kpi',article:'purchase',supplier:'purchase',comment:'comment',data:'data',governance:'data',document:'document',approval:'approval',scenario:'scenario'};
+  const FILTERS=[['all','Tudo'],['hotel','Hotéis'],['kpi','KPIs'],['action','Ações'],['agenda','Agenda'],['signal','Alertas'],['purchase','Compras'],['comment','Comentários'],['document','Documentos'],['approval','Aprovações'],['scenario','Cenários'],['data','Dados'],['finance','Financeiro']];
+  const ICON={assistant:'✦',report:'📄',performance:'◉',hotel:'🏨',kpi:'◫',action:'✓',event:'📅',alert:'🔔',anomaly:'⚠',target:'🎯',article:'🧾',supplier:'🚚',comment:'💬',data:'🗄️',governance:'🛡️',document:'🗂️',approval:'✅',scenario:'⚖️',cityledger:'💳',efficiency:'⚡'};
+  const KIND={assistant:'Assistente Analítico',report:'Relatório',performance:'Performance',hotel:'Hotel',kpi:'KPI',action:'Ação',event:'Agenda',alert:'Alerta',anomaly:'Anomalia',target:'Meta',article:'Artigo',supplier:'Fornecedor',comment:'Comentário',data:'Dados',governance:'Auditoria',document:'Documento',approval:'Aprovação',scenario:'Cenário',cityledger:'City Ledger',efficiency:'Eficiência'};
+  const GROUP={assistant:'hotel',report:'hotel',performance:'hotel',hotel:'hotel',kpi:'kpi',action:'action',event:'agenda',alert:'signal',anomaly:'signal',target:'kpi',article:'purchase',supplier:'purchase',comment:'comment',data:'data',governance:'data',document:'document',approval:'approval',scenario:'scenario',cityledger:'finance',efficiency:'finance'};
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const currentUser=()=>{try{return typeof window.vgAuthCurrent==='function'?window.vgAuthCurrent():null;}catch(e){return null;}};
@@ -53,6 +53,8 @@
   function buildHotelsAndKpis(arr){
     add(arr,{type:'assistant',title:'Assistente Analítico',subtitle:'Perguntas em linguagem natural sobre os dados da dashboard',keywords:'assistente analitico perguntas dados ai inteligencia analise comparar ranking forecast gop ocupacao'});
     add(arr,{type:'report',title:'Relatórios Automáticos',subtitle:'Hotel, região ou consolidado · PDF e Word',keywords:'relatorio relatorios automaticos pdf word semanal mensal executivo consolidado regiao'});
+    add(arr,{type:'efficiency',title:'Eficiência & Unit Economics',subtitle:'Custos, receitas e GOP por unidade de atividade',keywords:'abc eficiencia unit economics energia quarto ocupado quarto disponivel dormida cliente hospede chegada',open:()=>window.VG?.unitEconomics?.open?.()});
+    add(arr,{type:'cityledger',title:'City Ledger & Cobranças',subtitle:'Faturas, aging, diligências e recuperação',keywords:'city ledger cobranca divida faturas diligencias telefone email aging credito',open:()=>window.VG?.cityLedger?.open?.()});
     const r=raw(),y=year(),k=window.VG?.kpi;if(!r)return;
     for(const h of hotels()){
       add(arr,{type:'performance',title:`Performance · ${h}`,subtitle:'Situação executiva, riscos, forecast e ações',hotel:h,keywords:'performance hotel situacao executivo risco oportunidade'});
@@ -124,8 +126,22 @@
     if(isDirection())try{for(const r of window.vgGovernanceRows?.()||[]){add(arr,{type:'governance',title:r.action||'Alteração',subtitle:[r.name||r.user,r.hotel,r.detail,r.resource].filter(Boolean).join(' · '),hotel:r.hotel||'',value:r.serverTs?new Date(r.serverTs).toLocaleDateString('pt-PT'):'',keywords:[r.category,r.resource,r.key,r.detail].filter(Boolean).join(' ')});}}catch(e){}
   }
 
+
+  function buildCityLedger(arr){
+    try{
+      const api=window.VG?.cityLedger,rows=api?.state?.rows||[];if(!rows.length)return;
+      const clients=new Map();
+      for(const r of rows){
+        const saldo=Number(r.balance||0);if(!clients.has(r.clientKey))clients.set(r.clientKey,{name:r.entity,hotel:r.hotel,total:0,docs:0});
+        const c=clients.get(r.clientKey);c.total+=saldo>0?saldo:0;c.docs++;
+        add(arr,{type:'cityledger',title:`${r.hotel} · ${r.accountingDocument||r.documentNumber||'Fatura'}`,subtitle:`${r.entity} · ${r.daysOverdue>0?r.daysOverdue+' dias vencido':'a vencer'}`,hotel:r.hotel,value:saldo>0?fmtEur(saldo):'',keywords:`${r.entity} ${r.clientCode||''} ${r.voucher||''} fatura documento cobranca`,open:()=>{api.state.filterHotel=r.hotel;api.state.filterClient=r.clientKey;api.state.query=r.accountingDocument||r.documentNumber||'';api.state.tab='invoices';api.open();}});
+      }
+      for(const c of clients.values())add(arr,{type:'cityledger',title:`Cliente · ${c.name}`,subtitle:`${c.hotel} · ${c.docs} documento(s)`,hotel:c.hotel,value:fmtEur(c.total),keywords:'cliente devedor cobranca city ledger',open:()=>{api.state.filterHotel=c.hotel;api.state.query=c.name;api.state.tab='clients';api.open();}});
+    }catch(e){}
+  }
+
   function buildIndex(){
-    const arr=[];buildHotelsAndKpis(arr);buildActions(arr);buildAgenda(arr);buildSignals(arr);buildTargets(arr);buildPurchases(arr);buildComments(arr);buildDocuments(arr);buildApprovals(arr);buildScenarios(arr);buildDataHistory(arr);state.items=arr;state.builtAt=Date.now();return arr;
+    const arr=[];buildHotelsAndKpis(arr);buildActions(arr);buildAgenda(arr);buildSignals(arr);buildTargets(arr);buildPurchases(arr);buildComments(arr);buildDocuments(arr);buildApprovals(arr);buildScenarios(arr);buildCityLedger(arr);buildDataHistory(arr);state.items=arr;state.builtAt=Date.now();return arr;
   }
 
   function score(item,q){
