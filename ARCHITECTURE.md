@@ -258,3 +258,10 @@ O stock têxtil é um livro-razão: `base física + entradas - quebras ± acerto
 
 ### Persistência e recuperação
 Direção pode persistir os estados partilhados `ops-housekeeping`, `ops-ab` e `ops-reputation-semester`; estes recursos entram no sistema de auditoria e snapshots de recuperação. Utilizadores de hotel permanecem limitados ao âmbito autorizado.
+
+
+## V33.1 — UX de integração e City Ledger
+
+- `assets/js/modules/city-ledger-v32.js`: mantém compatibilidade V32 mas adiciona estado `filterClients[]`, filtro multi-entidade por hotel e limpeza global.
+- `assets/js/ui/vg-operations-2-v30.js`: expõe os domínios V33 no grupo `Operação Integrada` e no lançador do Resumo.
+- `assets/js/core/06-version-guard-v29_1.js` + `service-worker.js`: build 33.1, network-first e diagnóstico dos novos módulos.

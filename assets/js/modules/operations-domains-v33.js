@@ -6,8 +6,8 @@
 (function(){
 'use strict';
 window.VG=window.VG||{};
-if(window.VG.domains33?.version>=33)return;
-const VERSION=33;
+if(window.VG.domains33?.version>=33.1)return;
+const VERSION=33.1;
 const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 const num=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};

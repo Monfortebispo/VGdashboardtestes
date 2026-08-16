@@ -7,7 +7,7 @@
 (function(){
   'use strict';
   const BUILD='32.9'; // identificador de compatibilidade do guard legado
-  const PLATFORM_BUILD='33.0';
+  const PLATFORM_BUILD='33.1';
   const SW_URL='/service-worker.js?vg='+encodeURIComponent(PLATFORM_BUILD);
   window.__VG_APP_BUILD__=PLATFORM_BUILD;
   window.__VG_SW_URL__=SW_URL;
@@ -63,7 +63,10 @@
       ['approvalsRoot','Workflow de Aprovações',()=>typeof window.approvalsRender==='function'],
       ['scenarioComparisonRoot','Comparação de Cenários',()=>typeof window.scenarioComparisonRender==='function'],
       ['hotel360Root','Hotel 360º',()=>typeof window.hotel360Render==='function'],
-      ['revenueHubRoot','Revenue & Forecast',()=>!!window.VG?.revenueHub]
+      ['revenueHubRoot','Revenue & Forecast',()=>!!window.VG?.revenueHub],
+      ['abHubRoot','Compras & A&B',()=>!!window.VG?.domains33],
+      ['housekeepingRoot','Housekeeping & Têxtil',()=>!!window.VG?.domains33],
+      ['receitasDetalheRoot','Receita Detalhada',()=>!!window.VG?.domains33]
     ];
     for(const [id,label,ok] of checks){
       const root=document.getElementById(id);if(!root||ok())continue;
