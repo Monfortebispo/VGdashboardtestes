@@ -11,6 +11,7 @@ assert(html.includes('nav-cityledger')&&html.includes('cityLedgerRoot')&&html.in
 assert(html.includes('nav-unitEconomics')&&html.includes('unitEconomicsRoot')&&html.includes('unit-economics-v32.js')&&html.includes('unit-economics-v32.css'),'Unit Economics deve estar integrado no HTML');
 for(const x of ['ops-cityledger-snapshots','ops-cityledger-chunk','ops-cityledger-chunk-save','ops-cityledger-snapshot-save','ops-cityledger-diligences','ops-cityledger-diligence-save'])assert(backend.includes(x),`endpoint ${x} deve existir`);
 assert(backend.includes('CITYLEDGER_SNAPSHOT_PREFIX')&&backend.includes('CITYLEDGER_DATA_PREFIX')&&backend.includes('CITYLEDGER_DILIGENCE_PREFIX'),'Blobs de snapshot, dados e diligências devem ser separados');
+assert(backend.includes('String(b.snapshotDate||\"\").localeCompare(String(a.snapshotDate||\"\"))||String(b.createdAt||\"\").localeCompare(String(a.createdAt||\"\"))'),'snapshots da mesma data devem privilegiar o carregamento mais recente');
 assert(backend.includes('resource.startsWith("ops-cityledger")'),'acesso genérico a Blobs City Ledger deve ser bloqueado');
 assert(backend.includes('createdAt:new Date().toISOString()')||backend.includes('createdAt: new Date().toISOString()'),'data/hora da diligência deve ser carimbada no servidor');
 assert(backend.includes('createdBy:authUser.user')||backend.includes('createdBy: authUser.user'),'autor da diligência deve ser derivado da sessão no servidor');

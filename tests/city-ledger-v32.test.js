@@ -17,6 +17,13 @@ s.window.vgAuthCurrent=()=>({user:'dir',name:'Direção',role:'direcao',hotel:'*
 load(rel,s);
 const api=s.window.VG.cityLedger;
 assert(api&&api.version===32,'API City Ledger V32 deve existir');
+
+const source=fs.readFileSync(path.join(ROOT,rel),'utf8');
+assert(source.includes("filterCreditStatus:''"),'City Ledger deve manter estado do filtro por situação de crédito');
+assert(source.includes('clFilterCreditStatus'),'UI deve incluir filtro por situação de crédito');
+assert(source.includes("state.filterCreditStatus==='__EMPTY__'"),'filtro deve permitir documentos sem situação de crédito');
+assert(source.includes('setTimeout(renderBody,90)'),'pesquisa deve atualizar apenas o corpo, sem recriar o campo de pesquisa');
+assert(source.includes('buildSummary(filteredRows()'),'resumo/hotéis devem respeitar os filtros ativos');
 const H=['DATA_REGISTO','HOTEL','ID_HOTEL','DATA_DOCUMENTO','TIPO_DOCUMENTO','NUM_DOCUMENTO','NUM_DOCUMENTO_CONTABILIDADE','ENTIDADE','EMAIL_ENTIDADE','EMAIL_ENT_FINANCEIRO','MOEDA','PAIS_ENTIDADE','VALOR_DOCUMENTO','VALOR_PAGO','SALDO','VOUCHER','AGING_BANDA','AGING_DIAS','SITUACAO_CREDITO','PLAFOND_EUROS','COD_ENTIDADE'];
 const row=(hotel,date,doc,entity,saldo,valor=saldo,pago=0,moeda='EURO')=>['15/08/2026',hotel,'1',date,'FT',doc,doc,entity,'a@b.pt','fin@b.pt',moeda,'PT',valor,pago,saldo,'V1','','','APROVADO',50000,'C1'];
 const aoa=[['título'],H,

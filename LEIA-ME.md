@@ -190,3 +190,9 @@ A V32 acrescenta dois módulos ao menu principal:
 O City Ledger ignora automaticamente linhas de empresas/entidades que aparecem na coluna HOTEL mas não fazem parte da lista oficial de hotéis da VG Operations. A coluna ENTIDADE não é usada para excluir devedores.
 
 As diligências de cobrança não são escritas no Excel. Ficam na VG Operations e sobrevivem a importações futuras do City Ledger.
+
+## HOTFIX CITY LEDGER — 2026-08-16
+- Filtro por Situação de Crédito.
+- Pesquisa sem perda de foco durante a escrita.
+- Filtros refletidos nos KPIs/resumos.
+- Importação mantém snapshots anteriores e diligências; o ficheiro mais recente da mesma data assume a vista atual.

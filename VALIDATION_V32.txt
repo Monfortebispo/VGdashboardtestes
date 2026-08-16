@@ -34,3 +34,12 @@ Validação técnica final:
 - Ficha do Hotel preservada byte-a-byte.
 - service worker atualizado para vg-operations-shell-v32.
 - backend alterado para City Ledger server-side.
+
+HOTFIX CITY LEDGER — 2026-08-16
+- Adicionado filtro dinâmico por SITUACAO_CREDITO, incluindo opção "Sem situação".
+- Pesquisa City Ledger estabilizada: a escrita atualiza apenas o corpo dos resultados e deixa de recriar/perder foco do campo.
+- Pesquisa passa também a considerar código de cliente e situação de crédito.
+- Resumo/KPIs e visão por hotel passam a respeitar os filtros ativos.
+- Snapshots com a mesma DATA_REGISTO são ordenados pelo createdAt: o carregamento mais recente fica ativo e o anterior permanece no histórico.
+- Novo ficheiro cria snapshot independente; não acumula saldos com o anterior e não elimina diligências.
+- Regressão integral: 42/42 suites aprovadas.
