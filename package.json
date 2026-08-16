@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "32.0.0",
+  "version": "32.3.0",
   "private": true,
-  "description": "VG Operations v32: City Ledger & Cobranças e Eficiência & Unit Economics, mantendo mercados PT+ES/Brasil isolados",
+  "description": "VG Operations v32.3: City Ledger com preparação de cobrança por email, extrato PDF e diligência auditada por utilizador",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

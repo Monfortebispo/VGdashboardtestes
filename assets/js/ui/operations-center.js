@@ -161,7 +161,7 @@
       if(kinds.length>1){
         p.kind='mixed';
         p.title='Prioridade combinada — '+kinds.map(k=>k==='revenue'?'Revenue':k==='data'?'Dados':k==='anomaly'?'Anomalias':'Operação').join(' + ');
-        p.action='Tratar os desvios em conjunto e validar a causa na Ficha do Hotel e no módulo especializado.';
+        p.action='Tratar os desvios em conjunto e validar a causa na Comentários Fecho do Mês e no módulo especializado.';
       }
       return p;
     }).sort((a,b)=>b.score-a.score).slice(0,8);
@@ -203,7 +203,7 @@
     const sev=p.severity==='red'?'red':p.kind==='revenue'?'blue':'orange';
     const type=p.kind==='data'?'Dados':p.kind==='revenue'?'Revenue':p.kind==='anomaly'?'Anomalia':p.kind==='mixed'?'Decisão integrada':'Operação';
     const details=(p.reasons||[]).slice(0,3).join(' · ');
-    const actionLabel=p.kind==='revenue'?'Abrir Revenue Intelligence':p.kind==='anomaly'?'Abrir Anomalias':'Abrir Ficha do Hotel';
+    const actionLabel=p.kind==='revenue'?'Abrir Revenue Intelligence':p.kind==='anomaly'?'Abrir Anomalias':'Abrir Comentários Fecho do Mês';
     const action=p.kind==='revenue'?`opsGoTo('revenueint')`:p.kind==='anomaly'?`opsGoTo('anomalies')`:`opsOpenHotel(${JSON.stringify(p.hotel)})`;
     const a=p.actionRecord;
     const sm=a&&window.VG?.actions?.statusMeta?window.VG.actions.statusMeta(a.status):null;
@@ -296,7 +296,7 @@
       try{
         if(typeof hsEnsureSelectors==='function') hsEnsureSelectors();
         const el=document.getElementById('hsHotel'); if(el){ el.value=hotel; if(typeof hsRender==='function') hsRender(); }
-      }catch(e){ console.warn('Abrir Ficha do Hotel',e); }
+      }catch(e){ console.warn('Abrir Comentários Fecho do Mês',e); }
     },30);
   };
 

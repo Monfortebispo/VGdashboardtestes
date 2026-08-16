@@ -29,6 +29,7 @@ const SCENARIO_PREFIX = "ops-scenario/";
 const CITYLEDGER_SNAPSHOT_PREFIX = "ops-cityledger-snapshot/";
 const CITYLEDGER_DATA_PREFIX = "ops-cityledger-data/";
 const CITYLEDGER_DILIGENCE_PREFIX = "ops-cityledger-diligence/";
+const CITYLEDGER_EMAIL_TEMPLATES_KEY = "ops-cityledger-email-templates";
 const DOCUMENT_MAX_BYTES = 3.5 * 1024 * 1024;
 const DATA_IMPORT_PREFIX = "_data-import/";
 const DATA_BACKUP_PREFIX = "_data-backup/";
@@ -49,6 +50,12 @@ const DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx", "csv",
 const CITYLEDGER_METHODS = new Set(["phone","email","meeting","other"]);
 const CITYLEDGER_RESULTS = new Set(["answered","no_answer","promise","sent","dispute","other"]);
 const CITYLEDGER_STATUSES = new Set(["to_contact","contacted","promise","regularizing","dispute","legal","regularized"]);
+const CITYLEDGER_EMAIL_TEMPLATE_IDS = new Set(["first","reminder","urgent"]);
+const CITYLEDGER_DEFAULT_EMAIL_TEMPLATES = [
+  {id:"first",name:"1.º Contacto",subject:"Vila Galé — Documentos pendentes | {{ENTIDADE}}",body:"Exmos. Senhores,\n\nNa sequência da conferência da nossa conta corrente, verificamos que se encontram pendentes os documentos constantes do extrato em anexo, com um saldo em aberto de {{SALDO}}.\n\nAgradecemos a vossa verificação e, caso os documentos já tenham sido regularizados, o envio do respetivo comprovativo. Em alternativa, agradecemos indicação da data prevista para pagamento.\n\nCom os melhores cumprimentos,"},
+  {id:"reminder",name:"2.º Contacto",subject:"Vila Galé — Reforço de cobrança | {{ENTIDADE}}",body:"Exmos. Senhores,\n\nVoltamos ao vosso contacto relativamente aos documentos pendentes identificados no extrato em anexo, cujo saldo em aberto é de {{SALDO}}.\n\nAté ao momento não identificámos a respetiva regularização. Solicitamos, por favor, informação quanto à data prevista para pagamento ou, caso o pagamento já tenha sido efetuado, o envio do comprovativo.\n\nAgradecemos a vossa atenção para este assunto.\n\nCom os melhores cumprimentos,"},
+  {id:"urgent",name:"Cobrança Urgente",subject:"Vila Galé — Regularização urgente de saldo | {{ENTIDADE}}",body:"Exmos. Senhores,\n\nMantêm-se por regularizar os documentos constantes do extrato em anexo, correspondentes a um saldo em aberto de {{SALDO}}.\n\nSolicitamos a regularização com a maior brevidade ou, em alternativa, uma indicação objetiva da data de pagamento. Caso exista alguma divergência documental, agradecemos que a mesma seja identificada de imediato para análise.\n\nSe o pagamento já tiver sido efetuado, agradecemos o envio do respetivo comprovativo.\n\nCom os melhores cumprimentos,"}
+];
 
 const HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -113,6 +120,7 @@ function citySafeId(v){ return String(v||"").normalize("NFD").replace(/[\u0300-\
 function citySnapshotBlobKey(market,id){ return marketStoreKey(market,CITYLEDGER_SNAPSHOT_PREFIX+citySafeId(id)); }
 function cityChunkBlobKey(market,snapshot,hotel,part){ return marketStoreKey(market,CITYLEDGER_DATA_PREFIX+citySafeId(snapshot)+"/"+citySafeId(hotel)+"/"+String(Number(part)||0).padStart(4,"0")); }
 function cityDiligenceBlobKey(market,id){ return marketStoreKey(market,CITYLEDGER_DILIGENCE_PREFIX+citySafeId(id)); }
+function cityEmailTemplatesBlobKey(market){ return marketStoreKey(market,CITYLEDGER_EMAIL_TEMPLATES_KEY); }
 async function listCityLedgerSnapshots(store,market,user){
   const prefix=marketStoreKey(market,CITYLEDGER_SNAPSHOT_PREFIX),listing=await store.list({prefix}),blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
   const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(Boolean).sort((a,b)=>String(b.snapshotDate||"").localeCompare(String(a.snapshotDate||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
@@ -174,21 +182,21 @@ async function documentLinkLabel(store, linkType, linkId, hotel, market="iberia"
   if (linkType === "action") {
     const a = await store.get(actionBlobKey(linkId), { type:"json" });
     if (!a) throw new Error("Ação associada não encontrada.");
-    if (itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
+    if (itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outra geografia.");
     if (norm(a.hotel)!==norm(hotel)) throw new Error("A ação associada pertence a outro hotel.");
     return cleanText(a.sourceTitle||a.title||linkId,240);
   }
   if (linkType === "agenda") {
     const e = await store.get(agendaBlobKey(linkId), { type:"json" });
     if (!e) throw new Error("Evento associado não encontrado.");
-    if (itemMarket(e)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
+    if (itemMarket(e)!==marketId(market)) throw new Error("A referência associada pertence a outra geografia.");
     if (norm(e.hotel)!==norm(hotel)) throw new Error("O evento associado pertence a outro hotel.");
     return cleanText([e.title,e.date].filter(Boolean).join(" · "),240);
   }
   if (linkType === "approval") {
     const a = await store.get(approvalBlobKey(linkId), { type:"json" });
     if (!a) throw new Error("Pedido de aprovação associado não encontrado.");
-    if (itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
+    if (itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outra geografia.");
     if (norm(a.hotel)!==norm(hotel)) throw new Error("O pedido de aprovação associado pertence a outro hotel.");
     return cleanText([a.title,a.status].filter(Boolean).join(" · "),240);
   }
@@ -230,21 +238,21 @@ async function approvalLinkLabel(store, linkType, linkId, hotel, market="iberia"
   if (linkType === "action") {
     const a=await store.get(actionBlobKey(linkId),{type:"json"});
     if(!a) throw new Error("Ação associada não encontrada.");
-    if(itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
+    if(itemMarket(a)!==marketId(market)) throw new Error("A referência associada pertence a outra geografia.");
     if(norm(a.hotel)!==norm(hotel)) throw new Error("A ação associada pertence a outro hotel.");
     return cleanText(a.sourceTitle||a.title||linkId,240);
   }
   if (linkType === "agenda") {
     const e=await store.get(agendaBlobKey(linkId),{type:"json"});
     if(!e) throw new Error("Evento associado não encontrado.");
-    if(itemMarket(e)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
+    if(itemMarket(e)!==marketId(market)) throw new Error("A referência associada pertence a outra geografia.");
     if(norm(e.hotel)!==norm(hotel)) throw new Error("O evento associado pertence a outro hotel.");
     return cleanText([e.title,e.date].filter(Boolean).join(" · "),240);
   }
   if (linkType === "document") {
     const d=await store.get(documentMetaBlobKey(linkId),{type:"json"});
     if(!d) throw new Error("Documento associado não encontrado.");
-    if(itemMarket(d)!==marketId(market)) throw new Error("A referência associada pertence a outro mercado.");
+    if(itemMarket(d)!==marketId(market)) throw new Error("A referência associada pertence a outra geografia.");
     if(norm(d.hotel)!==norm(hotel)) throw new Error("O documento associado pertence a outro hotel.");
     return cleanText(d.title||d.fileName||linkId,240);
   }
@@ -326,20 +334,20 @@ function isRecoverableBusinessKey(key) {
   let k = String(key || "");
   if (k.startsWith("market/brasil/")) k = k.slice("market/brasil/".length);
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
-  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/"].some(p => k.startsWith(p));
+  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/","ops-cityledger-email-templates"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
   let k=String(key||""); if(k.startsWith("market/brasil/")) k=k.slice("market/brasil/".length);
   if (k === "index" || k === "meta") return "Índice / Metadados";
   if (k === "notas") return "Notas";
   if (k === "targets-rules" || k.startsWith("settings-")) return "Configuração";
-  if (k.startsWith("hotelsheet-")) return "Ficha do Hotel";
+  if (k.startsWith("hotelsheet-")) return "Comentários Fecho do Mês";
   if (k.startsWith("ops-action/")) return "Ações";
   if (k.startsWith("ops-agenda/")) return "Agenda";
   if (k.startsWith("ops-doc-meta/") || k.startsWith("ops-doc-data/")) return "Documentos";
   if (k.startsWith("ops-approval/")) return "Aprovações";
   if (k.startsWith("ops-scenario/")) return "Cenários";
-  if (k.startsWith("ops-cityledger-snapshot/") || k.startsWith("ops-cityledger-data/") || k.startsWith("ops-cityledger-diligence/")) return "City Ledger";
+  if (k.startsWith("ops-cityledger-snapshot/") || k.startsWith("ops-cityledger-data/") || k.startsWith("ops-cityledger-diligence/") || k.startsWith("ops-cityledger-email-templates")) return "City Ledger";
   if (k.startsWith("mesacum-")) return "P&L acumulado";
   if (k.startsWith("mes-")) return "P&L mensal";
   if (k.startsWith("hotelxlsx-")) return "Fichas técnicas";
@@ -533,7 +541,7 @@ function auditedGeneric(resource) { return ["settings","targets-rules","hotelshe
 function genericAuditDescriptor(resource, key) {
   if (resource === "settings") return { category:"Configuração", action:key === "regions" ? "Regiões atualizadas" : "Configuração atualizada", severity:"warning" };
   if (resource === "targets-rules") return { category:"Metas & Regras", action:"Metas e regras atualizadas", severity:"warning" };
-  if (resource === "hotelsheet") return { category:"Ficha do Hotel", action:"Ficha do Hotel atualizada", severity:"info", hotel:key };
+  if (resource === "hotelsheet") return { category:"Comentários Fecho do Mês", action:"Comentários Fecho do Mês atualizada", severity:"info", hotel:key };
   if (resource === "notas") return { category:"Dados", action:"Notas partilhadas atualizadas", severity:"info" };
   if (resource === "index") return { category:"Dados", action:"Publicação partilhada concluída", severity:"info" };
   return { category:"Sistema", action:"Dados atualizados", severity:"info" };
@@ -780,7 +788,7 @@ exports.handler = async (event) => {
     // Blobs internos nunca são endereçáveis pela API genérica, mesmo por utilizadores autenticados.
     if (resource.startsWith("_")) return forbidden();
     // V31: utilizadores de hotel não podem mudar o parâmetro market para consultar outro universo.
-    if (!isDirection(authUser) && !isGlobalResource(resource) && market !== userMarketServer(authUser)) return forbidden("O seu perfil não tem acesso a este mercado.");
+    if (!isDirection(authUser) && !isGlobalResource(resource) && market !== userMarketServer(authUser)) return forbidden("O seu perfil não tem acesso a esta geografia.");
 
     // -------------------- AUDITORIA & GOVERNAÇÃO (v16) --------------------
     if (resource === "audit-events" && event.httpMethod === "GET") {
@@ -836,7 +844,7 @@ exports.handler = async (event) => {
       const id = cleanText(key, 100).replace(/[^a-zA-Z0-9_.-]/g, "");
       if (!id) return badRequest("Identificador do carregamento em falta.");
       const record = await store.get(dataImportBlobKey(id), { type: "json" });
-      if (!record || itemMarket(record)!==market) return response(404, { error: "Snapshot anterior não encontrado neste mercado." });
+      if (!record || itemMarket(record)!==market) return response(404, { error: "Snapshot anterior não encontrado nesta geografia." });
       const backup = await store.get(dataBackupBlobKey(id), { type: "json" });
       if (!backup) return response(404, { error: "Snapshot anterior não encontrado." });
       return ok({ data: backup });
@@ -1241,7 +1249,7 @@ exports.handler = async (event) => {
       const snapshot=cleanText(params.snapshot,120),hotel=cleanText(params.hotel,160),part=Number(params.part||0);
       if(!snapshot||!hotel||!Number.isInteger(part)||part<0)return badRequest("Referência de City Ledger inválida.");
       if(!canManageHotel(authUser,hotel))return forbidden();
-      if(hotelMarketServer(hotel)!==market)return forbidden("O hotel pertence a outro mercado.");
+      if(hotelMarketServer(hotel)!==market)return forbidden("O hotel pertence a outra geografia.");
       const data=await store.get(cityChunkBlobKey(market,snapshot,hotel,part),{type:"json"});
       return ok({data:Array.isArray(data)?data:[]});
     }
@@ -1250,8 +1258,8 @@ exports.handler = async (event) => {
       if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("O bloco do City Ledger excede o limite do endpoint.");
       const input=parseBody(event)||{},snapshot=cleanText(input.snapshotId,120),hotel=cleanText(input.hotel,160),part=Number(input.part||0),rows=input.rows;
       if(!snapshot||!hotel||!Number.isInteger(part)||part<0||!Array.isArray(rows)||rows.length>1200)return badRequest("Bloco de City Ledger inválido.");
-      if(hotelMarketServer(hotel)!==market)return badRequest("O hotel do bloco pertence a outro mercado.");
-      if(rows.some(r=>norm(r?.hotel)!==norm(hotel)||marketId(r?.market||market)!==market))return badRequest("O bloco mistura hotéis ou mercados.");
+      if(hotelMarketServer(hotel)!==market)return badRequest("O hotel do bloco pertence a outra geografia.");
+      if(rows.some(r=>norm(r?.hotel)!==norm(hotel)||marketId(r?.market||market)!==market))return badRequest("O bloco mistura hotéis ou geografias.");
       await store.setJSON(cityChunkBlobKey(market,snapshot,hotel,part),rows);
       return ok({ok:true,rows:rows.length});
     }
@@ -1260,11 +1268,27 @@ exports.handler = async (event) => {
       if(bodySizeOf(event)>512*1024)return tooLarge("O resumo do City Ledger excede o tamanho permitido.");
       const input=parseBody(event)||{},id=cleanText(input.id,120),snapshotDate=cleanText(input.snapshotDate,20),hotels=Array.isArray(input.hotels)?input.hotels.map(x=>cleanText(x,160)).filter(Boolean):[];
       if(!id||!/^[A-Za-z0-9_.-]+$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate)||!hotels.length)return badRequest("Snapshot do City Ledger inválido.");
-      if(hotels.some(h=>hotelMarketServer(h)!==market))return badRequest("O snapshot contém hotéis de outro mercado.");
+      if(hotels.some(h=>hotelMarketServer(h)!==market))return badRequest("O snapshot contém hotéis de outra geografia.");
       const partsByHotel={};for(const h of hotels)partsByHotel[h]=Math.max(0,Math.min(100,Number(input.partsByHotel?.[h]||0)));
       const item={id,market,snapshotDate,fileName:cleanText(input.fileName,300),fileSize:Number(input.fileSize||0)||0,hotels,partsByHotel,summary:input.summary&&typeof input.summary==="object"?input.summary:{},ignoredRows:Number(input.ignoredRows||0)||0,createdAt:new Date().toISOString(),createdBy:authUser.user,createdByName:authUser.name};
       await store.setJSON(citySnapshotBlobKey(market,id),item);
       await safeGovernanceAudit(store,authUser,{category:"City Ledger",action:"City Ledger publicado",resource:"ops-cityledger",key:id,detail:`${snapshotDate} · ${hotels.length} hotéis · ${Number(item.summary?.documents||0)} documentos · ${item.ignoredRows} linhas não-hotel ignoradas`,severity:"info",meta:{market,hotels:hotels.length,documents:Number(item.summary?.documents||0),debt:Number(item.summary?.debt||0)}});
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-cityledger-email-templates" && event.httpMethod === "GET") {
+      const stored=await store.get(cityEmailTemplatesBlobKey(market),{type:"json"});
+      return ok({data:stored&&Array.isArray(stored.templates)?stored:{market,templates:CITYLEDGER_DEFAULT_EMAIL_TEMPLATES,updatedAt:"",updatedBy:"",updatedByName:""}});
+    }
+    if (resource === "ops-cityledger-email-templates" && event.httpMethod === "POST") {
+      if(!isDirection(authUser))return forbidden("Apenas a Direção pode alterar os templates de cobrança.");
+      if(bodySizeOf(event)>96*1024)return tooLarge("Os templates de email excedem o tamanho permitido.");
+      const input=parseBody(event)||{},raw=Array.isArray(input.templates)?input.templates:[];
+      if(raw.length!==3)return badRequest("Devem existir exatamente 3 templates de cobrança.");
+      const templates=raw.map(t=>({id:cleanText(t.id,30),name:cleanText(t.name,80),subject:cleanText(t.subject,250),body:cleanText(t.body,6000)}));
+      if(templates.some(t=>!CITYLEDGER_EMAIL_TEMPLATE_IDS.has(t.id)||!t.name||!t.subject||!t.body)||new Set(templates.map(t=>t.id)).size!==3)return badRequest("Templates de cobrança inválidos.");
+      const item={market,templates,updatedAt:new Date().toISOString(),updatedBy:authUser.user,updatedByName:authUser.name};
+      await store.setJSON(cityEmailTemplatesBlobKey(market),item);
+      await safeGovernanceAudit(store,authUser,{category:"City Ledger",action:"Templates de cobrança atualizados",resource:"ops-cityledger-email-templates",key:market,detail:templates.map(t=>t.name).join(" · "),severity:"info",meta:{market,templateCount:templates.length}});
       return ok({ok:true,data:item});
     }
     if (resource === "ops-cityledger-diligences" && event.httpMethod === "GET") {
@@ -1274,19 +1298,19 @@ exports.handler = async (event) => {
       if(bodySizeOf(event)>128*1024)return tooLarge("A diligência excede o tamanho permitido.");
       const input=parseBody(event)||{},hotel=cleanText(input.hotel,160);
       if(!hotel||!canManageHotel(authUser,hotel))return forbidden();
-      if(hotelMarketServer(hotel)!==market)return forbidden("O hotel pertence a outro mercado.");
+      if(hotelMarketServer(hotel)!==market)return forbidden("O hotel pertence a outra geografia.");
       const method=cleanText(input.method,20),result=cleanText(input.result,20),status=cleanText(input.status,30);
       if(!CITYLEDGER_METHODS.has(method)||!CITYLEDGER_RESULTS.has(result)||!CITYLEDGER_STATUSES.has(status))return badRequest("Tipo/estado de diligência inválido.");
       const invoiceKeys=Array.isArray(input.invoiceKeys)?input.invoiceKeys.map(x=>cleanText(x,500)).filter(Boolean).slice(0,100):[];
       if(!invoiceKeys.length)return badRequest("A diligência deve estar associada a pelo menos uma fatura.");
       const promisedDate=cleanText(input.promisedDate,20),nextContactDate=cleanText(input.nextContactDate,20);if(!validDateOnly(promisedDate)||!validDateOnly(nextContactDate))return badRequest("Data de diligência/promessa inválida.");
       const detail=cleanText(input.detail,1800),answer=cleanText(input.response,1800);if(!detail)return badRequest("Descreva a diligência realizada.");
-      const id=`dil-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`,item={id,market,hotel,clientKey:cleanText(input.clientKey,500),clientName:cleanText(input.clientName,300),clientCode:cleanText(input.clientCode,120),invoiceKeys,method,result,contactName:cleanText(input.contactName,200),contactDetail:cleanText(input.contactDetail,300),detail,response:answer,status,promisedAmount:Math.max(0,Number(input.promisedAmount||0)||0),promisedDate,nextContactDate,currency:cleanText(input.currency,20),createdAt:new Date().toISOString(),createdBy:authUser.user,createdByName:authUser.name};
+      const id=`dil-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`,item={id,market,hotel,clientKey:cleanText(input.clientKey,500),clientName:cleanText(input.clientName,300),clientCode:cleanText(input.clientCode,120),invoiceKeys,method,result,contactName:cleanText(input.contactName,200),contactDetail:cleanText(input.contactDetail,300),detail,response:answer,status,promisedAmount:Math.max(0,Number(input.promisedAmount||0)||0),promisedDate,nextContactDate,currency:cleanText(input.currency,20),emailBatchId:cleanText(input.emailBatchId,120),emailTemplateId:cleanText(input.emailTemplateId,40),emailTemplateName:cleanText(input.emailTemplateName,100),emailSubject:cleanText(input.emailSubject,250),emailBody:cleanText(input.emailBody,6000),emailTo:cleanText(input.emailTo,1000),emailCc:cleanText(input.emailCc,1000),emailScope:cleanText(input.emailScope,30),statementFileName:cleanText(input.statementFileName,300),snapshotId:cleanText(input.snapshotId,160),balanceAtContact:Number(input.balanceAtContact||0)||0,createdAt:new Date().toISOString(),createdBy:authUser.user,createdByName:authUser.name,createdByRole:authUser.role};
       await store.setJSON(cityDiligenceBlobKey(market,id),item);
       await safeGovernanceAudit(store,authUser,{category:"City Ledger",action:"Diligência de cobrança registada",resource:"ops-cityledger-diligence",key:id,hotel,detail:[item.clientName,method,result,promisedDate?`promessa ${promisedDate}`:""].filter(Boolean).join(" · "),severity:status==="legal"||status==="dispute"?"warning":"info",meta:{market,invoiceCount:invoiceKeys.length,status,method,result,promisedAmount:item.promisedAmount,promisedDate}});
       return ok({ok:true,data:item});
     }
-    if (["ops-cityledger-snapshots","ops-cityledger-chunk","ops-cityledger-chunk-save","ops-cityledger-snapshot-save","ops-cityledger-diligences","ops-cityledger-diligence-save"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (["ops-cityledger-snapshots","ops-cityledger-chunk","ops-cityledger-chunk-save","ops-cityledger-snapshot-save","ops-cityledger-diligences","ops-cityledger-diligence-save","ops-cityledger-email-templates"].includes(resource)) return response(405,{error:"Método não permitido."});
     if (resource.startsWith("ops-cityledger")) return forbidden("O City Ledger só pode ser acedido pelos endpoints próprios.");
 
     if (resource === "ops-scenarios" && event.httpMethod === "GET") {

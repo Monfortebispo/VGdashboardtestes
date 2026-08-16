@@ -58,7 +58,7 @@
     const r=raw(),y=year(),k=window.VG?.kpi;if(!r)return;
     for(const h of hotels()){
       add(arr,{type:'performance',title:`Performance · ${h}`,subtitle:'Situação executiva, riscos, forecast e ações',hotel:h,keywords:'performance hotel situacao executivo risco oportunidade'});
-      add(arr,{type:'hotel',title:h,subtitle:'Abrir Ficha do Hotel',hotel:h,keywords:'unidade hotel ficha performance'});
+      add(arr,{type:'hotel',title:h,subtitle:'Abrir Comentários Fecho do Mês',hotel:h,keywords:'unidade hotel ficha performance'});
       const op=r.hotels_ops?.[h]||{};
       const revenue=Number(op['Receita Total']?.[y]);
       const rows=[

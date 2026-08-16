@@ -12,7 +12,7 @@ for(const f of [marketRel,'netlify/functions/dashboard-sessao.js','service-worke
 assert(html.includes('assets/css/markets-v31.css')&&html.includes('assets/js/core/07-markets-v31.js'),'V31 deve ligar CSS e runtime de mercados');
 assert(sw.includes("vg-operations-shell-v32")&&sw.includes('/assets/css/markets-v31.css')&&sw.includes('/assets/js/core/07-markets-v31.js'),'PWA deve pré-cachear shell V31');
 assert(backend.includes('marketStoreKey')&&backend.includes('market/brasil/')&&backend.includes('userMarketServer'),'backend deve isolar blobs e acesso por mercado');
-assert(backend.includes('O seu perfil não tem acesso a este mercado'),'backend deve bloquear utilizador de hotel que tente trocar market manualmente');
+assert(backend.includes('O seu perfil não tem acesso a esta geografia'),'backend deve bloquear utilizador de hotel que tente trocar geografia manualmente');
 assert(backend.includes('itemMarket(x)===marketId(market)'),'listas operacionais devem ser filtradas por mercado');
 
 const s=createSandbox();s.document.readyState='loading';load(marketRel,s);const api=s.window.VG.market;

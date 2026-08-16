@@ -40,7 +40,8 @@
       <div class="vg-mobile-group-title">Decidir e agir</div>
       <div class="vg-mobile-grid">
         <button class="vg-mobile-link primary" data-view="hotel360" type="button"><i>🏨</i><span>Hotel 360º<small>Visão integrada da unidade</small></span></button>
-        <button class="vg-mobile-link primary" data-view="fichahotel" type="button"><i>📋</i><span>Ficha do Hotel<small>KPIs e comentários</small></span></button>
+        <button class="vg-mobile-link primary" data-view="hoteis" type="button"><i>🏨</i><span>Hotéis<small>Características e fichas técnicas</small></span></button>
+        <button class="vg-mobile-link primary" data-view="fichahotel" type="button"><i>📝</i><span>Comentários Fecho do Mês<small>KPIs e comentários</small></span></button>
         <button class="vg-mobile-link primary" data-view="revenuehub" type="button"><i>🔭</i><span>Revenue &amp; Forecast<small>Situação, forecast e cenários</small></span></button>
         <button class="vg-mobile-link" data-view="anomalies" type="button"><i>⚠</i><span>Anomalias<small>Desvios automáticos</small></span></button>
         <button class="vg-mobile-link" data-action="actions" type="button"><i>✓</i><span>Ações<small>Responsáveis e prazos</small></span></button>
@@ -163,7 +164,7 @@
   }
   function registerServiceWorker(){
     if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
-    window.addEventListener('load',()=>navigator.serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=32.0',{scope:'/',updateViaCache:'none'}).then(reg=>{
+    window.addEventListener('load',()=>navigator.serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=32.3',{scope:'/',updateViaCache:'none'}).then(reg=>{
       reg.update().catch(()=>{});
       if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
     }).catch(e=>console.warn('Service worker não registado',e)));

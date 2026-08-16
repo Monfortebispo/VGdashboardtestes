@@ -1,7 +1,7 @@
 // ==========================================================
 // VG OPERATIONS 2.0 / V30 — PRODUTO CONSOLIDADO
 // Simplifica navegação, cria Home por perfil e integra Hotel 360º / Revenue Hub.
-// Regra de produto: a Ficha do Hotel permanece independente e inalterada.
+// Regra de produto: os Comentários Fecho do Mês permanecem independentes; a página Hotéis volta a estar disponível.
 // ==========================================================
 (function(){
   'use strict';
@@ -12,7 +12,7 @@
   const money=v=>window.VG?.market?.formatMoneyCompact?window.VG.market.formatMoneyCompact(v,2):(()=>{const x=n(v);if(x==null)return '—';const a=Math.abs(x),s=x<0?'-':'';if(a>=1e6)return `${s}€${(a/1e6).toLocaleString('pt-PT',{maximumFractionDigits:2})}M`;if(a>=1000)return `${s}€${(a/1000).toLocaleString('pt-PT',{maximumFractionDigits:0})}K`;return `${s}€${a.toLocaleString('pt-PT',{maximumFractionDigits:0})}`;})();
   const user=()=>{try{return typeof window.vgAuthCurrent==='function'?window.vgAuthCurrent():null;}catch(e){return null;}};
   const direction=()=>{const u=user();return !!u&&['direcao','admin'].includes(u.role);};
-  const legacyHidden=['kpis','ocupacao','hotelperformance','revenueint','forecast','scenariocompare','costanalysis','cua','compare','ranking','sazonalidade','simulador','orcamento','alertas','reputacao','instagram','hoteis','analyticalassistant'];
+  const legacyHidden=['kpis','ocupacao','hotelperformance','revenueint','forecast','scenariocompare','costanalysis','cua','compare','ranking','sazonalidade','simulador','orcamento','alertas','reputacao','instagram','analyticalassistant'];
 
   function button(id,icon,label,handler){const b=document.createElement('button');b.className='sb-nav-btn';b.id='nav-'+id;b.innerHTML=`<span class="sb-nav-icon">${icon}</span> ${label}`;b.addEventListener('click',handler);return b;}
   function group(label,ids){const g=document.createElement('div');g.className='sb-nav-group v30-nav-group';g.innerHTML=`<div class="sb-nav-group-label">${label}</div>`;for(const id of ids){const el=document.getElementById('nav-'+id);if(el){el.style.display='';g.appendChild(el);}}return g;}
@@ -28,7 +28,7 @@
     const preservedButtons=Array.from(nav.querySelectorAll('.sb-nav-btn'));
     preservedButtons.forEach(el=>nav.appendChild(el));
     nav.querySelectorAll('.sb-nav-group').forEach(g=>g.remove());
-    nav.appendChild(group('Início & Hotéis',['resumo','fichahotel']));
+    nav.appendChild(group('Início & Hotéis',['resumo','hoteis','fichahotel']));
     document.getElementById('nav-fichahotel')?.after(h360);
     nav.appendChild(group('Gestão',['agenda','approvals','cityledger']));document.getElementById('nav-agenda')?.before(act);
     nav.appendChild(group('Análise',['receitas','custos','pl','unitEconomics','compras','benchmark','anomalies']));document.getElementById('nav-pl')?.after(rh);

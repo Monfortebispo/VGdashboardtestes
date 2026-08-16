@@ -23,7 +23,7 @@ for(const icon of manifest.icons){const p=path.join(ROOT,icon.src.replace(/^\//,
 assert(css.includes('@media (max-width:820px)'),'CSS deve abranger telemóveis e tablets até 820px');
 assert(css.includes('#vgMobileNav')&&css.includes('#vgMobileMore'),'CSS deve definir navegação e bottom sheet');
 assert(js.includes("data-view=\"resumo\"")&&js.includes("data-view=\"hotel360\"")&&js.includes("data-action=\"actions\"")&&js.includes("data-action=\"notifications\"")&&js.includes("data-action=\"more\""),'bottom nav V30 deve conter Central, Hotel 360, Ações, Notificações e Mais');
-assert(js.includes("serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=32.0'"),'cliente deve registar service worker versionado');
+assert(js.includes("serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=32.3'"),'cliente deve registar service worker versionado');
 assert(sw.includes("url.pathname.startsWith('/.netlify/')"),'service worker deve excluir Netlify API');
 assert(sw.includes("url.pathname.startsWith('/netlify/functions/')"),'service worker deve excluir functions publicadas');
 assert(sw.includes("if (req.method!=='GET') return true"),'service worker não pode cachear writes');

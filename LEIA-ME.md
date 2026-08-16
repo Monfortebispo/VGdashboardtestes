@@ -2,17 +2,17 @@
 
 A V30 é uma consolidação de produto sobre a V29.1. O objetivo não é acrescentar páginas indiscriminadamente, mas reduzir a fragmentação da experiência mantendo as funcionalidades existentes disponíveis.
 
-## Regra imutável: Ficha do Hotel
+## Regra imutável: Comentários Fecho do Mês
 
-A **Ficha do Hotel permanece independente, com entrada própria no menu e sem alterações ao seu módulo**.
+A **Comentários Fecho do Mês permanece independente, com entrada própria no menu e sem alterações ao seu módulo**.
 
-O ficheiro `assets/js/modules/ficha-hotel.js` é byte-a-byte igual ao da V29.1. O Hotel 360º é uma nova visão executiva complementar e nunca substitui a Ficha do Hotel.
+O ficheiro `assets/js/modules/ficha-hotel.js` é byte-a-byte igual ao da V29.1. O Hotel 360º é uma nova visão executiva complementar e nunca substitui a Comentários Fecho do Mês.
 
 ## Nova navegação principal
 
 A navegação é simplificada em torno de:
 
-- Início & Hotéis — Resumo, Ficha do Hotel, Hotel 360º;
+- Início & Hotéis — Resumo, Comentários Fecho do Mês, Hotel 360º;
 - Gestão — Ações, Agenda Operacional, Aprovações;
 - Análise — Receitas, Custos, P&L USALI, Revenue & Forecast, Compras, Benchmarking, Anomalias;
 - Suporte — Documentos, Relatórios;
@@ -28,7 +28,7 @@ Nova visão executiva por unidade, com separadores:
 
 A visão executiva agrega informação já produzida pelos módulos existentes, incluindo Performance Hotel, Benchmarking, Revenue Intelligence, Ações, Reputação, Anomalias e Qualidade de Dados.
 
-Inclui sempre um acesso direto à Ficha do Hotel original.
+Inclui sempre um acesso direto à Comentários Fecho do Mês original.
 
 ## Score Operacional — V28 integrado
 
@@ -110,14 +110,14 @@ Não é necessária a eliminação manual de ficheiros da V29.1: a V30 preserva 
 
 
 ## V30.1 — Correção da navegação
-A reconstrução do menu preserva agora todos os botões antes de remover os grupos antigos. Isto corrige os grupos vazios vistos na V30. A Ficha do Hotel permanece independente e o respetivo módulo não foi alterado.
+A reconstrução do menu preserva agora todos os botões antes de remover os grupos antigos. Isto corrige os grupos vazios vistos na V30. A Comentários Fecho do Mês permanece independente e o respetivo módulo não foi alterado.
 
 
 ## V30.3 — Correções consolidadas
 - O Portefólio da Home respeita o filtro ativo de região/hotéis.
 - A Ponte do GOP apresenta contribuição económica: menos custo melhora GOP (verde), mais custo deteriora (vermelho), independentemente do sinal contabilístico da rubrica.
 - Revenue & Forecast incorpora as views originais completas, preservando os IDs usados pelos estilos e pelos renderizadores legados.
-- Ficha do Hotel e backend não foram alterados.
+- Comentários Fecho do Mês e backend não foram alterados.
 
 ## V31 — Mercados Internacionais
 
@@ -150,7 +150,7 @@ Grupos iniciais, editáveis no Setup:
 
 O runtime V31 separa automaticamente dados mistos por hotel. Isto permite que fontes comuns de Ocupação/Reputação que contenham PT/ES e Brasil alimentem os dois bancos sem misturar os universos. P&L e Compras detetam o mercado pelos hotéis presentes no ficheiro e, quando necessário, mudam o contexto antes de aplicar os dados.
 
-### Ficha do Hotel
+### Comentários Fecho do Mês
 
 O ficheiro `assets/js/modules/ficha-hotel.js` continua byte-a-byte inalterado. A moeda é adaptada externamente pelo runtime V31: EUR em PT+ES e BRL no Brasil.
 
@@ -175,10 +175,10 @@ Direção/Admin pode alternar entre os dois mercados. Diretor/Assistente fica au
 ## V31.2 — Isolamento visual entre mercados
 
 - Ao trocar de PT+ES para Brasil (ou inverso), a UI derivada do mercado anterior é limpa imediatamente.
-- Se o mercado ativo ainda não tiver P&L, o Resumo, Ficha do Hotel, Hotel 360º e restantes vistas dependentes de P&L não mostram valores antigos.
+- Se o mercado ativo ainda não tiver P&L, o Resumo, Comentários Fecho do Mês, Hotel 360º e restantes vistas dependentes de P&L não mostram valores antigos.
 - O topo passa a 0 unidades e período “—”; o painel lateral de KPIs é ocultado enquanto não houver P&L do mercado ativo.
 - A mensagem de vazio identifica explicitamente o mercado ativo e garante que o mercado anterior não está a ser usado na análise.
-- A Ficha do Hotel continua byte-a-byte inalterada; a limpeza é feita externamente pelo runtime de mercados.
+- A Comentários Fecho do Mês continua byte-a-byte inalterada; a limpeza é feita externamente pelo runtime de mercados.
 
 ## Novidades V32
 
@@ -196,3 +196,25 @@ As diligências de cobrança não são escritas no Excel. Ficam na VG Operations
 - Pesquisa sem perda de foco durante a escrita.
 - Filtros refletidos nos KPIs/resumos.
 - Importação mantém snapshots anteriores e diligências; o ficheiro mais recente da mesma data assume a vista atual.
+
+
+## V32.2 — Hotéis e uniformização visual
+- Recuperada a página **Hotéis**, com características e fichas técnicas por unidade. O módulo já existia; tinha ficado oculto pela simplificação da navegação.
+- A página Hotéis respeita a **Geografia** ativa (PT + ES / Brasil) e não mistura carteiras.
+- A designação visível **Ficha do Hotel** passa a **Comentários Fecho do Mês**. A rota interna `fichahotel` e o ficheiro `assets/js/modules/ficha-hotel.js` mantêm-se por compatibilidade; a lógica funcional foi preservada.
+- Removida a barra flutuante horizontal de atalhos. O comando rápido `Ctrl/Cmd + K` continua disponível.
+- Reforçado o contraste de Notificações e Pesquisa na barra superior.
+- Compras & Artigos passa a usar a mesma linguagem visual, cartões, tipografia, estados e paleta global da aplicação.
+
+
+## V32.3 — Cobrança por email no City Ledger
+
+- preparação de email sem integração Microsoft/Outlook;
+- 3 templates partilhados e configuráveis por Geografia (edição reservada à Direção);
+- texto, destinatário, CC e assunto editáveis antes do envio;
+- âmbito por hotel ou todos os hotéis acessíveis ao perfil;
+- extrato PDF automático da entidade, com secções por hotel e totais por moeda;
+- `mailto:` para abrir o cliente de email e download automático do PDF para anexação manual;
+- botão **Registar como enviado**, criando diligência por hotel;
+- autor, nome e perfil são derivados da sessão autenticada no servidor, nunca do browser;
+- histórico conserva template, assunto, destinatários, ficheiro do extrato, snapshot e saldo à data da diligência.

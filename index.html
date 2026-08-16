@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VG Operations 2.0 · v31.2 · 2026-08-15 -->
+<!-- VG Operations 2.0 · v32.3 · 2026-08-16 -->
 
 <html lang="pt">
 <head>
@@ -214,7 +214,7 @@
 <button class="sb-nav-btn active" id="nav-resumo" onclick="setView('resumo')"> <span class="sb-nav-icon">⬛</span> Resumo</button>
 <button class="sb-nav-btn" id="nav-kpis" onclick="setView('kpis')"> <span class="sb-nav-icon">🎯</span> KPIs</button>
 <button class="sb-nav-btn" id="nav-ocupacao" onclick="setView('ocupacao')"><span class="sb-nav-icon">🛏</span> Ocupação</button>
-<button class="sb-nav-btn" id="nav-fichahotel" onclick="setView('fichahotel')"><span class="sb-nav-icon">📋</span> Ficha do Hotel</button>
+<button class="sb-nav-btn" id="nav-fichahotel" onclick="setView('fichahotel')"><span class="sb-nav-icon">📝</span> Comentários Fecho do Mês</button>
 <button class="sb-nav-btn" id="nav-hotelperformance" onclick="setView('hotelperformance')"><span class="sb-nav-icon">🏨</span> Performance Hotel</button>
 <button class="sb-nav-btn" id="nav-automaticreports" onclick="setView('automaticreports')"><span class="sb-nav-icon">📄</span> Relatórios Automáticos</button>
 <button class="sb-nav-btn" id="nav-analyticalassistant" onclick="analyticalAssistantOpen()" style="background:rgba(201,168,76,.12);color:var(--gold);border-left:2px solid var(--gold)"><span class="sb-nav-icon">✦</span> Assistente Analítico</button>
@@ -494,7 +494,7 @@
     </div>
     <div class="ops-head-actions">
       <button class="ops-btn" onclick="opsGoTo('alertas')">Alertas detalhados</button>
-      <button class="ops-btn" onclick="opsGoTo('fichahotel')">Ficha do Hotel</button>
+      <button class="ops-btn" onclick="opsGoTo('fichahotel')">Comentários Fecho do Mês</button>
       <button class="ops-btn" onclick="opsActionsOpen()">Ações</button>
       <button class="ops-btn primary" onclick="opsGoTo('revenueint')">Revenue Intelligence</button>
     </div>
@@ -727,7 +727,7 @@
 </div>
 <!-- REPUTAÇÃO -->
 <div class="tab-content" id="view-fichahotel">
-<div class="section-title">📋 Ficha do Hotel — análise mensal e comentários</div>
+<div class="section-title">📝 Comentários Fecho do Mês — análise mensal e comentários</div>
 <div class="hotel-sheet-toolbar">
 <div class="hs-field"><label>Hotel</label><select id="hsHotel" onchange="hsRender()"></select></div>
 <div class="hs-field"><label>Mês comentado</label><select id="hsMes" onchange="hsRender()"></select></div>
@@ -1400,7 +1400,7 @@
 </div>
 <!-- HOTÉIS -->
 <div class="tab-content" id="view-hoteis">
-<div class="section-title">🏨 Fichas de Hotel — Vila Galé Portugal, Ilhas &amp; Espanha</div>
+<div class="section-title" id="hoteisTitle">🏨 Hotéis — características e fichas técnicas</div>
 <input accept=".xlsx,.xls" id="hoteisXlsxInput" onchange="hoteisLoadXlsx(this.files[0]);this.value=''" style="display:none" type="file"/>
 <!-- Filters -->
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
@@ -1411,6 +1411,7 @@
 <button class="ht-filter-btn" onclick="hoteisRegiao(this,'Lisboa &amp; Ilhas')">Lisboa &amp; Ilhas</button>
 <button class="ht-filter-btn" onclick="hoteisRegiao(this,'Alentejo')">Alentejo</button>
 <button class="ht-filter-btn" onclick="hoteisRegiao(this,'Algarve')">Algarve</button>
+<button class="ht-filter-btn" onclick="hoteisRegiao(this,'Espanha')">Espanha</button>
 </div>
 </div>
 <!-- Cards grid -->
@@ -2137,7 +2138,6 @@
 <link rel="stylesheet" href="assets/css/navigation-shell.css">
 <div id="vgNavBackdrop"></div>
 <div id="vgNavCmd" role="dialog" aria-label="Comando rápido Interface 2.0"></div>
-<div id="vgNavDock" aria-label="Interface 2.0 - atalhos"></div>
 <script id="vg-navigation-shell" src="assets/js/ui/navigation-shell.js" defer></script>
 
 <!-- Ações transversais de gráficos -->
@@ -2147,6 +2147,7 @@
 
 
 <link rel="stylesheet" href="assets/css/logo-fix.css">
+<link rel="stylesheet" href="assets/css/uniformizacao-v32_2.css">
 <script id="vg-mobile-pwa" src="assets/js/ui/mobile-pwa.js" defer></script>
 <script id="vg-global-search-v19" src="assets/js/ui/global-search.js" defer></script>
 <script id="vg-notifications-v21" src="assets/js/ui/notifications-v21.js" defer></script>

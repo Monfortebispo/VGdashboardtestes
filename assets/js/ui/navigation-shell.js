@@ -6,7 +6,8 @@
   var modules = [
     ['resumo','◆','Visão Executiva','Início'],
     ['hotel360','◉','Hotel 360º','Hotéis'],
-    ['fichahotel','📋','Ficha do Hotel','Hotéis'],
+    ['hoteis','🏨','Hotéis','Hotéis'],
+    ['fichahotel','📝','Comentários Fecho do Mês','Hotéis'],
     ['agenda','📅','Agenda Operacional','Gestão'],
     ['approvals','✓','Aprovações','Gestão'],
     ['receitas','↗','Receitas','Análise'],
@@ -46,27 +47,11 @@
       closeCmd();
     }catch(e){console.error('VG navigation error',e)}
   }
-  function buildDock(){
-    var d=q('#vgNavDock'); if(!d) return;
-    var html = '<button class="vg-nav-primary" data-cmd="1">⌕ Comando</button>';
-    quick.forEach(function(id){ var m=mod(id); html += '<button data-view="'+esc(m[0])+'">'+esc(m[1])+' '+esc(m[2])+'</button>'; });
-    html += '<button data-theme="toggle">Original</button>';
-    d.innerHTML=html;
-    qa('[data-view]',d).forEach(function(b){b.addEventListener('click',function(){go(b.getAttribute('data-view'))})});
-    q('[data-cmd]',d).addEventListener('click',openCmd);
-    q('[data-theme]',d).addEventListener('click',function(){
-      var cur = document.body.classList.contains('vg-interface-modern') ? '2.0' : document.body.classList.contains('theme-v2') ? 'v2' : 'original';
-      var next = cur === '2.0' ? 'original' : cur === 'original' ? 'v2' : '2.0';
-      applyThemeMode(next);
-    });
-  }
   function applyThemeMode(mode){
     document.body.classList.remove('vg-interface-modern','theme-v2');
     if(mode === '2.0') document.body.classList.add('vg-interface-modern');
     if(mode === 'v2') document.body.classList.add('theme-v2');
     try{ localStorage.setItem('vg_theme_mode', mode); }catch(e){}
-    var btn = q('#vgNavDock [data-theme]');
-    if(btn) btn.textContent = mode === '2.0' ? 'Original' : mode === 'original' ? 'V2' : 'Interface 2.0';
     if(typeof buildChartsResumo === 'function' && currentView === 'resumo' && typeof RAW !== 'undefined' && RAW) buildChartsResumo();
   }
   function buildCmd(){
@@ -110,7 +95,7 @@
         try{ legacy = localStorage.getItem('vg20_safe_off'); }catch(e){}
         saved = legacy === '1' ? 'original' : '2.0';
       }
-      buildDock(); buildCmd(); bindKeys();
+      buildCmd(); bindKeys();
       applyThemeMode(saved);
     }catch(e){console.error('VG navigation init error',e)}
   }
