@@ -6,8 +6,8 @@
 (function(){
 'use strict';
 window.VG=window.VG||{};
-if(window.VG.domains33?.version>=34.0)return;
-const VERSION=34.0;
+if(window.VG.domains33?.version>=35.0)return;
+const VERSION=35.0;
 const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 const num=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
@@ -394,7 +394,7 @@ function crossIntelligence(){
   return alerts.slice(0,40);
 }
 function intelligenceHtml(){const a=crossIntelligence();return `<section class="od-card"><header><h3>Inteligência cruzada</h3><span>Custos A&B × Reputação × Receita Detalhada</span></header>${a.length?`<div class="od-alertlist">${a.map(x=>`<article class="${x.level}"><span>${esc(x.hotel)}</span><strong>${esc(x.title)}</strong><p>${esc(x.detail)}</p></article>`).join('')}</div>`:'<div class="od-ok">✓ Sem alertas cruzados materiais com os dados atualmente disponíveis.</div>'}</section>`;}
-function abExactHtml(){return `<section class="od-card od-micro-card"><header><div><h3>Custos &amp; Compras A&B · módulo completo</h3><span>Replica funcionalmente a ferramenta do Departamento de Compras, sem segundo login.</span></div><a class="od-btn small" href="integrated/custos-ab/index.html" target="_blank" rel="noopener">Abrir em ecrã completo</a></header><iframe class="od-microframe ab" src="integrated/custos-ab/index.html" title="Custos A&B integrado" loading="eager"></iframe></section>`;}
+function abExactHtml(){return `<div id="ab35NativeMount" class="od-native-mount"></div>`;}
 function buffetMeal(v){const n=norm(v);if(n.includes('PEQUENO')||n==='PA')return'Pequeno-almoço';if(n.includes('ALMO'))return'Almoço';if(n.includes('JANT'))return'Jantar';return String(v||'Outro').trim()||'Outro';}
 async function buffetLoadFile(file){
   if(!file)return;
@@ -439,6 +439,7 @@ function renderAB(){
   document.getElementById('theory34MapBtn')?.addEventListener('click',saveTheoryMapping);
   document.getElementById('buffet34Hotel')?.addEventListener('change',e=>{state.buffet.hotel=e.target.value;renderAB();});
   document.getElementById('buffet34Meal')?.addEventListener('change',e=>{state.buffet.meal=e.target.value;renderAB();});
+  if(tab==='exact'){const mount=document.getElementById('ab35NativeMount');if(window.VG?.comprasNative35?.mount)window.VG.comprasNative35.mount(mount);else if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>Módulo nativo A&B indisponível</h3><p>Verifique o carregamento de compras-ab-native-v35.js.</p></section>';}
 }
 
 // ---------- Housekeeping / Inventário Têxtil ----------
@@ -472,15 +473,14 @@ function hkPurchases(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;const
 function hkCatalog(){const db=state.hk.db;return `<section class="od-card"><header><h3>Catálogo têxtil</h3><span>${db.catalog.length} referências · categoria, cama/medida e índice de par-stock</span></header>${direction()?`<form id="hk33CatForm" class="od-form"><label>Categoria<input name="category" required></label><label>Artigo<input name="name" required></label><label>Custo unitário<input name="cost" type="number" min="0" step="0.01"></label><label>Índice / Par base<input name="par" type="number" min="0" step="0.1"></label><button class="od-btn primary">Adicionar</button></form>`:''}<div class="od-table-scroll"><table><thead><tr><th>Categoria</th><th>Artigo / Medida</th><th>Cama</th><th>Índice</th><th>Custo</th></tr></thead><tbody>${db.catalog.map(x=>`<tr><td>${esc(x.category)}</td><td>${esc(x.name)}</td><td>${esc(x.cama||'—')}</td><td>${fmt(x.index??x.par,1)}</td><td>${money(x.unitCost,2)}</td></tr>`).join('')}</tbody></table></div></section>`;}
 function renderHK(){
   const root=document.getElementById('housekeepingRoot');if(!root)return;
-  root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Housekeeping</span><h2>Inventário de Roupas · módulo operacional completo</h2><p>Replica funcionalmente a ferramenta original: Painel, Inventário, Projeção de compra, Relatório executivo, Comparação de campanhas, Quebras, Mapa de quebras, Valorização, Alertas, Campanhas, Catálogo e Registo de alterações.</p></div><div class="od-actions"><a class="od-btn" href="integrated/housekeeping/index.html" target="_blank" rel="noopener">Abrir em ecrã completo</a></div></div>
-  <div class="od-help"><b>Sessão única:</b> dentro da Dashboard o módulo reutiliza o utilizador autenticado. Direção vê todo o âmbito; Diretor/Assistente ficam limitados ao hotel do respetivo perfil. A ferramenta original mantém também o modo Governanta quando usada com esse perfil.</div>
-  <section class="od-card od-micro-card"><iframe class="od-microframe hk" src="integrated/housekeeping/index.html" title="Inventário de Roupas Housekeeping" loading="eager"></iframe></section>`;
+  root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Housekeeping</span><h2>Inventário de Roupas · módulo nativo</h2><p>A lógica da ferramenta original foi reconstruída dentro da arquitetura da VG Operations, sem iframe e sem segundo login.</p></div></div><div id="hk35NativeMount" class="od-native-mount"></div>`;
+  const mount=document.getElementById('hk35NativeMount');if(window.VG?.housekeepingNative35?.mount)window.VG.housekeepingNative35.mount(mount);else if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>Módulo nativo Housekeeping indisponível</h3><p>Verifique o carregamento de housekeeping-native-v35.js.</p></section>';
 }
 
 // ---------- Persistence helpers ----------
-function persistLocal(){const sem=semPersistable();try{localStorage.setItem('vg-domains-v34-'+marketId(),JSON.stringify({semester:sem,ab:state.ab,buffet:state.buffet}));}catch(e){console.warn('Persistência local V34 limitada',e);}if(direction()){persistRemote('ops-reputation-semester','state',sem);persistRemote('ops-ab','state',state.ab);persistRemote('ops-ab-buffet','state',state.buffet);}}
-function restoreLocal(){try{const d=JSON.parse(localStorage.getItem('vg-domains-v34-'+marketId())||localStorage.getItem('vg-domains-v33-'+marketId())||'null');if(d?.semester)state.semester=d.semester;if(d?.ab)state.ab=d.ab;if(d?.buffet)state.buffet=Object.assign(state.buffet,d.buffet);}catch(e){}}
-async function persistRemote(resource,key,payload){try{if(window.VG?.shared?.post)await window.VG.shared.post(resource,key,payload);}catch(e){console.warn('Persistência partilhada V34:',resource,e?.message||e);}}
+function persistLocal(){const sem=semPersistable();try{localStorage.setItem('vg-domains-v35-'+marketId(),JSON.stringify({semester:sem,ab:state.ab,buffet:state.buffet}));}catch(e){console.warn('Persistência local V35 limitada',e);}if(direction()){persistRemote('ops-reputation-semester','state',sem);persistRemote('ops-ab','state',state.ab);persistRemote('ops-ab-buffet','state',state.buffet);}}
+function restoreLocal(){try{const d=JSON.parse(localStorage.getItem('vg-domains-v35-'+marketId())||localStorage.getItem('vg-domains-v34-'+marketId())||localStorage.getItem('vg-domains-v33-'+marketId())||'null');if(d?.semester)state.semester=d.semester;if(d?.ab)state.ab=d.ab;if(d?.buffet)state.buffet=Object.assign(state.buffet,d.buffet);}catch(e){}}
+async function persistRemote(resource,key,payload){try{if(window.VG?.shared?.post)await window.VG.shared.post(resource,key,payload);}catch(e){console.warn('Persistência partilhada V35:',resource,e?.message||e);}}
 async function restoreRemote(){if(!window.VG?.shared?.get)return;const get=async(resource)=>{try{return (await window.VG.shared.get(resource,'state'))?.data||null;}catch(e){return null;}};const [sem,ab,hk,buffet]=await Promise.all([get('ops-reputation-semester'),get('ops-ab'),get('ops-housekeeping'),get('ops-ab-buffet')]);if(sem?.periods){state.semester=sem;semMigrate();}if(ab?.imports)state.ab=ab;if(buffet?.rows)state.buffet=Object.assign(state.buffet,buffet);if(hk?.catalog){state.hk.db=hkMigrate(hk);try{localStorage.setItem(hkKey(),JSON.stringify(state.hk.db));}catch(e){}}}
 function downloadJson(name,obj){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 
