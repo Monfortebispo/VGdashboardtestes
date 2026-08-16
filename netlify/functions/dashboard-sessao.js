@@ -115,7 +115,7 @@ function cityChunkBlobKey(market,snapshot,hotel,part){ return marketStoreKey(mar
 function cityDiligenceBlobKey(market,id){ return marketStoreKey(market,CITYLEDGER_DILIGENCE_PREFIX+citySafeId(id)); }
 async function listCityLedgerSnapshots(store,market,user){
   const prefix=marketStoreKey(market,CITYLEDGER_SNAPSHOT_PREFIX),listing=await store.list({prefix}),blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
-  const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(Boolean).sort((a,b)=>String(b.snapshotDate||b.createdAt||"").localeCompare(String(a.snapshotDate||a.createdAt||"")));
+  const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(Boolean).sort((a,b)=>String(b.snapshotDate||"").localeCompare(String(a.snapshotDate||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
   if(isDirection(user))return rows;
   return rows.map(r=>{const h=user.hotel,hs=(r.hotels||[]).filter(x=>norm(x)===norm(h));if(!hs.length)return null;const bh=(r.summary?.byHotel||[]).filter(x=>norm(x.hotel)===norm(h));const summary=Object.assign({},r.summary||{}, {byHotel:bh,byBucket:{},byCurrency:{},debt:bh.reduce((s,x)=>s+Number(x.debt||0),0),balance:bh.reduce((s,x)=>s+Number(x.balance||0),0),credits:bh.reduce((s,x)=>s+Number(x.credits||0),0),documents:bh.reduce((s,x)=>s+Number(x.documents||0),0),clients:bh.reduce((s,x)=>s+Number(x.clients||0),0)});return Object.assign({},r,{hotels:hs,partsByHotel:{[h]:Number(r.partsByHotel?.[h]||0)},summary});}).filter(Boolean);
 }
