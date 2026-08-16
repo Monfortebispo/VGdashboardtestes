@@ -6,8 +6,8 @@
 (function(){
 'use strict';
 window.VG=window.VG||{};
-if(window.VG.domains33?.version>=33.1)return;
-const VERSION=33.1;
+if(window.VG.domains33?.version>=34.0)return;
+const VERSION=34.0;
 const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 const num=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
@@ -41,7 +41,7 @@ function isCurrentHotel(h){try{return !window.VG?.market||window.VG.market.isCur
 function allowedHotel(h){const u=user();return direction()||!u?.hotel||u.hotel==='*'||canonHotel(h)===canonHotel(u.hotel);}
 function hotelRegion(h){try{for(const[k,arr] of Object.entries(REGIOES||{}))if((arr||[]).some(x=>canonHotel(x)===canonHotel(h)))return window.VG?.market?.regionLabel?.(k)||k;}catch(e){}return '—';}
 
-const state={seed:null,ready:false,repTab:'executive',semester:{periods:[],selectedId:null,subtab:'overview',dimension:'categories',region:'Todas',hotel:'Todas',loadedAt:null},ab:{imports:[],selected:null},recipes:{query:'',kind:'all'},hk:{tab:'overview',db:null},cross:[]};
+const state={seed:null,ready:false,repTab:'executive',weekly:{hotel:'',reportId:''},semester:{periods:[],selectedId:null,subtab:'overview',dimension:'categories',region:'Todas',hotel:'Todas',loadedAt:null},ab:{imports:[],selected:null,recipeMap:{}},recipes:{query:'',kind:'all',page:1,pageSize:36},theoretical:{cacheKey:'',data:null},buffet:{rows:[],sourceFile:'',loadedAt:null,hotel:'Todas',meal:'Todos'},hk:{tab:'exact',db:null},cross:[]};
 
 async function loadSeed(){
   if(state.seed)return state.seed;
@@ -83,7 +83,77 @@ function repHotelHtml(){
   const options=rows.map(x=>`<option value="${esc(x.hotel)}">${esc(x.hotel)}</option>`).join('');
   return `<section class="od-card"><header><h3>Ficha de reputação da unidade</h3><span>semana + concorrência + semântica</span></header><label class="od-field">Hotel<select id="rep33Hotel">${options}</select></label><div id="rep33HotelBody"></div></section>`;
 }
-function renderRepHotelBody(){const el=document.getElementById('rep33HotelBody'),sel=document.getElementById('rep33Hotel');if(!el||!sel)return;const h=sel.value,r=repLatestByHotel().find(x=>x.hotel===h)?.r;if(!r){el.innerHTML='';return;}const depts=(r.departments||[]).filter(x=>norm(x.name)!=='GRI');const neg=(r.negCategories||[]).slice(0,6),pos=(r.posCategories||[]).slice(0,6);el.innerHTML=`<div class="od-kpis compact"><article><span>GRI</span><strong>${fmt(r.kpis?.gri,1)}%</strong><small>${signed(r.kpis?.griDelta,' p.p.')}</small></article><article><span>Reviews</span><strong>${fmt(r.kpis?.reviews,0)}</strong><small>${signed(r.kpis?.reviewsDelta,'')}</small></article><article><span>Resposta</span><strong>${fmt(r.kpis?.mgmtResp,1)}%</strong><small>${signed(r.kpis?.mgmtRespDelta,' p.p.')}</small></article><article><span>CQI</span><strong>${fmt(r.competition?.cqi,1)}</strong><small>Compset ${fmt(r.competition?.compsetGri,1)}</small></article></div><div class="od-grid2"><div><h4>Departamentos</h4>${depts.map(d=>bar(d.name,num(d.gri)||0,100,num(d.gri)>=90?'good':num(d.gri)>=80?'warn':'bad',`${fmt(d.gri,1)}%`)).join('')}</div><div><h4>Concorrência</h4>${(r.competition?.ranking||[]).slice(0,6).map(x=>`<div class="od-rankline"><span>${x.rank}. ${esc(x.name)}</span><b>${fmt(x.gri,1)}%</b></div>`).join('')||'<p class="muted">Sem compset.</p>'}</div></div><div class="od-grid2"><div><h4>Pontos de atenção</h4>${neg.map(x=>`<span class="od-tag bad">${esc(x.category)} · ${fmt(x.count,0)}</span>`).join('')||'—'}</div><div><h4>Pontos fortes</h4>${pos.map(x=>`<span class="od-tag good">${esc(x.category)} · ${fmt(x.count,0)}</span>`).join('')||'—'}</div></div>`;}
+function renderRepHotelBody(){
+  const el=document.getElementById('rep33HotelBody'),sel=document.getElementById('rep33Hotel');if(!el||!sel)return;
+  const h=sel.value, history=weeklySortedReports(h), r=history[0];
+  if(!r){el.innerHTML='';return;}
+  const historyRows=history.slice(0,26).map(x=>`<tr><td>${esc(x.periodLabel||x.periodEnd||'—')}</td><td>${fmt(x.kpis?.gri,1)}%</td><td>${signed(x.kpis?.griDelta,' p.p.')}</td><td>${fmt(x.kpis?.reviews,0)}</td><td>${fmt(x.kpis?.mgmtResp,1)}%</td><td>${fmt(x.competition?.cqi,1)}</td></tr>`).join('');
+  el.innerHTML=`${repDetailedBody(r)}<section class="od-card"><header><h3>Histórico semanal</h3><span>até 26 leituras</span></header><div class="od-table-scroll"><table><thead><tr><th>Semana</th><th>GRI</th><th>Δ</th><th>Reviews</th><th>Resposta</th><th>CQI</th></tr></thead><tbody>${historyRows}</tbody></table></div></section>`;
+}
+function weeklySortedReports(hotel){
+  return weeklyReports().filter(r=>!hotel||canonHotel(r.hotelNameClean||r.hotelName)===canonHotel(hotel))
+    .slice().sort((a,b)=>(Date.parse(b.periodEnd||b.createdAt||'')||0)-(Date.parse(a.periodEnd||a.createdAt||'')||0));
+}
+function repSourceTable(r){
+  const src=(r?.sources||[]).filter(x=>norm(x.name)!=='GRI');
+  return `<section class="od-card"><header><h3>GRI por origem / fonte</h3><span>Booking.com · Expedia · Google · Tripadvisor e restantes fontes presentes no relatório</span></header>
+  ${src.length?`<div class="od-table-scroll"><table><thead><tr><th>Origem</th><th>GRI</th><th>Δ GRI</th><th>Reviews</th><th>Δ Reviews</th><th>Menções / Semântica</th><th>Δ</th></tr></thead><tbody>
+  ${src.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td class="${num(x.index)>=90?'good':num(x.index)>=80?'warn':'bad'}">${fmt(x.index,1)}%</td><td>${signed(x.indexDelta,' p.p.')}</td><td>${fmt(x.reviews,0)}</td><td>${signed(x.reviewsDelta,'')}</td><td>${num(x.mentions)==null?'—':fmt(x.mentions,1)+'%'}</td><td>${signed(x.mentionsDelta,' p.p.')}</td></tr>`).join('')}
+  </tbody></table></div>`:'<p class="muted">Este relatório não contém detalhe por origem.</p>'}</section>`;
+}
+function repDetailedBody(r){
+  if(!r)return emptyCard('Sem relatório','');
+  const depts=(r.departments||[]).filter(x=>norm(x.name)!=='GRI');
+  const neg=(r.negCategories||[]).slice(0,10),pos=(r.posCategories||[]).slice(0,10);
+  const langs=(r.languages||[]).filter(x=>norm(x.name)!=='GRI').slice(0,12);
+  const countries=(r.countries||[]).filter(x=>norm(x.name)!=='GRI').slice(0,12);
+  const internal=(r.internalRanking||[]).slice(0,8);
+  const up=(r.trends?.up||[]).slice(0,8),down=(r.trends?.down||[]).slice(0,8);
+  return `<div class="od-help"><b>Período:</b> ${esc(r.periodLabel||`${r.periodStart||''} - ${r.periodEnd||''}`)}${r.sourceFile?` · <b>Fonte:</b> ${esc(r.sourceFile)}`:''}</div>
+  <div class="od-kpis compact">
+    <article><span>GRI</span><strong>${fmt(r.kpis?.gri,1)}%</strong><small>${signed(r.kpis?.griDelta,' p.p.')}</small></article>
+    <article><span>Meta</span><strong>${num(r.kpis?.goal)==null?'—':fmt(r.kpis.goal,1)+'%'}</strong><small>${num(r.kpis?.goal)!=null&&num(r.kpis?.gri)!=null?(num(r.kpis.gri)>=num(r.kpis.goal)?'Meta cumprida':'Abaixo da meta'):''}</small></article>
+    <article><span>Reviews</span><strong>${fmt(r.kpis?.reviews,0)}</strong><small>${signed(r.kpis?.reviewsDelta,'')}</small></article>
+    <article><span>Resposta</span><strong>${fmt(r.kpis?.mgmtResp,1)}%</strong><small>${signed(r.kpis?.mgmtRespDelta,' p.p.')}</small></article>
+    <article><span>Semântica</span><strong>${fmt(r.kpis?.semantic,1)}%</strong><small>${signed(r.kpis?.semanticDelta,' p.p.')}</small></article>
+    <article><span>CQI</span><strong>${fmt(r.competition?.cqi,1)}</strong><small>Compset ${fmt(r.competition?.compsetGri,1)}</small></article>
+  </div>
+  ${repSourceTable(r)}
+  <div class="od-grid2">
+    <section class="od-card"><header><h3>Departamentos</h3><span>GRI e variação</span></header>${depts.length?`<div class="od-table-scroll"><table><thead><tr><th>Departamento</th><th>GRI</th><th>Δ</th><th>Meta</th><th>Reviews</th><th>Menções</th></tr></thead><tbody>${depts.map(d=>`<tr><td>${esc(d.name)}</td><td>${fmt(d.gri,1)}%</td><td>${signed(d.griDelta,' p.p.')}</td><td>${num(d.goal)==null?'—':fmt(d.goal,1)+'%'}</td><td>${fmt(d.reviews,0)}</td><td>${num(d.mentions)==null?'—':fmt(d.mentions,1)+'%'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Sem detalhe departamental.</p>'}</section>
+    <section class="od-card"><header><h3>Concorrência</h3><span>CQI ${fmt(r.competition?.cqi,1)} · compset ${fmt(r.competition?.compsetGri,1)}%</span></header>${(r.competition?.ranking||[]).length?(r.competition.ranking.slice(0,10).map(x=>`<div class="od-rankline"><span>${x.rank}. ${esc(x.name)}</span><b>${fmt(x.gri,1)}% · CQI ${fmt(x.cqi,1)}</b></div>`).join('')):'<p class="muted">Sem compset.</p>'}</section>
+  </div>
+  <div class="od-grid2">
+    <section class="od-card"><header><h3>Idiomas</h3><span>GRI por idioma</span></header>${langs.length?`<div class="od-table-scroll"><table><thead><tr><th>Idioma</th><th>GRI</th><th>Δ</th><th>Reviews</th><th>Menções</th></tr></thead><tbody>${langs.map(x=>`<tr><td>${esc(x.name)}</td><td>${fmt(x.index,1)}%</td><td>${signed(x.indexDelta,' p.p.')}</td><td>${fmt(x.reviews,0)}</td><td>${fmt(x.mentions,1)}%</td></tr>`).join('')}</tbody></table></div>`:'—'}</section>
+    <section class="od-card"><header><h3>Países</h3><span>GRI por origem do cliente</span></header>${countries.length?`<div class="od-table-scroll"><table><thead><tr><th>País</th><th>GRI</th><th>Δ</th><th>Reviews</th><th>Menções</th></tr></thead><tbody>${countries.map(x=>`<tr><td>${esc(x.name)}</td><td>${fmt(x.index,1)}%</td><td>${signed(x.indexDelta,' p.p.')}</td><td>${fmt(x.reviews,0)}</td><td>${fmt(x.mentions,1)}%</td></tr>`).join('')}</tbody></table></div>`:'—'}</section>
+  </div>
+  <div class="od-grid2">
+    <section class="od-card"><header><h3>Ranking interno</h3><span>Vila Galé / região</span></header>${internal.length?internal.map(x=>`<div class="od-rankline"><span>${esc(x.group)}</span><b>${x.rank}/${x.outOf} ${num(x.rankDelta)!=null?`· ${x.rankDelta>0?'+':''}${fmt(x.rankDelta,0)}`:''}</b></div>`).join(''):'—'}</section>
+    <section class="od-card"><header><h3>Tendências</h3><span>conceitos em evolução</span></header><div class="od-grid2"><div><h4 class="good">A melhorar</h4>${up.map(x=>`<div class="od-rankline"><span>${esc(x.concept)}</span><b>+${fmt(x.delta,1)}</b></div>`).join('')||'—'}</div><div><h4 class="bad">A deteriorar</h4>${down.map(x=>`<div class="od-rankline"><span>${esc(x.concept)}</span><b>${fmt(x.delta,1)}</b></div>`).join('')||'—'}</div></div></section>
+  </div>
+  <div class="od-grid2">
+    <section class="od-card"><header><h3>Pontos de atenção</h3><span>categorias negativas</span></header>${neg.length?neg.map(x=>`<div class="od-rankline"><span>${esc(x.category)}${x.topConcept?` · ${esc(x.topConcept)}`:''}</span><b>${fmt(x.count,0)} · impacto ${fmt(x.griImpact,1)}</b></div>`).join(''):'—'}</section>
+    <section class="od-card"><header><h3>Pontos fortes</h3><span>categorias positivas</span></header>${pos.length?pos.map(x=>`<div class="od-rankline"><span>${esc(x.category)}${x.topConcept?` · ${esc(x.topConcept)}`:''}</span><b>${fmt(x.count,0)} · impacto ${fmt(x.griImpact,1)}</b></div>`).join(''):'—'}</section>
+  </div>`;
+}
+function repWeeklyHtml(){
+  const reports=weeklySortedReports();
+  if(!reports.length)return emptyCard('Sem dados semanais','Importe o JSON semanal da ferramenta de reputação.');
+  const hotels=[...new Set(reports.map(r=>canonHotel(r.hotelNameClean||r.hotelName)))].sort((a,b)=>a.localeCompare(b,'pt'));
+  if(!state.weekly.hotel||!hotels.includes(state.weekly.hotel))state.weekly.hotel=hotels[0];
+  const hr=weeklySortedReports(state.weekly.hotel);
+  if(!state.weekly.reportId||!hr.some(r=>String(r.id)===String(state.weekly.reportId)))state.weekly.reportId=String(hr[0]?.id||'');
+  const r=hr.find(x=>String(x.id)===String(state.weekly.reportId))||hr[0];
+  return `<div class="od-toolbar">
+    <label>Hotel<select id="rep33WeeklyHotel">${hotels.map(h=>`<option value="${esc(h)}" ${h===state.weekly.hotel?'selected':''}>${esc(h)}</option>`).join('')}</select></label>
+    <label>Semana<select id="rep33WeeklyPeriod">${hr.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(r?.id)?'selected':''}>${esc(x.periodLabel||x.periodEnd||x.createdAt||x.id)}</option>`).join('')}</select></label>
+    <span class="od-chip">${hr.length} semana${hr.length===1?'':'s'} disponível${hr.length===1?'':'is'}</span>
+  </div>${repDetailedBody(r)}`;
+}
+function bindWeeklyUI(){
+  document.getElementById('rep33WeeklyHotel')?.addEventListener('change',e=>{state.weekly.hotel=e.target.value;state.weekly.reportId='';renderReputation33();});
+  document.getElementById('rep33WeeklyPeriod')?.addEventListener('change',e=>{state.weekly.reportId=e.target.value;renderReputation33();});
+}
 
 // ---------- Reputação semestral — port nativo da ferramenta semestral V3 ----------
 const SEM_ROLES={panel:'Painel',results:'Resultados',competition:'Concorrência',responses:'Respostas',semantic:'Semântica',mentions:'Menções'};
@@ -137,8 +207,18 @@ function bindSemesterUI(){
   document.querySelectorAll('[data-semdim]').forEach(b=>b.onclick=()=>{state.semester.dimension=b.dataset.semdim;renderReputation33();});
   document.querySelectorAll('[data-semhotel]').forEach(b=>b.onclick=()=>{state.semester.hotel=b.dataset.semhotel;state.semester.subtab='units';renderReputation33();});
 }
-function renderReputation33(){const root=document.getElementById('repV33Root');if(!root)return;const body=state.repTab==='executive'?repExecutiveHtml():state.repTab==='semester'?repSemesterHtml():state.repTab==='hotel'?repHotelHtml():'';root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Guest Experience</span><h2>Reputação &amp; Guest Experience</h2><p>Uma única área para leitura executiva, detalhe semanal, análise semestral e ficha por hotel.</p></div><div class="od-actions"><label class="od-btn">Importar JSON semanal<input id="rep33JsonInput" type="file" accept=".json" hidden></label></div></div><nav class="od-tabs"><button data-reptab="executive" class="${state.repTab==='executive'?'active':''}">Visão Executiva</button><button data-reptab="weekly" class="${state.repTab==='weekly'?'active':''}">Semanal</button><button data-reptab="semester" class="${state.repTab==='semester'?'active':''}">Semestral</button><button data-reptab="hotel" class="${state.repTab==='hotel'?'active':''}">Hotel</button></nav><div id="rep33Body">${body}</div>`;
-  const legacy=document.querySelector('#view-reputacao .view-rep-root');if(legacy)legacy.style.display=state.repTab==='weekly'?'block':'none';root.querySelectorAll('[data-reptab]').forEach(b=>b.onclick=()=>{state.repTab=b.dataset.reptab;renderReputation33();});document.getElementById('rep33JsonInput')?.addEventListener('change',e=>rep33LoadJson(e.target.files[0]));document.getElementById('rep33Hotel')?.addEventListener('change',renderRepHotelBody);if(state.repTab==='hotel')setTimeout(renderRepHotelBody,0);if(state.repTab==='semester')bindSemesterUI();
+function renderReputation33(){
+  const root=document.getElementById('repV33Root');if(!root)return;
+  const body=state.repTab==='executive'?repExecutiveHtml():state.repTab==='weekly'?repWeeklyHtml():state.repTab==='semester'?repSemesterHtml():repHotelHtml();
+  root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Guest Experience</span><h2>Reputação &amp; Guest Experience</h2><p>Visão executiva, leitura semanal completa por origem, análise semestral e ficha histórica por hotel.</p></div><div class="od-actions"><label class="od-btn">Importar JSON semanal<input id="rep33JsonInput" type="file" accept=".json" hidden></label></div></div>
+  <nav class="od-tabs"><button data-reptab="executive" class="${state.repTab==='executive'?'active':''}">Visão Executiva</button><button data-reptab="weekly" class="${state.repTab==='weekly'?'active':''}">Semanal</button><button data-reptab="semester" class="${state.repTab==='semester'?'active':''}">Semestral</button><button data-reptab="hotel" class="${state.repTab==='hotel'?'active':''}">Hotel</button></nav><div id="rep33Body">${body}</div>`;
+  const legacy=document.querySelector('#view-reputacao .view-rep-root');if(legacy)legacy.style.display='none';
+  root.querySelectorAll('[data-reptab]').forEach(b=>b.onclick=()=>{state.repTab=b.dataset.reptab;renderReputation33();});
+  document.getElementById('rep33JsonInput')?.addEventListener('change',e=>rep33LoadJson(e.target.files[0]));
+  document.getElementById('rep33Hotel')?.addEventListener('change',renderRepHotelBody);
+  if(state.repTab==='hotel')setTimeout(renderRepHotelBody,0);
+  if(state.repTab==='weekly')bindWeeklyUI();
+  if(state.repTab==='semester')bindSemesterUI();
 }
 async function rep33LoadJson(file){if(!file)return;try{const d=JSON.parse(await file.text());if(!Array.isArray(d.reports))throw Error('Formato vg_reputation inválido');state.seed.weeklyReputation=d;seedLegacyReputation();renderReputation33();toast(`${d.reports.length} relatórios semanais carregados.`);}catch(e){toast(e.message,true);}}
 
@@ -168,14 +248,198 @@ function abCurrent(){return state.ab.imports.find(x=>x.id===state.ab.selected)||
 function abOverview(d){if(!d)return emptyCard('Sem mapa de Custos A&B','Importe o ficheiro mensal analisado pelo Departamento de Compras.');const hs=d.hotels,avg=k=>{const v=hs.map(h=>num(d.summary[h]?.[k])).filter(x=>x!=null);return v.length?sum(v)/v.length:null;};const subs=Object.entries(d.summaryGeneral?.couvert||{}).map(([name,vals])=>({name,avg:avgObj(vals)})).filter(x=>x.avg!=null).sort((a,b)=>b.avg-a.avg).slice(0,12);return `<div class="od-kpis"><article><span>Food Cost · consumo</span><strong>${fmt(avg('fcCons')*100,1)}%</strong><small>média simples unidades</small></article><article><span>Beverage Cost · consumo</span><strong>${fmt(avg('bcCons')*100,1)}%</strong><small>média simples unidades</small></article><article><span>Hotéis</span><strong>${hs.length}</strong><small>${esc(d.meta.fileName)}</small></article><article><span>Stock / pax</span><strong>${money(avg('stockPax'),2)}</strong><small>indicador do mapa</small></article></div><section class="od-card"><header><h3>Leitura por hotel</h3><span>compras vs consumo</span></header><div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>FC compras</th><th>FC consumo</th><th>BC compras</th><th>BC consumo</th><th>Consumo/pax</th><th>Stock/pax</th><th>Peso stock</th></tr></thead><tbody>${hs.map(h=>{const x=d.summary[h]||{};return `<tr><td>${esc(h)}</td><td>${pctVal(x.fcPurch)}</td><td>${pctVal(x.fcCons)}</td><td>${pctVal(x.bcPurch)}</td><td>${pctVal(x.bcCons)}</td><td>${money(x.consPax,2)}</td><td>${money(x.stockPax,2)}</td><td>${pctVal(x.stockWeight)}</td></tr>`}).join('')}</tbody></table></div></section>${subs.length?`<section class="od-card"><header><h3>Custo comidas / couvert por subfamília</h3><span>RESUMO GERAL · média das unidades no ficheiro</span></header>${subs.map(x=>bar(x.name,x.avg,Math.max(...subs.map(y=>y.avg),1),'',money(x.avg,2))).join('')}</section>`:''}`;}
 function avgObj(o){const v=Object.values(o||{}).map(num).filter(x=>x!=null);return v.length?sum(v)/v.length:null;}
 function abStock(d){if(!d)return emptyCard('Sem dados','');const hotels=d.hotels;let rows=[];for(const h of hotels){const arts=new Set([...Object.keys(d.stock.initial[h]||{}),...Object.keys(d.stock.purchases[h]||{}),...Object.keys(d.stock.final[h]||{})]);for(const a of arts){const ini=Number(d.stock.initial[h]?.[a]||0),buy=Number(d.stock.purchases[h]?.[a]||0),fin=Number(d.stock.final[h]?.[a]||0),cons=ini+buy-fin;rows.push({h,a,ini,buy,fin,cons});}}rows=rows.sort((a,b)=>Math.abs(b.cons)-Math.abs(a.cons)).slice(0,300);return `<section class="od-card"><header><h3>Stock &amp; consumo teórico por balanço</h3><span>Inventário inicial + compras - inventário final</span></header><div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>Artigo</th><th>Inv. inicial</th><th>Compras</th><th>Inv. final</th><th>Consumo</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.h)}</td><td>${esc(x.a)}</td><td>${fmt(x.ini,2)}</td><td>${fmt(x.buy,2)}</td><td>${fmt(x.fin,2)}</td><td>${fmt(x.cons,2)}</td></tr>`).join('')}</tbody></table></div></section>`;}
-function recipesList(){const lib=state.seed?.technicalLibrary||{},all=[...(lib.recipes||[]),...(lib.products||[])].filter(x=>x.market===seedMarket());const q=norm(state.recipes.query);return all.filter(x=>!q||norm([x.name,x.category,x.collection,x.brandScope,x.source,(x.ingredients||[]).map(i=>i.ingredient).join(' ')].join(' ')).includes(q));}
-function recipesHtml(){const rows=recipesList(),recipes=rows.filter(x=>x.kind!=='product'),products=rows.filter(x=>x.kind==='product');return `<div class="od-kpis"><article><span>Receitas</span><strong>${recipes.length}</strong><small>cocktails/bebidas</small></article><article><span>Produtos</span><strong>${products.length}</strong><small>vinhos, azeites e outros</small></article><article><span>Com custo calculado</span><strong>${recipes.filter(x=>num(x.cost)!=null).length}</strong><small>fichas PT com custeio</small></article><article><span>Versões Brasil</span><strong>${recipes.filter(x=>x.market==='br').length}</strong><small>2021 / 2024</small></article></div><section class="od-card"><header><h3>Biblioteca A&B</h3><input id="ft33Search" class="od-search" placeholder="Pesquisar receita, ingrediente, produto…" value="${esc(state.recipes.query)}"></header><div class="ft33-grid">${rows.slice(0,160).map(x=>`<button class="ft33-item" data-ftid="${esc(x.id)}"><span class="ft33-kind">${esc(x.kind==='product'?x.category:(x.brandScope||x.category||'Receita'))}</span><strong>${esc(x.name)}</strong><small>${esc(x.version||'')} ${x.cost!=null?' · custo '+money(x.cost,2):''}</small></button>`).join('')}</div></section><div id="ft33Detail"></div>`;}
-function showRecipe(id){const x=[...(state.seed?.technicalLibrary?.recipes||[]),...(state.seed?.technicalLibrary?.products||[])].find(y=>y.id===id),el=document.getElementById('ft33Detail');if(!x||!el)return;if(x.kind==='product'){el.innerHTML=`<section class="od-card ft33-detail"><header><div><span class="eyebrow">${esc(x.collection||x.category)}</span><h3>${esc(x.name)}</h3></div><span class="od-chip">${esc(x.version||'Ficha técnica')}</span></header><div class="od-grid2"><div>${Object.entries(x.fields||{}).map(([k,v])=>`<div class="od-rankline"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div><div><h4>Notas de prova</h4><p>${esc(x.tasting||x.textExcerpt||'—')}</p><h4>Gastronomia</h4><p>${esc(x.gastronomy||'—')}</p></div></div></section>`;return;}el.innerHTML=`<section class="od-card ft33-detail"><header><div><span class="eyebrow">${esc(x.brandScope||x.category||'Receita')}</span><h3>${esc(x.name)}</h3></div><span class="od-chip">${esc(x.version||'Atual')}</span></header><div class="od-kpis compact"><article><span>PVP</span><strong>${money(x.pvp,2)}</strong></article><article><span>Custo</span><strong>${money(x.cost,2)}</strong></article><article><span>Rácio</span><strong>${x.ratio==null?'—':fmt(Number(x.ratio)*100,1)+'%'}</strong></article><article><span>Copo</span><strong class="smallval">${esc(x.glass||'—')}</strong></article></div><div class="od-grid2"><div><h4>Ingredientes</h4>${(x.ingredients||[]).map(i=>`<div class="od-rankline"><span>${esc(i.ingredient)}</span><b>${esc(i.qtyText||`${i.qty??''} ${i.unit||''}`)}</b></div>`).join('')||'—'}</div><div><h4>Preparação</h4>${(x.steps||[]).map(s=>`<p><b>${esc(s.order||'')}</b> ${esc([s.action,s.qty,s.unit,s.ingredient,s.method].filter(Boolean).join(' '))}</p>`).join('')||(x.stepsText||[]).map(t=>`<p>${esc(t)}</p>`).join('')||'—'}</div></div></section>`;}
-function theoreticalSalesHtml(){let rows=[];try{const rds=typeof RD_STORE!=='undefined'?RD_STORE:[];const sales=rds.flatMap(s=>s.rows||[]).filter(r=>norm(r.subfamilia).includes('BEBIDA')||norm(r.grupo).includes('COCKTAIL'));const recipes=(state.seed?.technicalLibrary?.recipes||[]).filter(x=>x.market===seedMarket());for(const r of sales){const rec=recipes.find(x=>norm(x.name)===norm(r.artigo)||norm(x.name).includes(norm(r.artigo))||norm(r.artigo).includes(norm(x.name)));if(rec&&num(rec.cost)!=null)rows.push({hotel:r.hotel,art:r.artigo,qtd:r.qtd,vn:r.vn,cost:Number(rec.cost)*Number(r.qtd||0),unit:rec.cost});}}catch(e){}rows.sort((a,b)=>b.vn-a.vn);const totRev=sum(rows,x=>x.vn),totCost=sum(rows,x=>x.cost);return `<div class="od-kpis"><article><span>Vendas ligadas a ficha</span><strong>${fmt(sum(rows,x=>x.qtd),0)}</strong><small>${rows.length} linhas</small></article><article><span>Receita líquida</span><strong>${money(totRev)}</strong></article><article><span>Custo teórico</span><strong>${money(totCost)}</strong></article><article><span>BC teórico</span><strong>${totRev?fmt(totCost/totRev*100,1)+'%':'—'}</strong></article></div><section class="od-card"><header><h3>Venda → ficha técnica → custo teórico</h3><span>matching por artigo normalizado</span></header>${rows.length?`<div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>Artigo</th><th>Qtd.</th><th>Receita</th><th>Custo unit.</th><th>Custo teórico</th><th>Rácio</th></tr></thead><tbody>${rows.slice(0,200).map(x=>`<tr><td>${esc(x.hotel)}</td><td>${esc(x.art)}</td><td>${fmt(x.qtd,0)}</td><td>${money(x.vn,2)}</td><td>${money(x.unit,2)}</td><td>${money(x.cost,2)}</td><td>${x.vn?fmt(x.cost/x.vn*100,1)+'%':'—'}</td></tr>`).join('')}</tbody></table></div>`:emptyCard('Ainda sem correspondências','O cálculo aparece quando os artigos de Receita Detalhada correspondem a fichas com custo conhecido.')}</section>`;}
-function crossIntelligence(){const alerts=[];const d=abCurrent();if(d){for(const h of d.hotels){const s=d.summary[h]||{},rep=repLatestByHotel().find(x=>canonHotel(x.hotel)===canonHotel(h))?.r;const negFB=sum((rep?.negCategories||[]).filter(x=>/(ALIMENT|RESTAUR|BAR|BEBID|CAFE)/.test(norm(x.category))),x=>x.count);if(num(s.fcCons)!=null&&s.fcCons>0.35)alerts.push({level:'bad',hotel:h,title:'Food Cost elevado',detail:`FC consumo ${fmt(s.fcCons*100,1)}%${negFB?' · '+negFB+' menções negativas A&B':''}`});if(num(s.bcCons)!=null&&s.bcCons>0.25)alerts.push({level:'warn',hotel:h,title:'Beverage Cost elevado',detail:`BC consumo ${fmt(s.bcCons*100,1)}%`});if(num(s.stockWeight)!=null&&s.stockWeight>0.25)alerts.push({level:'warn',hotel:h,title:'Peso de stock elevado',detail:`${fmt(s.stockWeight*100,1)}% no mapa de Compras`});}}
-  for(const {hotel,r} of repLatestByHotel()){const neg=(r.negCategories||[]).filter(x=>/(ALIMENT|RESTAUR|BAR|BEBID|CAFE)/.test(norm(x.category)));if(sum(neg,x=>x.count)>=5)alerts.push({level:'warn',hotel,title:'Pressão de reputação em A&B',detail:neg.slice(0,3).map(x=>`${x.category} (${x.count})`).join(' · ')});}return alerts.slice(0,40);}
+
+function recipesList(){
+  const lib=state.seed?.technicalLibrary||{},all=[...(lib.recipes||[]),...(lib.products||[])].filter(x=>x.market===seedMarket());
+  const q=norm(state.recipes.query), kind=state.recipes.kind||'all';
+  return all.filter(x=>(kind==='all'||(kind==='recipes'&&x.kind!=='product')||(kind==='products'&&x.kind==='product'))&&
+    (!q||norm([x.name,x.category,x.collection,x.brandScope,x.source,x.country,x.version,(x.ingredients||[]).map(i=>i.ingredient).join(' ')].join(' ')).includes(q)));
+}
+function recipeDetailHtml(x){
+  if(!x)return'';
+  if(x.kind==='product'){
+    return `<div class="ft34-modal-card"><header><div><span class="eyebrow">${esc(x.collection||x.category||'Produto')}</span><h2>${esc(x.name)}</h2><p>${esc(x.country||'')} · ${esc(x.source||'')}</p></div><button class="ft34-close" data-ftclose aria-label="Fechar">×</button></header>
+      <div class="od-kpis compact"><article><span>Versão</span><strong class="smallval">${esc(x.version||'Ficha técnica')}</strong></article><article><span>Categoria</span><strong class="smallval">${esc(x.category||'—')}</strong></article><article><span>Coleção</span><strong class="smallval">${esc(x.collection||'—')}</strong></article></div>
+      <div class="od-grid2"><section><h3>Ficha técnica</h3>${Object.entries(x.fields||{}).map(([k,v])=>`<div class="od-rankline"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')||'<p>—</p>'}</section>
+      <section><h3>Notas de prova</h3><p>${esc(x.tasting||x.textExcerpt||'—')}</p><h3>Gastronomia / harmonização</h3><p>${esc(x.gastronomy||'—')}</p></section></div></div>`;
+  }
+  const ratio=num(x.ratio),time=num(x.time);
+  return `<div class="ft34-modal-card"><header><div><span class="eyebrow">${esc(x.brandScope||x.category||'Receita')}</span><h2>${esc(x.name)}</h2><p>${esc(x.country||'')} · ${esc(x.source||'')} · ${esc(x.version||'Atual')}</p></div><button class="ft34-close" data-ftclose aria-label="Fechar">×</button></header>
+    <div class="od-kpis compact">
+      <article><span>PVP</span><strong>${money(x.pvp,2)}</strong><small>Preço de venda</small></article>
+      <article><span>Custo</span><strong>${money(x.cost,2)}</strong><small>Ficha técnica</small></article>
+      <article><span>Beverage Cost</span><strong>${ratio==null?'—':fmt(ratio*100,1)+'%'}</strong><small>${x.netPrice!=null?'Preço líquido '+money(x.netPrice,2):''}</small></article>
+      <article><span>Margem bruta</span><strong>${money(x.grossMargin,2)}</strong></article>
+      <article><span>Copo</span><strong class="smallval">${esc(x.glass||'—')}</strong></article>
+      <article><span>Método</span><strong class="smallval">${esc(x.method||'—')}</strong></article>
+    </div>
+    <div class="od-grid2">
+      <section><h3>Ingredientes</h3>${(x.ingredients||[]).map(i=>`<div class="od-rankline"><span>${esc(i.ingredient)}</span><b>${esc(i.qtyText||`${i.qty??''} ${i.unit||''}`)}${num(i.cost)!=null?` · ${money(i.cost,3)}`:''}</b></div>`).join('')||'<p>—</p>'}</section>
+      <section><h3>Preparação</h3>${(x.steps||[]).map(s=>`<p class="ft34-step"><b>${esc(s.order||'')}</b> ${esc([s.action,s.qty,s.unit,s.ingredient,s.method].filter(Boolean).join(' '))}</p>`).join('')||(x.stepsText||[]).map(t=>`<p class="ft34-step">${esc(t)}</p>`).join('')||'<p>—</p>'}</section>
+    </div>
+    <div class="od-grid2">
+      <section><h3>Operação</h3>
+        <div class="od-rankline"><span>Tipo</span><b>${esc(x.type||'—')}</b></div>
+        <div class="od-rankline"><span>Capitação</span><b>${num(x.capitation)==null?'—':fmt(x.capitation,2)}</b></div>
+        <div class="od-rankline"><span>Gosto</span><b>${esc(x.taste||'—')}</b></div>
+        <div class="od-rankline"><span>Tempo</span><b>${time==null?'—':(time<1?fmt(time*24*60,0)+' min':fmt(time,2))}</b></div>
+        <div class="od-rankline"><span>Alergénios</span><b>${esc(x.allergens||'—')}</b></div>
+      </section>
+      <section><h3>Aplicabilidade e controlo</h3>
+        <div class="od-rankline"><span>Âmbito</span><b>${esc(x.brandScope||'Geral')}</b></div>
+        <div class="od-rankline"><span>Mercado</span><b>${esc(x.market==='br'?'Brasil':'PT + ES')}</b></div>
+        <div class="od-rankline"><span>Versão</span><b>${esc(x.version||'Atual')}</b></div>
+        <div class="od-rankline"><span>Fonte</span><b>${esc(x.source||'—')}</b></div>
+      </section>
+    </div></div>`;
+}
+function ensureRecipeModal(){
+  let m=document.getElementById('ft34Modal');
+  if(!m){m=document.createElement('div');m.id='ft34Modal';m.className='ft34-modal';m.setAttribute('aria-hidden','true');document.body.appendChild(m);}
+  return m;
+}
+function showRecipe(id){
+  const x=[...(state.seed?.technicalLibrary?.recipes||[]),...(state.seed?.technicalLibrary?.products||[])].find(y=>String(y.id)===String(id));
+  if(!x)return;
+  const m=ensureRecipeModal();m.innerHTML=recipeDetailHtml(x);m.classList.add('open');m.setAttribute('aria-hidden','false');
+  m.querySelector('[data-ftclose]')?.addEventListener('click',closeRecipeModal);
+  m.addEventListener('click',e=>{if(e.target===m)closeRecipeModal();},{once:true});
+}
+function closeRecipeModal(){const m=document.getElementById('ft34Modal');if(m){m.classList.remove('open');m.setAttribute('aria-hidden','true');}}
+function recipesHtml(){
+  const filtered=recipesList(),full=[...(state.seed?.technicalLibrary?.recipes||[]),...(state.seed?.technicalLibrary?.products||[])].filter(x=>x.market===seedMarket());
+  const recFull=full.filter(x=>x.kind!=='product'),prodFull=full.filter(x=>x.kind==='product'),costed=recFull.filter(x=>num(x.cost)!=null);
+  const ps=state.recipes.pageSize||36,totalPages=Math.max(1,Math.ceil(filtered.length/ps));state.recipes.page=Math.min(Math.max(1,state.recipes.page||1),totalPages);
+  const start=(state.recipes.page-1)*ps,rows=filtered.slice(start,start+ps);
+  return `<div class="od-kpis">
+    <article><span>Receitas</span><strong>${recFull.length}</strong><small>cocktails / bebidas</small></article>
+    <article><span>Produtos</span><strong>${prodFull.length}</strong><small>vinhos, azeites e outros</small></article>
+    <article><span>Com custo</span><strong>${costed.length}</strong><small>fichas com custeio disponível</small></article>
+    <article><span>Resultados</span><strong>${filtered.length}</strong><small>${filtered.length===full.length?'biblioteca completa':'após filtros'}</small></article>
+  </div>
+  <section class="od-card"><header class="ft34-library-head"><div><h3>Biblioteca A&B</h3><span>Clique numa ficha para abrir o detalhe completo.</span></div>
+    <div class="ft34-searchbar"><select id="ft34Kind"><option value="all" ${state.recipes.kind==='all'?'selected':''}>Tudo</option><option value="recipes" ${state.recipes.kind==='recipes'?'selected':''}>Receitas</option><option value="products" ${state.recipes.kind==='products'?'selected':''}>Produtos</option></select><input id="ft33Search" class="od-search" placeholder="Pesquisar receita, ingrediente, produto…" value="${esc(state.recipes.query)}"></div></header>
+    <div class="ft33-grid">${rows.map(x=>`<button type="button" class="ft33-item" data-ftid="${esc(x.id)}"><span class="ft33-kind">${esc(x.kind==='product'?x.category:(x.brandScope||x.category||'Receita'))}</span><strong>${esc(x.name)}</strong><small>${esc(x.version||'Atual')}${x.cost!=null?' · custo '+money(x.cost,2):''}</small><em>Ver ficha técnica →</em></button>`).join('')||'<div class="od-empty"><h3>Sem resultados</h3><p>Altere a pesquisa ou o tipo de ficha.</p></div>'}</div>
+    <div class="ft34-pager"><button class="od-btn small" data-ftpage="${state.recipes.page-1}" ${state.recipes.page<=1?'disabled':''}>← Anterior</button><span>Página ${state.recipes.page} de ${totalPages}</span><button class="od-btn small" data-ftpage="${state.recipes.page+1}" ${state.recipes.page>=totalPages?'disabled':''}>Seguinte →</button></div>
+  </section>`;
+}
+const THEORY_ALIASES={
+  'PORTO VAL MOREIRA TONICO':'PORTO VM TONICO',
+  'PORTO VAL MOREIRA TÓNICO':'PORTO VM TONICO'
+};
+function theoryRecipeIndex(){
+  const recipes=(state.seed?.technicalLibrary?.recipes||[]).filter(x=>x.market===seedMarket()).slice().sort((a,b)=>String(b.version||'').localeCompare(String(a.version||'')));
+  const map=new Map();for(const r of recipes){const k=norm(r.name);if(k&&!map.has(k))map.set(k,r);}
+  return map;
+}
+function theoreticalData(){
+  const rds=typeof RD_STORE!=='undefined'?RD_STORE:[];
+  const key=[seedMarket(),rds.length,rds.map(s=>(s.rows||[]).length).join(','),state.seed?.generatedAt||''].join('|');
+  if(state.theoretical.cacheKey===key&&state.theoretical.data)return state.theoretical.data;
+  const idx=theoryRecipeIndex(),matched=[],unmatched=[],ingredients=new Map();
+  const recipes=(state.seed?.technicalLibrary?.recipes||[]).filter(x=>x.market===seedMarket()),byId=new Map(recipes.map(r=>[String(r.id),r]));
+  state.ab.recipeMap=state.ab.recipeMap||{};
+  const sales=rds.flatMap(s=>s.rows||[]).filter(r=>isCurrentHotel(r.hotel)&&allowedHotel(r.hotel));
+  for(const r of sales){
+    const articleKey=norm(r.artigo),alias=THEORY_ALIASES[articleKey]?norm(THEORY_ALIASES[articleKey]):articleKey,mappedId=state.ab.recipeMap[articleKey];
+    const rec=(mappedId&&byId.get(String(mappedId)))||idx.get(alias);
+    const looksLikeRecipe=!!mappedId||/(COCKTAIL|LONG DRINK|MOCKTAIL)/.test(norm(`${r.grupo||''} ${r.subfamilia||''}`))||idx.has(articleKey)||idx.has(alias);
+    if(!looksLikeRecipe)continue;
+    if(!rec){unmatched.push(r);continue;}
+    const q=Number(r.qtd)||0,unitCost=num(rec.cost),cost=unitCost==null?null:unitCost*q;
+    const match=mappedId?'Mapeamento validado':(articleKey===norm(rec.name)?'Exata':'Alias controlado');
+    matched.push({hotel:r.hotel,pdv:r.armazem,art:r.artigo,qtd:q,vn:Number(r.vn)||0,cost,unit:unitCost,recipe:rec,match});
+    for(const ing of rec.ingredients||[]){
+      const ik=norm(ing.ingredient)+'|'+norm(ing.unit),cur=ingredients.get(ik)||{ingredient:ing.ingredient,unit:ing.unit||'',qty:0,cost:0,knownCost:false};
+      cur.qty+=(Number(ing.qty)||0)*q;
+      const perServing=num(ing.cost);if(perServing!=null){cur.cost+=perServing*q;cur.knownCost=true;}
+      ingredients.set(ik,cur);
+    }
+  }
+  const result={matched,unmatched,ingredients:[...ingredients.values()].sort((a,b)=>Math.abs(b.cost)-Math.abs(a.cost)||b.qty-a.qty)};
+  state.theoretical={cacheKey:key,data:result};return result;
+}
+function theoreticalSalesHtml(){
+  const d=theoreticalData(),rows=d.matched.slice().sort((a,b)=>b.vn-a.vn),unmatched=d.unmatched;
+  const totRev=sum(rows,x=>x.vn),totCost=sum(rows,x=>x.cost),qty=sum(rows,x=>x.qtd);
+  return `<div class="od-help"><b>Regra V34:</b> só são aceites correspondências exatas pelo nome normalizado ou aliases explicitamente controlados. Correspondências por “contém” foram removidas para evitar falsos consumos.</div>
+  <div class="od-kpis">
+    <article><span>Vendas com ficha</span><strong>${fmt(qty,0)}</strong><small>${rows.length} linhas de venda</small></article>
+    <article><span>Receita líquida</span><strong>${money(totRev)}</strong></article>
+    <article><span>Custo teórico</span><strong>${money(totCost)}</strong><small>somente fichas com custo conhecido</small></article>
+    <article class="${unmatched.length?'warn':''}"><span>Sem correspondência</span><strong>${unmatched.length}</strong><small>não entram no cálculo</small></article>
+  </div>
+  <div class="od-grid2">
+    <section class="od-card"><header><h3>Venda → ficha técnica</h3><span>correspondências auditáveis</span></header>${rows.length?`<div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>PdV</th><th>Artigo</th><th>Ficha</th><th>Match</th><th>Qtd.</th><th>Receita</th><th>Custo teórico</th><th>Rácio</th></tr></thead><tbody>${rows.slice(0,400).map(x=>`<tr><td>${esc(x.hotel)}</td><td>${esc(x.pdv||'—')}</td><td>${esc(x.art)}</td><td><button class="od-linkbtn" data-ftid="${esc(x.recipe.id)}">${esc(x.recipe.name)}</button></td><td><span class="od-tag good">${esc(x.match)}</span></td><td>${fmt(x.qtd,0)}</td><td>${money(x.vn,2)}</td><td>${money(x.cost,2)}</td><td>${x.vn&&x.cost!=null?fmt(x.cost/x.vn*100,1)+'%':'—'}</td></tr>`).join('')}</tbody></table></div>`:emptyCard('Ainda sem correspondências','Carregue Receita Detalhada e confirme que os artigos têm uma ficha técnica com o mesmo nome.')}</section>
+    <section class="od-card"><header><h3>Consumo teórico por ingrediente</h3><span>quantidade vendida × capitação da ficha</span></header>${d.ingredients.length?`<div class="od-table-scroll"><table><thead><tr><th>Ingrediente</th><th>Quantidade teórica</th><th>Unidade</th><th>Custo teórico</th></tr></thead><tbody>${d.ingredients.slice(0,300).map(x=>`<tr><td>${esc(x.ingredient)}</td><td>${fmt(x.qty,2)}</td><td>${esc(x.unit||'—')}</td><td>${x.knownCost?money(x.cost,2):'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Sem ingredientes calculáveis.</p>'}</section>
+  </div>
+  ${unmatched.length?theoryUnmatchedHtml(unmatched):''}`;
+}
+function theoryUnmatchedHtml(unmatched){
+  const grouped=new Map();for(const x of unmatched){const k=norm(x.artigo),g=grouped.get(k)||{key:k,article:x.artigo,group:x.grupo||'',qty:0,vn:0,hotels:new Set(),pdvs:new Set()};g.qty+=Number(x.qtd)||0;g.vn+=Number(x.vn)||0;g.hotels.add(x.hotel);if(x.armazem)g.pdvs.add(x.armazem);grouped.set(k,g);}
+  const rows=[...grouped.values()].sort((a,b)=>b.vn-a.vn),recipes=(state.seed?.technicalLibrary?.recipes||[]).filter(x=>x.market===seedMarket()).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt'));
+  return `<section class="od-card"><header><h3>Artigos sem ficha correspondente</h3><span>não entram no cálculo até serem validados</span></header>
+  <div class="od-help"><b>Associação manual auditável:</b> selecione um artigo vendido e a ficha técnica correta. O mapeamento fica guardado e passa a ser identificado como “Mapeamento validado”; não é feita qualquer aproximação automática.</div>
+  <div class="od-form theory34-map"><label>Artigo sem ficha<select id="theory34Article">${rows.map(x=>`<option value="${esc(x.key)}">${esc(x.article)} · ${fmt(x.qty,0)} vendas</option>`).join('')}</select></label><label>Ficha técnica<select id="theory34Recipe"><option value="">Escolher…</option>${recipes.map(r=>`<option value="${esc(r.id)}">${esc(r.name)} · ${money(r.cost,2)}</option>`).join('')}</select></label><button type="button" class="od-btn primary" id="theory34MapBtn">Associar e recalcular</button></div>
+  <div class="od-table-scroll"><table><thead><tr><th>Artigo</th><th>Grupo</th><th>Hotéis</th><th>PdV</th><th>Qtd.</th><th>Receita</th></tr></thead><tbody>${rows.slice(0,300).map(x=>`<tr><td>${esc(x.article)}</td><td>${esc(x.group||'—')}</td><td>${esc([...x.hotels].join(', '))}</td><td>${esc([...x.pdvs].join(', ')||'—')}</td><td>${fmt(x.qty,0)}</td><td>${money(x.vn,2)}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+function saveTheoryMapping(){
+  const a=document.getElementById('theory34Article')?.value,r=document.getElementById('theory34Recipe')?.value;if(!a||!r)return toast('Selecione o artigo e a ficha técnica.',true);
+  state.ab.recipeMap=state.ab.recipeMap||{};state.ab.recipeMap[a]=r;state.theoretical={cacheKey:'',data:null};persistLocal();renderAB();toast('Associação validada e consumo teórico recalculado.');
+}
+function crossIntelligence(){
+  const alerts=[],d=abCurrent();
+  if(d){for(const h of d.hotels){const s=d.summary[h]||{},rep=repLatestByHotel().find(x=>canonHotel(x.hotel)===canonHotel(h))?.r,negFB=sum((rep?.negCategories||[]).filter(x=>/(ALIMENT|RESTAUR|BAR|BEBID|CAFE)/.test(norm(x.category))),x=>x.count);if(num(s.fcCons)!=null&&s.fcCons>0.35)alerts.push({level:'bad',hotel:h,title:'Food Cost elevado',detail:`FC consumo ${fmt(s.fcCons*100,1)}%${negFB?' · '+negFB+' menções negativas A&B':''}`});if(num(s.bcCons)!=null&&s.bcCons>0.25)alerts.push({level:'warn',hotel:h,title:'Beverage Cost elevado',detail:`BC consumo ${fmt(s.bcCons*100,1)}%`});if(num(s.stockWeight)!=null&&s.stockWeight>0.25)alerts.push({level:'warn',hotel:h,title:'Peso de stock elevado',detail:`${fmt(s.stockWeight*100,1)}% no mapa de Compras`});}}
+  for(const {hotel,r} of repLatestByHotel()){const neg=(r.negCategories||[]).filter(x=>/(ALIMENT|RESTAUR|BAR|BEBID|CAFE)/.test(norm(x.category)));if(sum(neg,x=>x.count)>=5)alerts.push({level:'warn',hotel,title:'Pressão de reputação em A&B',detail:neg.slice(0,3).map(x=>`${x.category} (${x.count})`).join(' · ')});}
+  return alerts.slice(0,40);
+}
 function intelligenceHtml(){const a=crossIntelligence();return `<section class="od-card"><header><h3>Inteligência cruzada</h3><span>Custos A&B × Reputação × Receita Detalhada</span></header>${a.length?`<div class="od-alertlist">${a.map(x=>`<article class="${x.level}"><span>${esc(x.hotel)}</span><strong>${esc(x.title)}</strong><p>${esc(x.detail)}</p></article>`).join('')}</div>`:'<div class="od-ok">✓ Sem alertas cruzados materiais com os dados atualmente disponíveis.</div>'}</section>`;}
-function renderAB(){const root=document.getElementById('abHubRoot');if(!root)return;const tab=root.dataset.tab||'overview',d=abCurrent();let body=tab==='overview'?abOverview(d):tab==='stock'?abStock(d):tab==='recipes'?recipesHtml():tab==='theoretical'?theoreticalSalesHtml():intelligenceHtml();root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Compras &amp; A&B</span><h2>Performance, Stock &amp; Receituário</h2><p>Integra a análise do Departamento de Compras, o detalhe de vendas, fichas técnicas e inteligência operacional.</p></div><div class="od-actions"><label class="od-btn primary">Importar Custos A&B<input id="ab33Input" type="file" accept=".xlsx,.xls" hidden></label>${state.ab.imports.length?`<select id="ab33Snapshot">${state.ab.imports.map(x=>`<option value="${x.id}" ${x.id===d?.id?'selected':''}>${esc(x.meta.fileName)}</option>`).join('')}</select>`:''}</div></div><nav class="od-tabs"><button data-abtab="overview" class="${tab==='overview'?'active':''}">Performance A&B</button><button data-abtab="stock" class="${tab==='stock'?'active':''}">Stock &amp; Compras</button><button data-abtab="recipes" class="${tab==='recipes'?'active':''}">Fichas Técnicas</button><button data-abtab="theoretical" class="${tab==='theoretical'?'active':''}">Consumo Teórico</button><button data-abtab="intelligence" class="${tab==='intelligence'?'active':''}">Inteligência</button></nav><div>${body}</div>`;document.getElementById('ab33Input')?.addEventListener('change',e=>abLoadFile(e.target.files[0]));document.getElementById('ab33Snapshot')?.addEventListener('change',e=>{state.ab.selected=e.target.value;renderAB();});root.querySelectorAll('[data-abtab]').forEach(b=>b.onclick=()=>{root.dataset.tab=b.dataset.abtab;renderAB();});document.getElementById('ft33Search')?.addEventListener('input',e=>{state.recipes.query=e.target.value;clearTimeout(state._searchT);state._searchT=setTimeout(renderAB,180);});root.querySelectorAll('[data-ftid]').forEach(b=>b.onclick=()=>showRecipe(b.dataset.ftid));}
+function abExactHtml(){return `<section class="od-card od-micro-card"><header><div><h3>Custos &amp; Compras A&B · módulo completo</h3><span>Replica funcionalmente a ferramenta do Departamento de Compras, sem segundo login.</span></div><a class="od-btn small" href="integrated/custos-ab/index.html" target="_blank" rel="noopener">Abrir em ecrã completo</a></header><iframe class="od-microframe ab" src="integrated/custos-ab/index.html" title="Custos A&B integrado" loading="eager"></iframe></section>`;}
+function buffetMeal(v){const n=norm(v);if(n.includes('PEQUENO')||n==='PA')return'Pequeno-almoço';if(n.includes('ALMO'))return'Almoço';if(n.includes('JANT'))return'Jantar';return String(v||'Outro').trim()||'Outro';}
+async function buffetLoadFile(file){
+  if(!file)return;
+  try{
+    await window.VG?.performance?.ensureXLSX?.();const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[];
+    for(const sn of wb.SheetNames){
+      const g=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:true});
+      let hi=-1,hmap=null;
+      for(let i=0;i<Math.min(40,g.length);i++){const row=(g[i]||[]).map(norm);if(row.some(x=>/(PRATO|ARTIGO|ITEM|DESCRICAO|RECEITA)/.test(x))){hi=i;hmap=row;break;}}
+      if(hi<0)continue;
+      const ix=(...terms)=>hmap.findIndex(x=>terms.some(t=>x.includes(norm(t))));
+      const ih=ix('HOTEL','UNIDADE'),im=ix('REFEICAO','SERVICO','MEAL'),ii=ix('PRATO','ARTIGO','ITEM','DESCRICAO','RECEITA'),ic=ix('CATEGORIA','GRUPO','FAMILIA'),iq=ix('QUANTIDADE','CAPITACAO','QTD'),iu=ix('UNIDADE','UND'),ip=ix('PAX','PESSOAS','COUVERT'),ico=ix('CUSTO'),io=ix('OBS','NOTA'),iv=ix('VERSAO','VIGENCIA');
+      if(ii<0)continue;
+      for(const r of g.slice(hi+1)){const item=String(r?.[ii]??'').trim();if(!item)continue;const hotel=ih>=0?canonHotel(r[ih]):'';if(hotel&&(!isCurrentHotel(hotel)||!allowedHotel(hotel)))continue;out.push({sheet:sn,hotel,meal:buffetMeal(im>=0?r[im]:sn),item,category:ic>=0?String(r[ic]??'').trim():'',qty:iq>=0?num(r[iq]):null,unit:iu>=0?String(r[iu]??'').trim():'',pax:ip>=0?num(r[ip]):null,cost:ico>=0?num(r[ico]):null,note:io>=0?String(r[io]??'').trim():'',version:iv>=0?String(r[iv]??'').trim():''});}
+    }
+    if(!out.length)throw Error('Não foi encontrada uma grelha reconhecível. O importador procura colunas como Prato/Artigo/Item, Hotel, Refeição, Quantidade/Capitação, Unidade e Custo.');
+    state.buffet.rows=out;state.buffet.sourceFile=file.name;state.buffet.loadedAt=new Date().toISOString();persistLocal();renderAB();toast(`${out.length} linhas de buffet/ementa carregadas.`);
+  }catch(e){toast('Buffets & Ementas: '+e.message,true);}
+}
+function buffetHtml(){
+  const all=state.buffet.rows||[],hotels=['Todas',...new Set(all.map(x=>x.hotel).filter(Boolean)).values()].sort(),meals=['Todos',...new Set(all.map(x=>x.meal).filter(Boolean)).values()];
+  if(!hotels.includes(state.buffet.hotel))state.buffet.hotel='Todas';if(!meals.includes(state.buffet.meal))state.buffet.meal='Todos';
+  const rows=all.filter(x=>(state.buffet.hotel==='Todas'||x.hotel===state.buffet.hotel)&&(state.buffet.meal==='Todos'||x.meal===state.buffet.meal));
+  const linked=rows.map(x=>({x,rec:theoryRecipeIndex().get(norm(x.item))})),withFt=linked.filter(z=>z.rec).length,cost=sum(linked,z=>num(z.x.cost)!=null?z.x.cost:(num(z.rec?.cost)!=null&&num(z.x.qty)!=null?z.rec.cost*z.x.qty:0));
+  return `<div class="od-hero compact"><div><span class="eyebrow">Buffets &amp; Ementas</span><h3>Grelhas operacionais</h3><p>Pequeno-almoço, almoço e jantar, com ligação às fichas técnicas quando o nome coincide.</p></div><div class="od-actions"><label class="od-btn primary">Importar grelha<input id="buffet34Input" type="file" accept=".xlsx,.xls" hidden></label></div></div>
+  ${!all.length?`<section class="od-card od-empty"><div class="od-empty-icon">▦</div><h3>Sem grelhas carregadas nesta versão</h3><p>A área está pronta para as grelhas de buffet. Carregue o Excel original para manter os dados reais, sem inventar pratos ou capitações.</p></section>`:
+  `<div class="od-toolbar"><label>Hotel<select id="buffet34Hotel">${hotels.map(x=>`<option ${x===state.buffet.hotel?'selected':''}>${esc(x)}</option>`).join('')}</select></label><label>Refeição<select id="buffet34Meal">${meals.map(x=>`<option ${x===state.buffet.meal?'selected':''}>${esc(x)}</option>`).join('')}</select></label><span class="od-chip">${esc(state.buffet.sourceFile)} · ${rows.length} linhas</span></div>
+  <div class="od-kpis compact"><article><span>Linhas</span><strong>${rows.length}</strong></article><article><span>Com ficha ligada</span><strong>${withFt}</strong></article><article><span>Custo calculável</span><strong>${money(cost,2)}</strong></article></div>
+  <section class="od-card"><header><h3>Grelha</h3><span>Dados da fonte importada</span></header><div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>Refeição</th><th>Categoria</th><th>Prato / artigo</th><th>Capitação/Qtd.</th><th>Unid.</th><th>Pax</th><th>Custo</th><th>Ficha técnica</th><th>Observação</th></tr></thead><tbody>${linked.slice(0,1000).map(({x,rec})=>`<tr><td>${esc(x.hotel||'—')}</td><td>${esc(x.meal)}</td><td>${esc(x.category||'—')}</td><td>${esc(x.item)}</td><td>${fmt(x.qty,2)}</td><td>${esc(x.unit||'—')}</td><td>${fmt(x.pax,0)}</td><td>${num(x.cost)!=null?money(x.cost,2):(num(rec?.cost)!=null&&num(x.qty)!=null?money(rec.cost*x.qty,2):'—')}</td><td>${rec?`<button class="od-linkbtn" data-ftid="${esc(rec.id)}">${esc(rec.name)}</button>`:'—'}</td><td>${esc(x.note||'')}</td></tr>`).join('')}</tbody></table></div></section>`}`;
+}
+function renderAB(){
+  const root=document.getElementById('abHubRoot');if(!root)return;const tab=root.dataset.tab||'exact';
+  let body=tab==='exact'?abExactHtml():tab==='recipes'?recipesHtml():tab==='theoretical'?theoreticalSalesHtml():tab==='buffet'?buffetHtml():intelligenceHtml();
+  root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Compras &amp; A&B</span><h2>Custos, Compras, Receituário &amp; Buffets</h2><p>O módulo original de Custos A&B é mantido completo; as fichas, consumo teórico e grelhas operacionais vivem ao lado e partilham a mesma sessão.</p></div></div>
+  <nav class="od-tabs"><button data-abtab="exact" class="${tab==='exact'?'active':''}">Custos &amp; Compras</button><button data-abtab="recipes" class="${tab==='recipes'?'active':''}">Fichas Técnicas</button><button data-abtab="theoretical" class="${tab==='theoretical'?'active':''}">Consumo Teórico</button><button data-abtab="buffet" class="${tab==='buffet'?'active':''}">Buffets &amp; Ementas</button><button data-abtab="intelligence" class="${tab==='intelligence'?'active':''}">Inteligência</button></nav><div>${body}</div>`;
+  root.querySelectorAll('[data-abtab]').forEach(b=>b.onclick=()=>{root.dataset.tab=b.dataset.abtab;renderAB();});
+  const search=document.getElementById('ft33Search');search?.addEventListener('input',e=>{state.recipes.query=e.target.value;state.recipes.page=1;clearTimeout(state._searchT);state._searchT=setTimeout(renderAB,260);});
+  document.getElementById('ft34Kind')?.addEventListener('change',e=>{state.recipes.kind=e.target.value;state.recipes.page=1;renderAB();});
+  root.querySelectorAll('[data-ftpage]').forEach(b=>b.onclick=()=>{const p=Number(b.dataset.ftpage);if(p>0){state.recipes.page=p;renderAB();}});
+  root.querySelectorAll('[data-ftid]').forEach(b=>b.addEventListener('click',()=>showRecipe(b.dataset.ftid)));
+  document.getElementById('buffet34Input')?.addEventListener('change',e=>buffetLoadFile(e.target.files[0]));
+  document.getElementById('theory34MapBtn')?.addEventListener('click',saveTheoryMapping);
+  document.getElementById('buffet34Hotel')?.addEventListener('change',e=>{state.buffet.hotel=e.target.value;renderAB();});
+  document.getElementById('buffet34Meal')?.addEventListener('change',e=>{state.buffet.meal=e.target.value;renderAB();});
+}
 
 // ---------- Housekeeping / Inventário Têxtil ----------
 const HK_CAUSES=['Fim de vida','Mancha/nódoa','Desaparecido/roubo','Dano de lavagem','Outro'];
@@ -206,13 +470,18 @@ function hkMovements(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;retur
 function hkCampaigns(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;return `<section class="od-card"><header><h3>Campanha de inventário físico</h3><span>contagem → validação → aprovação DO → acerto auditado</span></header><div class="od-help"><b>Controlo:</b> a contagem física fica pendente. O acerto ao stock teórico só é lançado quando a Direção aprova a validação.</div><form id="hk33CountForm" class="od-form"><label>Hotel<select name="hotel">${hs.map(h=>`<option>${esc(h)}</option>`).join('')}</select></label><label>Artigo<select name="item">${items.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join('')}</select></label><label>Contagem física<input name="count" type="number" min="0" step="1" required></label><label>Justificação<input name="note" placeholder="Obrigatória se existir diferença"></label><button class="od-btn primary">Submeter contagem</button></form></section><section class="od-card"><header><h3>Validações de campanha</h3><span>${db.campaigns.filter(x=>(x.status||'pending')==='pending').length} pendente(s)</span></header>${db.campaigns.length?`<div class="od-table-scroll"><table><thead><tr><th>Data</th><th>Hotel</th><th>Artigo</th><th>Teórico</th><th>Físico</th><th>Dif.</th><th>Estado</th><th>Nota</th><th></th></tr></thead><tbody>${db.campaigns.slice().reverse().slice(0,300).map(x=>`<tr><td>${x.date}</td><td>${esc(x.hotel)}</td><td>${esc(items.find(i=>i.id===x.item)?.name||x.item)}</td><td>${fmt(x.theoretical,0)}</td><td>${fmt(x.count,0)}</td><td>${signed(x.diff,'')}</td><td><span class="od-tag ${(x.status||'pending')==='approved'?'good':'warn'}">${(x.status||'pending')==='approved'?'Aprovado':'Pendente'}</span></td><td>${esc(x.note||'')}</td><td>${direction()&&(x.status||'pending')==='pending'?`<button class="od-btn small" data-hkapprove="${x.id}">Aprovar</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Ainda sem campanhas.</p>'}</section>`;}
 function hkPurchases(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;const rows=[];for(const h of hs)for(const i of items){const stock=hkStock(h,i.id),target=hkTarget(h,i.id),dyn=hkDynamicTarget(h,i.id),need=Math.max(0,target-stock),needDyn=Math.max(0,dyn.target-stock);if(need>0||needDyn>0)rows.push({h,i,stock,target,dyn,need,needDyn,value:need*Number(i.unitCost||0)});}rows.sort((a,b)=>(b.need-a.need)||(b.needDyn-a.needDyn));return `<section class="od-card"><header><h3>Necessidades de compra</h3><span>par-stock normal + sugestão dinâmica ligada ao forecast de ocupação</span></header><div class="od-help"><b>Regra:</b> par-stock = índice × vestido 100% (ou par manual). A sugestão dinâmica usa o forecast de ocupação da Dashboard com piso de segurança de ${fmt(db.safetyFloor,0)}%; não altera o par-stock oficial.</div><div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>Artigo</th><th>Stock</th><th>Par oficial</th><th>Forecast OCC</th><th>Sug. normal</th><th>Sug. dinâmica</th><th>Valor normal</th></tr></thead><tbody>${rows.slice(0,600).map(x=>`<tr><td>${esc(x.h)}</td><td>${esc(x.i.name)}</td><td>${fmt(x.stock,0)}</td><td>${fmt(x.target,0)}</td><td>${x.dyn.occ==null?'—':fmt(x.dyn.occ,1)+'%'}</td><td class="${x.need?'warn':''}">${fmt(x.need,0)}</td><td>${fmt(x.needDyn,0)}</td><td>${money(x.value,2)}</td></tr>`).join('')}</tbody></table></div></section>`;}
 function hkCatalog(){const db=state.hk.db;return `<section class="od-card"><header><h3>Catálogo têxtil</h3><span>${db.catalog.length} referências · categoria, cama/medida e índice de par-stock</span></header>${direction()?`<form id="hk33CatForm" class="od-form"><label>Categoria<input name="category" required></label><label>Artigo<input name="name" required></label><label>Custo unitário<input name="cost" type="number" min="0" step="0.01"></label><label>Índice / Par base<input name="par" type="number" min="0" step="0.1"></label><button class="od-btn primary">Adicionar</button></form>`:''}<div class="od-table-scroll"><table><thead><tr><th>Categoria</th><th>Artigo / Medida</th><th>Cama</th><th>Índice</th><th>Custo</th></tr></thead><tbody>${db.catalog.map(x=>`<tr><td>${esc(x.category)}</td><td>${esc(x.name)}</td><td>${esc(x.cama||'—')}</td><td>${fmt(x.index??x.par,1)}</td><td>${money(x.unitCost,2)}</td></tr>`).join('')}</tbody></table></div></section>`;}
-function renderHK(){const root=document.getElementById('housekeepingRoot');if(!root)return;if(!state.hk.db)hkLoad();const tab=root.dataset.tab||state.hk.tab||'overview';state.hk.tab=tab;const body=tab==='overview'?hkOverview():tab==='movements'?hkMovements():tab==='campaigns'?hkCampaigns():tab==='purchases'?hkPurchases():hkCatalog();root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Housekeeping</span><h2>Inventário Têxtil &amp; Quebras</h2><p>Inventário permanente, movimentos, campanhas físicas, causas de quebra e necessidades de compra.</p></div><div class="od-actions"><button class="od-btn" id="hk33Export">Exportar JSON</button><label class="od-btn">Importar JSON<input id="hk33Import" type="file" accept=".json" hidden></label></div></div><nav class="od-tabs"><button data-hktab="overview" class="${tab==='overview'?'active':''}">Visão Geral</button><button data-hktab="movements" class="${tab==='movements'?'active':''}">Movimentos &amp; Quebras</button><button data-hktab="campaigns" class="${tab==='campaigns'?'active':''}">Campanhas</button><button data-hktab="purchases" class="${tab==='purchases'?'active':''}">Necessidades</button><button data-hktab="catalog" class="${tab==='catalog'?'active':''}">Catálogo</button></nav>${body}`;root.querySelectorAll('[data-hktab]').forEach(b=>b.onclick=()=>{root.dataset.tab=b.dataset.hktab;renderHK();});document.getElementById('hk33Form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget),type=f.get('type'),cause=String(f.get('cause')||'');if(type==='breakage'&&!HK_CAUSES.includes(cause)){toast('A causa da quebra é obrigatória.',true);return;}state.hk.db.movements.push({id:'mov-'+uid(),date:today(),hotel:canonHotel(f.get('hotel')),item:f.get('item'),type,qty:Number(f.get('qty')),cause:type==='breakage'?cause:'',note:String(f.get('note')||''),author:user()?.name||user()?.user||'local',createdAt:new Date().toISOString()});hkSave();renderHK();});document.getElementById('hk33CountForm')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget),hotel=canonHotel(f.get('hotel')),item=f.get('item'),count=Number(f.get('count')),theoretical=hkStock(hotel,item),diff=count-theoretical,note=String(f.get('note')||'').trim();if(diff&& !note){toast('Justificação obrigatória para diferenças.',true);return;}state.hk.db.campaigns.push({id:'cnt-'+uid(),date:today(),hotel,item,count,theoretical,diff,note,author:user()?.name||user()?.user||'local',status:'pending',submittedAt:new Date().toISOString()});hkSave();renderHK();});root.querySelectorAll('[data-hkapprove]').forEach(b=>b.onclick=()=>{const c=state.hk.db.campaigns.find(x=>x.id===b.dataset.hkapprove);if(!c||!direction())return;if(c.diff&&!c.adjustmentId){const id='adj-'+uid();state.hk.db.movements.push({id,date:today(),hotel:c.hotel,item:c.item,type:c.diff>0?'adjust_in':'adjust_out',qty:Math.abs(c.diff),cause:'',note:'Acerto de campanha aprovado: '+(c.note||''),author:user()?.name||user()?.user||'Direção',createdAt:new Date().toISOString()});c.adjustmentId=id;}c.status='approved';c.approvedAt=new Date().toISOString();c.approvedBy=user()?.name||user()?.user||'Direção';hkSave();renderHK();});document.getElementById('hk33CatForm')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget);state.hk.db.catalog.push({id:'it-'+uid(),category:String(f.get('category')),name:String(f.get('name')),unitCost:Number(f.get('cost'))||0,index:Number(f.get('par'))||0,par:Number(f.get('par'))||0});hkSave();renderHK();});document.getElementById('hk33Export')?.addEventListener('click',()=>downloadJson(`housekeeping_${marketId()}_${today()}.json`,state.hk.db));document.getElementById('hk33Import')?.addEventListener('change',async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!Array.isArray(d.catalog)||!Array.isArray(d.movements))throw Error('Formato inválido');state.hk.db=hkMigrate(d);hkSave();renderHK();}catch(x){toast(x.message,true);}});}
+function renderHK(){
+  const root=document.getElementById('housekeepingRoot');if(!root)return;
+  root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Housekeeping</span><h2>Inventário de Roupas · módulo operacional completo</h2><p>Replica funcionalmente a ferramenta original: Painel, Inventário, Projeção de compra, Relatório executivo, Comparação de campanhas, Quebras, Mapa de quebras, Valorização, Alertas, Campanhas, Catálogo e Registo de alterações.</p></div><div class="od-actions"><a class="od-btn" href="integrated/housekeeping/index.html" target="_blank" rel="noopener">Abrir em ecrã completo</a></div></div>
+  <div class="od-help"><b>Sessão única:</b> dentro da Dashboard o módulo reutiliza o utilizador autenticado. Direção vê todo o âmbito; Diretor/Assistente ficam limitados ao hotel do respetivo perfil. A ferramenta original mantém também o modo Governanta quando usada com esse perfil.</div>
+  <section class="od-card od-micro-card"><iframe class="od-microframe hk" src="integrated/housekeeping/index.html" title="Inventário de Roupas Housekeeping" loading="eager"></iframe></section>`;
+}
 
 // ---------- Persistence helpers ----------
-function persistLocal(){const sem=semPersistable();try{localStorage.setItem('vg-domains-v33-'+marketId(),JSON.stringify({semester:sem,ab:state.ab}));}catch(e){console.warn('Persistência local V33 limitada',e);}if(direction()){persistRemote('ops-reputation-semester','state',sem);persistRemote('ops-ab','state',state.ab);}}
-function restoreLocal(){try{const d=JSON.parse(localStorage.getItem('vg-domains-v33-'+marketId())||'null');if(d?.semester)state.semester=d.semester;if(d?.ab)state.ab=d.ab;}catch(e){}}
-async function persistRemote(resource,key,payload){try{if(window.VG?.shared?.post)await window.VG.shared.post(resource,key,payload);}catch(e){console.warn('Persistência partilhada V33:',resource,e?.message||e);}}
-async function restoreRemote(){if(!window.VG?.shared?.get)return;const get=async(resource)=>{try{return (await window.VG.shared.get(resource,'state'))?.data||null;}catch(e){return null;}};const [sem,ab,hk]=await Promise.all([get('ops-reputation-semester'),get('ops-ab'),get('ops-housekeeping')]);if(sem?.periods){state.semester=sem;semMigrate();}if(ab?.imports)state.ab=ab;if(hk?.catalog){state.hk.db=hkMigrate(hk);try{localStorage.setItem(hkKey(),JSON.stringify(state.hk.db));}catch(e){}}}
+function persistLocal(){const sem=semPersistable();try{localStorage.setItem('vg-domains-v34-'+marketId(),JSON.stringify({semester:sem,ab:state.ab,buffet:state.buffet}));}catch(e){console.warn('Persistência local V34 limitada',e);}if(direction()){persistRemote('ops-reputation-semester','state',sem);persistRemote('ops-ab','state',state.ab);persistRemote('ops-ab-buffet','state',state.buffet);}}
+function restoreLocal(){try{const d=JSON.parse(localStorage.getItem('vg-domains-v34-'+marketId())||localStorage.getItem('vg-domains-v33-'+marketId())||'null');if(d?.semester)state.semester=d.semester;if(d?.ab)state.ab=d.ab;if(d?.buffet)state.buffet=Object.assign(state.buffet,d.buffet);}catch(e){}}
+async function persistRemote(resource,key,payload){try{if(window.VG?.shared?.post)await window.VG.shared.post(resource,key,payload);}catch(e){console.warn('Persistência partilhada V34:',resource,e?.message||e);}}
+async function restoreRemote(){if(!window.VG?.shared?.get)return;const get=async(resource)=>{try{return (await window.VG.shared.get(resource,'state'))?.data||null;}catch(e){return null;}};const [sem,ab,hk,buffet]=await Promise.all([get('ops-reputation-semester'),get('ops-ab'),get('ops-housekeeping'),get('ops-ab-buffet')]);if(sem?.periods){state.semester=sem;semMigrate();}if(ab?.imports)state.ab=ab;if(buffet?.rows)state.buffet=Object.assign(state.buffet,buffet);if(hk?.catalog){state.hk.db=hkMigrate(hk);try{localStorage.setItem(hkKey(),JSON.stringify(state.hk.db));}catch(e){}}}
 function downloadJson(name,obj){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 
 // ---------- Helpers HTML ----------
@@ -225,10 +494,31 @@ function setupViews(){
   const rep=document.querySelector('#view-reputacao .view-rep-root');if(rep&&!document.getElementById('repV33Root')){const d=document.createElement('div');d.id='repV33Root';rep.parentElement.insertBefore(d,rep);}
   installRevenueView();
 }
-function refreshCurrent(){try{if(currentView==='reputacao')renderReputation33();if(currentView==='receitasdet')installRevenueView(),rdRender?.();if(currentView==='ab')renderAB();if(currentView==='housekeeping')renderHK();}catch(e){console.warn(e);}}
-async function init(){restoreLocal();await loadSeed();hkLoad();await restoreRemote();seedLegacyReputation();setupViews();ensureRevenueSeed();renderReputation33();renderAB();renderHK();state.ready=true;setTimeout(refreshCurrent,200);}
+async function ensureIntegratedData(){
+  if(state._integratedDataReady)return;
+  if(!state._integratedDataPromise)state._integratedDataPromise=(async()=>{
+    await loadSeed();
+    await restoreRemote();
+    seedLegacyReputation();
+    ensureRevenueSeed();
+    state._integratedDataReady=true;
+  })().finally(()=>{state._integratedDataPromise=null;});
+  return state._integratedDataPromise;
+}
+async function refreshCurrent(){
+  try{
+    if(typeof currentView==='undefined')return;
+    if(currentView==='housekeeping'){renderHK();return;}
+    if(['reputacao','receitasdet','ab'].includes(currentView))await ensureIntegratedData();
+    if(currentView==='reputacao')renderReputation33();
+    if(currentView==='receitasdet'){installRevenueView();if(typeof rdRender==='function')rdRender();}
+    if(currentView==='ab')renderAB();
+  }catch(e){console.warn(e);}
+}
+async function init(){restoreLocal();setupViews();state.ready=true;refreshCurrent();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-window.VG.domains33={version:VERSION,state,init,refresh:refreshCurrent,canonHotel,weeklyReports,repLatestByHotel,renderReputation:renderReputation33,renderAB,renderHousekeeping:renderHK,parseAbWorkbook,hkStock,crossIntelligence,loadSeed};
-window.VG.events?.on?.('market:changed',()=>{state.seed=null;state.semester={periods:[],selectedId:null,subtab:'overview',dimension:'categories',region:'Todas',hotel:'Todas',loadedAt:null};state.ab={imports:[],selected:null};state.hk.db=null;restoreLocal();loadSeed().then(async()=>{hkLoad();await restoreRemote();seedLegacyReputation();ensureRevenueSeed();refreshCurrent();});});
+window.VG.domains33={version:VERSION,state,init,refresh:refreshCurrent,canonHotel,weeklyReports,repLatestByHotel,renderReputation:renderReputation33,renderAB,renderHousekeeping:renderHK,parseAbWorkbook,hkStock,crossIntelligence,loadSeed,theoreticalData,theoryRecipeIndex,buffetLoadFile};
+window.VG.events?.on?.('market:changed',()=>{state.seed=null;state._integratedDataReady=false;state._integratedDataPromise=null;state.weekly={hotel:'',reportId:''};state.semester={periods:[],selectedId:null,subtab:'overview',dimension:'categories',region:'Todas',hotel:'Todas',loadedAt:null};state.ab={imports:[],selected:null,recipeMap:{}};state.buffet={rows:[],sourceFile:'',loadedAt:null,hotel:'Todas',meal:'Todos'};state.theoretical={cacheKey:'',data:null};state.hk.db=null;restoreLocal();refreshCurrent();});
+window.VG.events?.on?.('revenue-detail:changed',()=>{state.theoretical={cacheKey:'',data:null};if(typeof currentView!=='undefined'&&currentView==='ab'&&document.getElementById('abHubRoot')?.dataset.tab==='theoretical')renderAB();});
 window.VG.events?.on?.('state:changed',refreshCurrent);
 })();

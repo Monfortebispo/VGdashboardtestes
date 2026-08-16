@@ -127,6 +127,7 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
         }</div>
       </div>
       ${pdfSectionBody(tab.id, cap.images, cap.tables)}
+      <div class="pdf-footer"><span>Vila Galé Hotéis · Dashboard Operações</span><span>${now}</span></div>
     </div>`;
   });
 
@@ -137,7 +138,7 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
 <meta charset="UTF-8">
 <title>Vila Galé — Dashboard Operações</title>
 <style>
-  @page { size: A4 landscape; margin: 10mm 12mm; }
+  @page { size: A4 landscape; margin: 10mm 12mm 13mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; color: #1a2535; background: #fff;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -146,7 +147,7 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
   .pdf-section:last-child { page-break-after: avoid; break-after: avoid; }
 
   /* Header */
-  .pdf-hdr { display: flex; align-items: center; gap: 10px; padding: 5px 0 8px; border-bottom: 2.5px solid #1e3a5f; margin-bottom: 11px; }
+  .pdf-hdr { display: flex; align-items: center; gap: 10px; padding: 5px 0 8px; border-bottom: 2.5px solid #1e3a5f; margin-bottom: 11px; break-inside: avoid; }
   .pdf-brand { display:flex;align-items:center;gap:6px;min-width:92px;color:#1e3a5f;font-weight:800;font-size:8pt;white-space:nowrap; }
   .pdf-logo { width:27px;height:27px;object-fit:contain;border-radius:4px; }
   .pdf-hdr-title { font-size: 13pt; font-weight: 800; color: #1e3a5f; flex: 1; }
@@ -181,6 +182,7 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
   td:first-child { text-align: left; font-family: Arial, sans-serif; font-weight: 600; color: #1a2535; }
   td:nth-child(2) { text-align: left; }
   tbody tr:nth-child(even) td { background: #f5f7fa; }
+  .pdf-footer { margin-top:8px; padding-top:5px; border-top:1px solid #d6dce5; display:flex; justify-content:space-between; gap:10px; color:#6b7280; font-size:6.5pt; font-family:Arial,Helvetica,sans-serif; break-inside:avoid; }
 
   /* Misc */
   .no-data { color: #aaa; font-size: 9pt; padding: 10px 0; }
@@ -243,6 +245,7 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
 </head><body>
 ${sectionsHtml}
 <div class="no-print" style="text-align:center;padding:20px;font-family:Arial;font-size:11pt;color:#555">
+  <div style="max-width:780px;margin:0 auto 12px;padding:9px 12px;border:1px solid #d7dde6;border-radius:7px;background:#f8fafc;font-size:10pt"><b>Para um PDF institucional limpo:</b> na janela de impressão desative “Cabeçalhos e rodapés”. Assim não aparecem data do browser, URL/about:blank nem numeração automática do navegador.</div>
   <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:12px 28px;border-radius:6px;font-size:12pt;font-weight:700;cursor:pointer;margin-right:12px">🖨 Imprimir / Guardar PDF</button>
   <button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:12px 20px;border-radius:6px;font-size:12pt;cursor:pointer">Fechar</button>
 </div>
