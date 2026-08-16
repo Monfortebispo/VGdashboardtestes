@@ -173,7 +173,7 @@ function updateContextPanel() {
 // ==========================================================
 function initHashRouting() {
   const hash = window.location.hash.replace('#', '');
-  const validViews = ['resumo','receitas','recdet','custos','kpis','pl','costanalysis','cua','reputacao','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
+  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
   if (hash && validViews.includes(hash)) {
     setView(hash);
   }

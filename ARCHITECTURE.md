@@ -241,3 +241,20 @@ O runtime `07-markets-v31.js` passa a tratar a troca de mercado como uma frontei
 - Agregados de portefólio são ponderados: soma do numerador / soma da atividade, nunca média simples entre hotéis.
 - Semântica de variação: em custos unitários menos é melhor; em receita/GOP unitários mais é melhor.
 - Respeita integralmente o mercado ativo e a moeda contextual (EUR/BRL).
+
+
+## V33 — Domínios operacionais integrados
+
+A camada V33 não duplica autenticação, geografia ou catálogo de hotéis. Os novos módulos consomem `VG.market`, o perfil autenticado e os globais operacionais existentes.
+
+### Reputação
+O JSON semanal é normalizado para o `REP_STORE` legado, preservando os gráficos ReviewPro existentes. A camada semestral mantém origem/tipo separados (`painel`, `resultados`, `concorrencia`, `respostas`, `semantica_resultados`, `semantica_mencoes`) para impedir mistura metodológica entre horizontes.
+
+### Receita detalhada e A&B
+`RD_STORE` continua a ser o livro de snapshots de receita detalhada. A área A&B lê os mapas de Compras e liga artigos vendidos às receitas técnicas quando existe correspondência normalizada. O consumo por balanço usa `inventário inicial + compras - inventário final`.
+
+### Housekeeping
+O stock têxtil é um livro-razão: `base física + entradas - quebras ± acertos`. O par oficial é `índice × vestido 100%` quando essa parametrização existe. A sugestão dinâmica aplica o forecast de ocupação com piso de segurança, sem alterar o par oficial. Diferenças de contagem física exigem justificação.
+
+### Persistência e recuperação
+Direção pode persistir os estados partilhados `ops-housekeeping`, `ops-ab` e `ops-reputation-semester`; estes recursos entram no sistema de auditoria e snapshots de recuperação. Utilizadores de hotel permanecem limitados ao âmbito autorizado.

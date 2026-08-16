@@ -274,33 +274,35 @@ function igRenderOverview(mes) {
   const mesData=snap.months[mes]||{};
   const hotels=Object.keys(mesData).sort();
   const labels=hotels.map(h=>h.replace('COLLECTION ','C. ').replace('MASSA FINA ','MF '));
-  const get=(h,k)=>mesData[h]?.[k]??0;
+  const get=(h,k)=>mesData[h]?.[k]??null;
   const sortedMonths=igGetSortedMonths();
   const prevMes=sortedMonths[sortedMonths.indexOf(mes)-1]||null;
   const prevData=prevMes?(snap.months[prevMes]||{}):{};
-  const totalSeg=hotels.reduce((s,h)=>s+(get(h,'seguidores')||0),0);
+  const followerValue=h=>{const cur=get(h,'seguidores'),prev=prevData[h]?.seguidores;return cur===0&&Number(prev)>0?null:cur;};
+  const followerGrowth=h=>{const cur=followerValue(h),prev=prevData[h]?.seguidores;return cur==null||prev==null?null:cur-prev;};
+  const totalSeg=hotels.reduce((s,h)=>s+(followerValue(h)||0),0);
   const totalViews=hotels.reduce((s,h)=>s+(get(h,'views')||0),0);
   const totalPubs=hotels.reduce((s,h)=>s+(get(h,'total')||0),0);
-  const growthArr=hotels.map(h=>(get(h,'seguidores')||0)-(prevData[h]?.seguidores||0));
-  const totalGrowth=growthArr.reduce((s,v)=>s+v,0);
+  const growthArr=hotels.map(h=>followerGrowth(h));
+  const growthValid=growthArr.filter(v=>v!=null), totalGrowth=growthValid.reduce((s,v)=>s+v,0);
   document.getElementById('igKpis').innerHTML=[
     {lbl:'Total Seguidores',val:totalSeg.toLocaleString('pt-PT'),sub:`${igCapMes(mes)} · ${hotels.length} hotéis`,cls:''},
-    {lbl:'Crescimento Seguidores',val:(totalGrowth>=0?'+':'')+totalGrowth.toLocaleString('pt-PT'),sub:prevMes?`vs ${igCapMes(prevMes)}`:'sem mês anterior',cls:totalGrowth>=0?'k-green':'k-red'},
+    {lbl:'Crescimento Seguidores',val:growthValid.length?((totalGrowth>=0?'+':'')+totalGrowth.toLocaleString('pt-PT')):'Sem dados',sub:prevMes?`vs ${igCapMes(prevMes)} · ${growthValid.length}/${hotels.length} com dados`:'sem mês anterior',cls:totalGrowth>=0?'k-green':'k-red'},
     {lbl:'Total Visualizações',val:totalViews.toLocaleString('pt-PT'),sub:'Todas as plataformas',cls:'k-teal'},
     {lbl:'Total Publicações',val:totalPubs.toLocaleString('pt-PT'),sub:'Posts + Histórias',cls:''},
   ].map(k=>`<div class="ig-kpi ${k.cls}"><div class="ig-kpi-lbl">${k.lbl}</div><div class="ig-kpi-val">${k.val}</div><div class="ig-kpi-sub">${k.sub}</div></div>`).join('');
-  igDC('igChartSeguidores','bar',labels,[{label:'Seguidores',data:hotels.map(h=>get(h,'seguidores')),backgroundColor:'rgba(131,58,180,.55)',borderColor:'#833ab4',borderWidth:1,borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',font:{size:11},callback:v=>v.toLocaleString('pt-PT')},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#64748b',font:{size:10},maxRotation:40},grid:{color:'rgba(255,255,255,.04)'}}}});
+  igDC('igChartSeguidores','bar',labels,[{label:'Seguidores',data:hotels.map(h=>followerValue(h)),backgroundColor:'rgba(131,58,180,.55)',borderColor:'#833ab4',borderWidth:1,borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',font:{size:11},callback:v=>v.toLocaleString('pt-PT')},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#64748b',font:{size:10},maxRotation:40},grid:{color:'rgba(255,255,255,.04)'}}}});
   igDC('igChartViews','bar',labels,[{label:'Visualizações',data:hotels.map(h=>get(h,'views')),backgroundColor:'rgba(253,29,29,.55)',borderColor:'#fd1d1d',borderWidth:1,borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',font:{size:11},callback:v=>v.toLocaleString('pt-PT')},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#64748b',font:{size:10},maxRotation:40},grid:{color:'rgba(255,255,255,.04)'}}}});
   igDC('igChartPubs','bar',labels,[{label:'Posts',data:hotels.map(h=>get(h,'posts')),backgroundColor:'rgba(131,58,180,.6)',borderColor:'#833ab4',borderWidth:1,borderRadius:3},{label:'Histórias',data:hotels.map(h=>get(h,'historias')),backgroundColor:'rgba(252,176,69,.6)',borderColor:'#fcb045',borderWidth:1,borderRadius:3}],{scales:{x:{stacked:true,ticks:{color:'#64748b',font:{size:10},maxRotation:40},grid:{color:'rgba(255,255,255,.04)'}},y:{stacked:true,ticks:{color:'#64748b',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}});
-  igDC('igChartGrowth','bar',labels,[{label:'Δ Seguidores',data:growthArr,backgroundColor:growthArr.map(v=>v>=0?'rgba(31,158,107,.6)':'rgba(192,57,43,.6)'),borderColor:growthArr.map(v=>v>=0?'#1f9e6b':'#c0392b'),borderWidth:1,borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',font:{size:11},callback:v=>(v>=0?'+':'')+v},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#64748b',font:{size:10},maxRotation:40},grid:{color:'rgba(255,255,255,.04)'}}}});
+  igDC('igChartGrowth','bar',labels,[{label:'Δ Seguidores',data:growthArr,backgroundColor:growthArr.map(v=>v==null?'rgba(148,163,184,.25)':v>=0?'rgba(31,158,107,.6)':'rgba(192,57,43,.6)'),borderColor:growthArr.map(v=>v==null?'#94a3b8':v>=0?'#1f9e6b':'#c0392b'),borderWidth:1,borderRadius:4}],{plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',font:{size:11},callback:v=>(v>=0?'+':'')+v},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#64748b',font:{size:10},maxRotation:40},grid:{color:'rgba(255,255,255,.04)'}}}});
   const maxViews=Math.max(...hotels.map(h=>get(h,'views')||0));
   document.getElementById('igRankBody').innerHTML=[...hotels].sort((a,b)=>(get(b,'views')||0)-(get(a,'views')||0)).map(h=>{
     const d=mesData[h]||{};
-    const growth=(d.seguidores||0)-(prevData[h]?.seguidores||0);
-    const badge=growth>0?`<span class="delta-badge pos">+${growth}</span>`:growth<0?`<span class="delta-badge neg">${growth}</span>`:'—';
+    const seg=followerValue(h),growth=followerGrowth(h);
+    const badge=growth==null?'<span class="delta-badge">Sem dados</span>':growth>0?`<span class="delta-badge pos">+${growth}</span>`:growth<0?`<span class="delta-badge neg">${growth}</span>`:'—';
     const barPct=maxViews>0?((d.views||0)/maxViews*100).toFixed(0):0;
     const alcanceStr=d.alcance!=null?(d.alcance<2&&d.alcance>0?(d.alcance*100).toFixed(1)+'%':d.alcance.toLocaleString('pt-PT')):'—';
-    return `<tr><td>${h.replace('COLLECTION ','C. ').replace('MASSA FINA ','MF ')}</td><td>${(d.seguidores||0).toLocaleString('pt-PT')}</td><td>${badge}</td><td>${d.posts??'—'}</td><td>${d.historias??'—'}</td><td>${d.total??'—'}</td><td>${d.media!=null?d.media.toFixed(2):'—'}</td><td><div class="ig-bar-wrap"><div class="ig-bar"><div class="ig-bar-fill" style="width:${barPct}%"></div></div>${(d.views||0).toLocaleString('pt-PT')}</div></td><td>${d.gostos!=null?d.gostos.toLocaleString('pt-PT'):'—'}</td><td>${d.partilhas!=null?d.partilhas.toLocaleString('pt-PT'):'—'}</td><td>${alcanceStr}</td></tr>`;
+    return `<tr><td>${h.replace('COLLECTION ','C. ').replace('MASSA FINA ','MF ')}</td><td>${seg==null?'Sem dados':seg.toLocaleString('pt-PT')}</td><td>${badge}</td><td>${d.posts??'—'}</td><td>${d.historias??'—'}</td><td>${d.total??'—'}</td><td>${d.media!=null?d.media.toFixed(2):'—'}</td><td><div class="ig-bar-wrap"><div class="ig-bar"><div class="ig-bar-fill" style="width:${barPct}%"></div></div>${(d.views||0).toLocaleString('pt-PT')}</div></td><td>${d.gostos!=null?d.gostos.toLocaleString('pt-PT'):'—'}</td><td>${d.partilhas!=null?d.partilhas.toLocaleString('pt-PT'):'—'}</td><td>${alcanceStr}</td></tr>`;
   }).join('');
 }
 

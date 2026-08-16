@@ -6,9 +6,10 @@
 // ==========================================================
 (function(){
   'use strict';
-  const BUILD='32.4';
-  const SW_URL='/service-worker.js?vg='+encodeURIComponent(BUILD);
-  window.__VG_APP_BUILD__=BUILD;
+  const BUILD='32.9'; // identificador de compatibilidade do guard legado
+  const PLATFORM_BUILD='33.0';
+  const SW_URL='/service-worker.js?vg='+encodeURIComponent(PLATFORM_BUILD);
+  window.__VG_APP_BUILD__=PLATFORM_BUILD;
   window.__VG_SW_URL__=SW_URL;
 
   function swBuild(controller){
@@ -24,7 +25,7 @@
   function clearUpdatingScreen(){document.documentElement.classList.remove('vg-build-updating');}
   function reloadOnce(){
     try{
-      const key='vg_build_reloaded_'+BUILD;
+      const key='vg_build_reloaded_'+PLATFORM_BUILD;
       if(sessionStorage.getItem(key)==='1'){clearUpdatingScreen();return;}
       sessionStorage.setItem(key,'1');
     }catch(e){}
@@ -33,21 +34,21 @@
 
   if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
   const controlled=navigator.serviceWorker.controller;
-  const oldController=!!controlled && swBuild(controlled)!==BUILD;
+  const oldController=!!controlled && swBuild(controlled)!==PLATFORM_BUILD;
   if(oldController)addUpdatingScreen();
 
   let controllerTimer=null;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
     clearTimeout(controllerTimer);
     controllerTimer=setTimeout(()=>{
-      if(swBuild(navigator.serviceWorker.controller)===BUILD)reloadOnce();
+      if(swBuild(navigator.serviceWorker.controller)===PLATFORM_BUILD)reloadOnce();
     },40);
   });
 
   navigator.serviceWorker.register(SW_URL,{scope:'/',updateViaCache:'none'}).then(reg=>{
     try{reg.update();}catch(e){}
     if(reg.waiting)try{reg.waiting.postMessage({type:'SKIP_WAITING'});}catch(e){}
-    if(swBuild(navigator.serviceWorker.controller)===BUILD)clearUpdatingScreen();
+    if(swBuild(navigator.serviceWorker.controller)===PLATFORM_BUILD)clearUpdatingScreen();
     // Nunca deixar um ecrã de atualização bloqueado indefinidamente.
     if(oldController)setTimeout(clearUpdatingScreen,12000);
   }).catch(err=>{

@@ -111,13 +111,14 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
   const meses = [...selectedMeses].sort((a,b)=>a-b).map(m=>MES_NOME[m]||m).join(' + ') || '—';
   const nHoteis = typeof getActiveHotels === 'function' ? getActiveHotels().length : '—';
   const scopeLabel = (hotelChoice && hotelChoice !== '__all__') ? hotelChoice : null;
+  const logoUrl = new URL('assets/icons/vg-ops-180.png', window.location.href).href;
 
   let sectionsHtml = '';
   tabs.forEach(tab => {
     const cap = captures[tab.id] || { images:{}, tables:{} };
     sectionsHtml += `<div class="pdf-section">
       <div class="pdf-hdr">
-        <div class="pdf-vg">VG</div>
+        <div class="pdf-brand"><img class="pdf-logo" src="${logoUrl}" alt="Vila Galé"><span>Vila Galé</span></div>
         <div class="pdf-hdr-title">${tab.icon} ${tab.label}${scopeLabel ? ' — ' + scopeLabel : ''}</div>
         <div class="pdf-hdr-meta">Vila Galé Hotéis &nbsp;·&nbsp; ${now} &nbsp;·&nbsp; ${
           tab.id === 'reputacao'
@@ -146,7 +147,8 @@ function pdfOpenWindow(tabs, captures, hotelChoice) {
 
   /* Header */
   .pdf-hdr { display: flex; align-items: center; gap: 10px; padding: 5px 0 8px; border-bottom: 2.5px solid #1e3a5f; margin-bottom: 11px; }
-  .pdf-vg { background: #1e3a5f; color: #fff; font-weight: 800; font-size: 9.5pt; padding: 2px 7px; border-radius: 3px; letter-spacing: 1px; }
+  .pdf-brand { display:flex;align-items:center;gap:6px;min-width:92px;color:#1e3a5f;font-weight:800;font-size:8pt;white-space:nowrap; }
+  .pdf-logo { width:27px;height:27px;object-fit:contain;border-radius:4px; }
   .pdf-hdr-title { font-size: 13pt; font-weight: 800; color: #1e3a5f; flex: 1; }
   .pdf-hdr-meta { font-size: 7pt; color: #555; font-family: monospace; }
 
@@ -313,7 +315,7 @@ function pdfBodyResumo(images, tables) {
     ${pdfImg(images,'chartGOP','GOP por Hotel')}
     ${pdfImg(images,'chartGOPpct','GOP % (Margem)')}
   </div>`;
-  const th = `<tr><th>Hotel</th><th>Rec.${YR_PREV}</th><th>Rec.${YR_CUR}</th><th>Var%</th><th>Occ ${YR_PREV.slice(2)}</th><th>Occ ${YR_CUR.slice(2)}</th><th>RevPAR ${YR_PREV.slice(2)}</th><th>RevPAR ${YR_CUR.slice(2)}</th><th>ADR ${YR_PREV.slice(2)}</th><th>ADR ${YR_CUR.slice(2)}</th><th>GOP ${YR_PREV.slice(2)}</th><th>GOP ${YR_CUR.slice(2)}</th><th>GOP%</th><th>GOP sem sede</th></tr>`;
+  const th = `<tr><th>Hotel</th><th>Rec.${YR_PREV}</th><th>Rec.${YR_CUR}</th><th>Δ €</th><th>Δ %</th><th>Occ ${YR_PREV.slice(2)}</th><th>Occ ${YR_CUR.slice(2)}</th><th>RevPAR ${YR_PREV.slice(2)}</th><th>RevPAR ${YR_CUR.slice(2)}</th><th>ADR ${YR_PREV.slice(2)}</th><th>ADR ${YR_CUR.slice(2)}</th><th>GOP ${YR_PREV.slice(2)}</th><th>GOP ${YR_CUR.slice(2)}</th><th>GOP%</th><th>GOP sem sede</th></tr>`;
   return kpis + charts + pdfTable('Tabela Comparativa', th, tables['mainTableBody']);
 }
 
@@ -347,7 +349,7 @@ function pdfBodyKpis(images, tables) {
     ${pdfImg(images,'chartKpiOcc','Taxa de Ocupação')}
     ${pdfImg(images,'chartKpiRevpar','RevPAR')}
   </div>`;
-  const th = `<tr><th>Hotel</th><th>Occ ${YR_PREV.slice(2)}</th><th>Occ ${YR_CUR.slice(2)}</th><th>ADR ${YR_PREV.slice(2)}</th><th>ADR ${YR_CUR.slice(2)}</th><th>RevPAR ${YR_PREV.slice(2)}</th><th>RevPAR ${YR_CUR.slice(2)}</th><th>TRevPAR ${YR_PREV.slice(2)}</th><th>TRevPAR ${YR_CUR.slice(2)}</th><th>GOP ${YR_PREV.slice(2)}</th><th>GOP ${YR_CUR.slice(2)}</th><th>GOP%</th><th>Dorm.${YR_CUR.slice(2)}</th></tr>`;
+  const th = `<tr><th>Hotel</th><th>Occ ${YR_PREV.slice(2)}</th><th>Occ ${YR_CUR.slice(2)}</th><th>Δ %</th><th>ADR ${YR_PREV.slice(2)}</th><th>ADR ${YR_CUR.slice(2)}</th><th>Δ %</th><th>RevPAR ${YR_PREV.slice(2)}</th><th>RevPAR ${YR_CUR.slice(2)}</th><th>Δ %</th><th>TRevPAR ${YR_PREV.slice(2)}</th><th>TRevPAR ${YR_CUR.slice(2)}</th><th>Δ %</th><th>GOP ${YR_PREV.slice(2)}</th><th>GOP ${YR_CUR.slice(2)}</th><th>Δ %</th><th>GOP% ${YR_PREV.slice(2)}</th><th>GOP% ${YR_CUR.slice(2)}</th><th>Δ p.p.</th><th>GOP sem sede ${YR_PREV.slice(2)}</th><th>GOP sem sede ${YR_CUR.slice(2)}</th><th>Δ %</th><th>Dorm. ${YR_PREV.slice(2)}</th><th>Dorm. ${YR_CUR.slice(2)}</th><th>Δ %</th></tr>`;
   return charts + pdfTable('KPIs por Hotel', th, tables['kpiTableBody']);
 }
 
@@ -436,7 +438,7 @@ function pdfBodyReputacao(images, tables) {
     <th>#</th><th>Hotel</th><th>Semana</th>
     <th>GRI™</th><th>Δ GRI</th><th>Objetivo</th>
     <th>Reviews</th><th>Resp%</th>
-    <th>Serviço</th><th>Quarto</th><th>Limpeza</th><th>F&amp;B</th>
+    <th>Serviço</th><th>Quarto</th><th>Limpeza</th><th>Valor</th><th>CQI™</th><th>Rank VG</th>
   </tr>`;
 
   return kpisHtml + charts + pdfTable('Ranking de Reputação — ReviewPro', thRanking, tables['rtRankBody']);

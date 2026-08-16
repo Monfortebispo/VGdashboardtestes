@@ -106,8 +106,8 @@ function setView(v) {
   // A página Agenda & Tempo não depende do carregamento do Excel; por isso não deve reservar espaço para o empty state.
   const empty = document.getElementById('emptyState');
   if (empty) {
-    if (v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare' || v === 'hoteis') empty.style.display = 'none';
-    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare' || v === 'hoteis');
+    if (v === 'agenda' || v === 'compras' || v === 'receitasdet' || v === 'ab' || v === 'housekeeping' || v === 'reputacao' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare' || v === 'hoteis') empty.style.display = 'none';
+    empty.classList.toggle('agenda-hidden', v === 'agenda' || v === 'compras' || v === 'receitasdet' || v === 'ab' || v === 'housekeeping' || v === 'reputacao' || v === 'datacenter' || v === 'governance' || v === 'backup' || v === 'automaticreports' || v === 'analyticalassistant' || v === 'documents' || v === 'approvals' || v === 'scenariocompare' || v === 'hoteis');
   }
   requestAnimationFrame(() => { if(window.VG?.performance?.resizeVisibleCharts) window.VG.performance.resizeVisibleCharts(); else Object.values(charts).forEach(c => c?.resize?.()); });
 }
@@ -1391,7 +1391,9 @@ function refreshAll(){
   if(currentView === 'hoteis') { if(typeof hoteisInit==='function') hoteisInit(); return; }
   if(currentView === 'ocupacao') { if(typeof occRender==='function') occRender(); return; }
   if(currentView === 'instagram') { if(typeof igRender==='function') igRender(); return; }
-  if(currentView === 'recdet') { if(typeof rdRender==='function') rdRender(); return; }
+  if(currentView === 'recdet' || currentView === 'receitasdet') { if(typeof rdRender==='function') rdRender(); window.VG?.domains33?.refresh?.('receitasdet'); return; }
+  if(currentView === 'ab') { window.VG?.domains33?.refresh?.('ab'); return; }
+  if(currentView === 'housekeeping') { window.VG?.domains33?.refresh?.('housekeeping'); return; }
   if(!RAW) { try{window.VG?.market?.syncMarketDataUi?.();}catch(e){} return; }
   try{window.VG?.market?.syncMarketDataUi?.();}catch(e){}
   buildKPIs('kpiGrid');
