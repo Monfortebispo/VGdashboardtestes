@@ -1,3 +1,13 @@
+# Atualização V32.5 — City Ledger e Assistente Analítico
+
+- PDF de extrato do City Ledger com paleta fixa para impressão: cabeçalho branco sobre azul e corpo sempre em texto escuro, independentemente do tema da dashboard.
+- Metas do “Perguntar aos dados” formatadas por KPI: crescimento de Receita em %, Ocupação/Margens/Rácios em %, ADR e RevPAR em moeda.
+- Removido o ruído de precisão de ponto flutuante (ex.: `74.848424...`).
+- Cache PWA atualizado para `vg-operations-shell-v32-5`.
+- Regressão completa: 46/46 suites aprovadas.
+
+---
+
 # VG Operations 2.0 — v30
 
 A V30 é uma consolidação de produto sobre a V29.1. O objetivo não é acrescentar páginas indiscriminadamente, mas reduzir a fragmentação da experiência mantendo as funcionalidades existentes disponíveis.
@@ -207,14 +217,8 @@ As diligências de cobrança não são escritas no Excel. Ficam na VG Operations
 - Compras & Artigos passa a usar a mesma linguagem visual, cartões, tipografia, estados e paleta global da aplicação.
 
 
-## V32.3 — Cobrança por email no City Ledger
-
-- preparação de email sem integração Microsoft/Outlook;
-- 3 templates partilhados e configuráveis por Geografia (edição reservada à Direção);
-- texto, destinatário, CC e assunto editáveis antes do envio;
-- âmbito por hotel ou todos os hotéis acessíveis ao perfil;
-- extrato PDF automático da entidade, com secções por hotel e totais por moeda;
-- `mailto:` para abrir o cliente de email e download automático do PDF para anexação manual;
-- botão **Registar como enviado**, criando diligência por hotel;
-- autor, nome e perfil são derivados da sessão autenticada no servidor, nunca do browser;
-- histórico conserva template, assunto, destinatários, ficheiro do extrato, snapshot e saldo à data da diligência.
+## V32.4 — contraste dos temas claros + navegação Qualidade & Comunicação
+- Corrigido o contraste de Notificações, Pesquisar, atalho Ctrl K, estado online e Perguntar aos dados nos temas ERP e Vila Galé.
+- O tema azul escuro mantém o contraste original.
+- Reputação e Instagram voltam ao menu lateral numa área própria `Qualidade & Comunicação`.
+- Os módulos e respetivos dados não foram recriados: já existiam; o acesso tinha sido ocultado pela simplificação V30.

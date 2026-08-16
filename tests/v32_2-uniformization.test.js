@@ -14,5 +14,5 @@ assert.strictEqual(sha('assets/js/modules/ficha-hotel.js'),'2779d6f5cbfcedb672f0
 assert(!html.includes('id="vgNavDock"')&&!shell.includes('function buildDock'),'barra flutuante horizontal deve ser removida, não apenas escondida');
 assert(html.includes('assets/css/uniformizacao-v32_2.css')&&css.includes('.vg-notif-trigger')&&css.includes('.vg-search-top-trigger'),'contraste do topo deve ser uniformizado');
 assert(css.includes('#view-compras .cd-head')&&css.includes('#view-compras .kpi')&&compras.includes("'#06b6d4','#7c3aed'"),'Compras & Artigos deve usar linguagem visual global');
-assert(sw.includes("vg-operations-shell-v32-2")&&sw.includes('/assets/css/uniformizacao-v32_2.css')&&sw.includes('/assets/js/modules/hoteis.js'),'PWA deve publicar V32.2 completa');
+assert(/vg-operations-shell-v32-[2-9]/.test(sw)&&sw.includes('/assets/css/uniformizacao-v32_2.css')&&sw.includes('/assets/js/modules/hoteis.js'),'PWA deve manter ou superar V32.2 completa');
 console.log('✓ V32.2: Hotéis recuperado, Geografia, Comentários Fecho do Mês, barra removida e uniformização visual');

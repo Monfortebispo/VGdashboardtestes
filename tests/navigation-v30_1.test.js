@@ -11,7 +11,7 @@ const preserve=ui.indexOf("const preservedButtons=Array.from(nav.querySelectorAl
 const move=ui.indexOf('preservedButtons.forEach(el=>nav.appendChild(el))');
 const remove=ui.indexOf("nav.querySelectorAll('.sb-nav-group').forEach(g=>g.remove())");
 assert(preserve>=0&&move>preserve&&remove>move,'V30.1 deve preservar/mover os botões antes de remover os grupos antigos');
-assert(ui.includes("nav.dataset.v30Version==='30.1'")&&ui.includes('version:30.1'),'V30.1 deve poder substituir a navegação defeituosa da V30');
+assert(/nav\.dataset\.v30Version==='30\.[1-9][0-9]*'/.test(ui)&&/version:30\.[1-9][0-9]*/.test(ui),'A navegação consolidada deve manter versão igual ou superior à V30.1');
 for(const id of ['nav-resumo','nav-fichahotel','nav-agenda','nav-approvals','nav-receitas','nav-custos','nav-pl','nav-compras','nav-benchmark','nav-anomalies','nav-documents','nav-automaticreports','nav-datacenter','nav-governance','nav-backup','nav-upload']){
   assert(html.includes(`id="${id}"`),`botão base ${id} deve existir no HTML para a reconstrução do menu`);
 }

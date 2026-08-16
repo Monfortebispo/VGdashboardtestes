@@ -13,6 +13,6 @@ assert(backend.includes('createdBy:authUser.user')&&backend.includes('createdByN
 assert(!/createdBy\s*:\s*cleanText\(input\./.test(backend),'backend não pode aceitar autor da diligência enviado pelo cliente');
 assert(backend.includes('ops-cityledger-email-templates"].some')||backend.includes('"ops-cityledger-email-templates"].some'),'templates devem integrar Backup & Recuperação');
 assert(css.includes('.cl-email-panel')&&css.includes('.cl-template-card'),'UI deve ter composer e editor de templates');
-assert(sw.includes("vg-operations-shell-v32-3"),'service worker deve avançar para cache V32.3');
-assert.strictEqual(pkg.version,'32.3.0');
+assert(/vg-operations-shell-v32-(?:[3-9]|[1-9][0-9])/.test(sw),'service worker deve manter cache V32.3 ou superior');
+assert(Number(pkg.version.split('.')[0])>32 || (Number(pkg.version.split('.')[0])===32 && Number(pkg.version.split('.')[1])>=3),'versão deve manter ou superar V32.3');
 console.log('✓ V32.3: cobrança por email, PDF, 3 templates, multi-hotel e autor server-side');

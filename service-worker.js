@@ -1,7 +1,7 @@
-// VG Operations v32.3 — service worker
+// VG Operations v32.5 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v32-3';
-// Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-2.
+const CACHE_NAME = 'vg-operations-shell-v32-5';
+// Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-4.
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",
   "/assets/css/audit-governance.css",

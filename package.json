@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "32.3.0",
+  "version": "32.5.0",
   "private": true,
-  "description": "VG Operations v32.3: City Ledger com preparação de cobrança por email, extrato PDF e diligência auditada por utilizador",
+  "description": "VG Operations v32.5: PDF City Ledger legível e formatação correta das metas no Assistente Analítico",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"
