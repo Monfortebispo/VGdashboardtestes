@@ -16,7 +16,7 @@ cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 assert(html.includes('assets/js/ui/notifications-v21.js')&&html.includes('assets/css/notifications-v21.css'),'V21 deve estar ligada ao HTML');
 assert(js.includes('VG.notifications={version:21'),'API VG.notifications v21 deve existir');
 assert(css.includes('#vgNotifications')&&css.includes('.vg-notif-trigger'),'deve existir centro e sino de notificações');
-assert(sw.includes("vg-operations-shell-v31")&&sw.includes('/assets/js/ui/notifications-v21.js')&&sw.includes('/assets/css/notifications-v21.css'),'PWA deve pré-cachear apenas a interface estática V21');
+assert(sw.includes("vg-operations-shell-v32")&&sw.includes('/assets/js/ui/notifications-v21.js')&&sw.includes('/assets/css/notifications-v21.css'),'PWA deve pré-cachear apenas a interface estática V21');
 assert(mobile.includes("data-action=\"notifications\"")&&mobile.includes('vgMobileNotificationBadge'),'mobile deve abrir notificações e mostrar badge');
 assert(!/fetch\s*\(|PushManager|pushManager|resource=notifications/i.test(js),'V21 não deve criar backend/push externo para notificações');
 assert(!/passwordhash|passwordsalt|vg_auth_token|authorization/i.test(js),'estado local de notificações não pode conter credenciais');

@@ -50,6 +50,8 @@
 <link rel="stylesheet" href="assets/css/workflow-approvals-v27.css">
 <link rel="stylesheet" href="assets/css/vg-operations-2-v30.css">
 <link rel="stylesheet" href="assets/css/markets-v31.css">
+<link rel="stylesheet" href="assets/css/unit-economics-v32.css">
+<link rel="stylesheet" href="assets/css/city-ledger-v32.css">
 </head>
 <body>
 <div id="cdnWarningBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#9c0006;color:#fff;text-align:center;padding:10px 16px;font-family:Arial,sans-serif;font-size:13px;font-weight:700">
@@ -225,6 +227,8 @@
 <button class="sb-nav-btn" id="nav-receitas" onclick="setView('receitas')"> <span class="sb-nav-icon">📈</span> Receitas</button>
 <button class="sb-nav-btn" id="nav-custos" onclick="setView('custos')"> <span class="sb-nav-icon">📉</span> Custos</button>
 <button class="sb-nav-btn" id="nav-pl" onclick="setView('pl')"> <span class="sb-nav-icon">📊</span> P&amp;L USALI</button>
+<button class="sb-nav-btn" id="nav-unitEconomics" onclick="setView('unitEconomics')"><span class="sb-nav-icon">⚡</span> Eficiência &amp; Unit Economics</button>
+<button class="sb-nav-btn" id="nav-cityledger" onclick="setView('cityledger')"><span class="sb-nav-icon">💳</span> City Ledger &amp; Cobranças</button>
 <button class="sb-nav-btn" id="nav-revenueint" onclick="setView('revenueint')"> <span class="sb-nav-icon">🧠</span> Revenue Intelligence</button>
 <button class="sb-nav-btn" id="nav-forecast" onclick="setView('forecast')"> <span class="sb-nav-icon">🔭</span> Forecast &amp; Cenários</button>
 <button class="sb-nav-btn" id="nav-scenariocompare" onclick="setView('scenariocompare')"> <span class="sb-nav-icon">⚖️</span> Comparação de Cenários</button>
@@ -1708,6 +1712,10 @@
 </div>
 </div>
 </div>
+<!-- EFICIÊNCIA & UNIT ECONOMICS V32 -->
+<div class="tab-content" id="view-unitEconomics"><div id="unitEconomicsRoot"><div style="padding:28px;color:var(--text-3)">A preparar Eficiência &amp; Unit Economics…</div></div></div>
+<!-- CITY LEDGER & COBRANÇAS V32 -->
+<div class="tab-content" id="view-cityledger"><div id="cityLedgerRoot"><div style="padding:28px;color:var(--text-3)">A preparar City Ledger &amp; Gestão de Cobranças…</div></div></div>
 <!-- CUSTO POR UNIDADE DE ACTIVIDADE -->
 <div class="tab-content" id="view-cua">
 <div class="section-title">⚡ Custo por Unidade de Actividade
@@ -1923,6 +1931,7 @@
 <script src="assets/js/modules/ficha-hotel.js" defer></script>
 <script src="assets/js/modules/pl-usali.js" defer></script>
 <script src="assets/js/modules/custo-atividade.js" defer></script>
+<script id="vg-unit-economics-v32" src="assets/js/modules/unit-economics-v32.js" defer></script>
 <script src="assets/js/modules/analysis-tools.js" defer></script>
 <script src="assets/js/modules/cost-analysis.js" defer></script>
 <script src="assets/js/ui/context-panel.js" defer></script>
@@ -1937,6 +1946,7 @@
 <script src="assets/js/modules/hoteis.js" defer></script>
 <script src="assets/js/modules/receitas-detalhe.js" defer></script>
 <script id="vg-markets-v31" src="assets/js/core/07-markets-v31.js" defer></script>
+<script id="vg-city-ledger-v32" src="assets/js/modules/city-ledger-v32.js" defer></script>
 <script src="assets/js/core/04-bootstrap.js" defer></script>
 <!-- GESTÃO DE AÇÕES v8.1 -->
 <div class="ops-action-modal" id="opsActionModal" role="dialog" aria-modal="true" aria-labelledby="opsActionModalTitle">

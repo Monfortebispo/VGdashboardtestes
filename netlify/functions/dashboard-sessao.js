@@ -26,6 +26,9 @@ const DOCUMENT_META_PREFIX = "ops-doc-meta/";
 const DOCUMENT_DATA_PREFIX = "ops-doc-data/";
 const APPROVAL_PREFIX = "ops-approval/";
 const SCENARIO_PREFIX = "ops-scenario/";
+const CITYLEDGER_SNAPSHOT_PREFIX = "ops-cityledger-snapshot/";
+const CITYLEDGER_DATA_PREFIX = "ops-cityledger-data/";
+const CITYLEDGER_DILIGENCE_PREFIX = "ops-cityledger-diligence/";
 const DOCUMENT_MAX_BYTES = 3.5 * 1024 * 1024;
 const DATA_IMPORT_PREFIX = "_data-import/";
 const DATA_BACKUP_PREFIX = "_data-backup/";
@@ -43,6 +46,9 @@ const APPROVAL_PRIORITIES = new Set(["normal", "high", "critical"]);
 const APPROVAL_STATUSES = new Set(["pending", "approved", "rejected", "cancelled"]);
 const APPROVAL_LINK_TYPES = new Set(["hotel", "action", "document", "agenda", "target"]);
 const DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx", "csv", "png", "jpg", "jpeg", "webp", "txt"]);
+const CITYLEDGER_METHODS = new Set(["phone","email","meeting","other"]);
+const CITYLEDGER_RESULTS = new Set(["answered","no_answer","promise","sent","dispute","other"]);
+const CITYLEDGER_STATUSES = new Set(["to_contact","contacted","promise","regularizing","dispute","legal","regularized"]);
 
 const HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -103,6 +109,21 @@ function documentMetaBlobKey(id) { return DOCUMENT_META_PREFIX + String(id || ""
 function documentDataBlobKey(id) { return DOCUMENT_DATA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function approvalBlobKey(id) { return APPROVAL_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function scenarioBlobKey(id) { return SCENARIO_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function citySafeId(v){ return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_.-]/g,"_").slice(0,180); }
+function citySnapshotBlobKey(market,id){ return marketStoreKey(market,CITYLEDGER_SNAPSHOT_PREFIX+citySafeId(id)); }
+function cityChunkBlobKey(market,snapshot,hotel,part){ return marketStoreKey(market,CITYLEDGER_DATA_PREFIX+citySafeId(snapshot)+"/"+citySafeId(hotel)+"/"+String(Number(part)||0).padStart(4,"0")); }
+function cityDiligenceBlobKey(market,id){ return marketStoreKey(market,CITYLEDGER_DILIGENCE_PREFIX+citySafeId(id)); }
+async function listCityLedgerSnapshots(store,market,user){
+  const prefix=marketStoreKey(market,CITYLEDGER_SNAPSHOT_PREFIX),listing=await store.list({prefix}),blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
+  const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(Boolean).sort((a,b)=>String(b.snapshotDate||b.createdAt||"").localeCompare(String(a.snapshotDate||a.createdAt||"")));
+  if(isDirection(user))return rows;
+  return rows.map(r=>{const h=user.hotel,hs=(r.hotels||[]).filter(x=>norm(x)===norm(h));if(!hs.length)return null;const bh=(r.summary?.byHotel||[]).filter(x=>norm(x.hotel)===norm(h));const summary=Object.assign({},r.summary||{}, {byHotel:bh,byBucket:{},byCurrency:{},debt:bh.reduce((s,x)=>s+Number(x.debt||0),0),balance:bh.reduce((s,x)=>s+Number(x.balance||0),0),credits:bh.reduce((s,x)=>s+Number(x.credits||0),0),documents:bh.reduce((s,x)=>s+Number(x.documents||0),0),clients:bh.reduce((s,x)=>s+Number(x.clients||0),0)});return Object.assign({},r,{hotels:hs,partsByHotel:{[h]:Number(r.partsByHotel?.[h]||0)},summary});}).filter(Boolean);
+}
+async function listCityLedgerDiligences(store,market,user){
+  const prefix=marketStoreKey(market,CITYLEDGER_DILIGENCE_PREFIX),listing=await store.list({prefix}),blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
+  const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(x=>x&&x.id);
+  return rows.filter(x=>isDirection(user)||norm(x.hotel)===norm(user.hotel)).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).slice(0,3000);
+}
 function documentExt(name) { const p=String(name||"").toLowerCase().split("."); return p.length>1?p.pop():""; }
 function safeDocumentFileName(name) { return cleanText(String(name||"").replace(/[\/\\<>:\"|?*\x00-\x1F]/g,"_"), 240); }
 function canManageHotel(user, hotel) {
@@ -305,7 +326,7 @@ function isRecoverableBusinessKey(key) {
   let k = String(key || "");
   if (k.startsWith("market/brasil/")) k = k.slice("market/brasil/".length);
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
-  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/"].some(p => k.startsWith(p));
+  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
   let k=String(key||""); if(k.startsWith("market/brasil/")) k=k.slice("market/brasil/".length);
@@ -318,6 +339,7 @@ function recoveryCategoryForKey(key) {
   if (k.startsWith("ops-doc-meta/") || k.startsWith("ops-doc-data/")) return "Documentos";
   if (k.startsWith("ops-approval/")) return "Aprovações";
   if (k.startsWith("ops-scenario/")) return "Cenários";
+  if (k.startsWith("ops-cityledger-snapshot/") || k.startsWith("ops-cityledger-data/") || k.startsWith("ops-cityledger-diligence/")) return "City Ledger";
   if (k.startsWith("mesacum-")) return "P&L acumulado";
   if (k.startsWith("mes-")) return "P&L mensal";
   if (k.startsWith("hotelxlsx-")) return "Fichas técnicas";
@@ -1210,6 +1232,63 @@ exports.handler = async (event) => {
     if (resource.startsWith("ops-approval/")) return forbidden("Os pedidos de aprovação só podem ser acedidos pelos endpoints próprios.");
 
     // -------------------- COMPARAÇÃO DE CENÁRIOS v29 --------------------
+
+    // -------------------- CITY LEDGER & COBRANÇAS V32 --------------------
+    if (resource === "ops-cityledger-snapshots" && event.httpMethod === "GET") {
+      return ok({ data: await listCityLedgerSnapshots(store, market, authUser) });
+    }
+    if (resource === "ops-cityledger-chunk" && event.httpMethod === "GET") {
+      const snapshot=cleanText(params.snapshot,120),hotel=cleanText(params.hotel,160),part=Number(params.part||0);
+      if(!snapshot||!hotel||!Number.isInteger(part)||part<0)return badRequest("Referência de City Ledger inválida.");
+      if(!canManageHotel(authUser,hotel))return forbidden();
+      if(hotelMarketServer(hotel)!==market)return forbidden("O hotel pertence a outro mercado.");
+      const data=await store.get(cityChunkBlobKey(market,snapshot,hotel,part),{type:"json"});
+      return ok({data:Array.isArray(data)?data:[]});
+    }
+    if (resource === "ops-cityledger-chunk-save" && event.httpMethod === "POST") {
+      if(!isDirection(authUser))return forbidden("Apenas a Direção pode importar o City Ledger.");
+      if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("O bloco do City Ledger excede o limite do endpoint.");
+      const input=parseBody(event)||{},snapshot=cleanText(input.snapshotId,120),hotel=cleanText(input.hotel,160),part=Number(input.part||0),rows=input.rows;
+      if(!snapshot||!hotel||!Number.isInteger(part)||part<0||!Array.isArray(rows)||rows.length>1200)return badRequest("Bloco de City Ledger inválido.");
+      if(hotelMarketServer(hotel)!==market)return badRequest("O hotel do bloco pertence a outro mercado.");
+      if(rows.some(r=>norm(r?.hotel)!==norm(hotel)||marketId(r?.market||market)!==market))return badRequest("O bloco mistura hotéis ou mercados.");
+      await store.setJSON(cityChunkBlobKey(market,snapshot,hotel,part),rows);
+      return ok({ok:true,rows:rows.length});
+    }
+    if (resource === "ops-cityledger-snapshot-save" && event.httpMethod === "POST") {
+      if(!isDirection(authUser))return forbidden("Apenas a Direção pode publicar o City Ledger.");
+      if(bodySizeOf(event)>512*1024)return tooLarge("O resumo do City Ledger excede o tamanho permitido.");
+      const input=parseBody(event)||{},id=cleanText(input.id,120),snapshotDate=cleanText(input.snapshotDate,20),hotels=Array.isArray(input.hotels)?input.hotels.map(x=>cleanText(x,160)).filter(Boolean):[];
+      if(!id||!/^[A-Za-z0-9_.-]+$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate)||!hotels.length)return badRequest("Snapshot do City Ledger inválido.");
+      if(hotels.some(h=>hotelMarketServer(h)!==market))return badRequest("O snapshot contém hotéis de outro mercado.");
+      const partsByHotel={};for(const h of hotels)partsByHotel[h]=Math.max(0,Math.min(100,Number(input.partsByHotel?.[h]||0)));
+      const item={id,market,snapshotDate,fileName:cleanText(input.fileName,300),fileSize:Number(input.fileSize||0)||0,hotels,partsByHotel,summary:input.summary&&typeof input.summary==="object"?input.summary:{},ignoredRows:Number(input.ignoredRows||0)||0,createdAt:new Date().toISOString(),createdBy:authUser.user,createdByName:authUser.name};
+      await store.setJSON(citySnapshotBlobKey(market,id),item);
+      await safeGovernanceAudit(store,authUser,{category:"City Ledger",action:"City Ledger publicado",resource:"ops-cityledger",key:id,detail:`${snapshotDate} · ${hotels.length} hotéis · ${Number(item.summary?.documents||0)} documentos · ${item.ignoredRows} linhas não-hotel ignoradas`,severity:"info",meta:{market,hotels:hotels.length,documents:Number(item.summary?.documents||0),debt:Number(item.summary?.debt||0)}});
+      return ok({ok:true,data:item});
+    }
+    if (resource === "ops-cityledger-diligences" && event.httpMethod === "GET") {
+      return ok({data:await listCityLedgerDiligences(store,market,authUser)});
+    }
+    if (resource === "ops-cityledger-diligence-save" && event.httpMethod === "POST") {
+      if(bodySizeOf(event)>128*1024)return tooLarge("A diligência excede o tamanho permitido.");
+      const input=parseBody(event)||{},hotel=cleanText(input.hotel,160);
+      if(!hotel||!canManageHotel(authUser,hotel))return forbidden();
+      if(hotelMarketServer(hotel)!==market)return forbidden("O hotel pertence a outro mercado.");
+      const method=cleanText(input.method,20),result=cleanText(input.result,20),status=cleanText(input.status,30);
+      if(!CITYLEDGER_METHODS.has(method)||!CITYLEDGER_RESULTS.has(result)||!CITYLEDGER_STATUSES.has(status))return badRequest("Tipo/estado de diligência inválido.");
+      const invoiceKeys=Array.isArray(input.invoiceKeys)?input.invoiceKeys.map(x=>cleanText(x,500)).filter(Boolean).slice(0,100):[];
+      if(!invoiceKeys.length)return badRequest("A diligência deve estar associada a pelo menos uma fatura.");
+      const promisedDate=cleanText(input.promisedDate,20),nextContactDate=cleanText(input.nextContactDate,20);if(!validDateOnly(promisedDate)||!validDateOnly(nextContactDate))return badRequest("Data de diligência/promessa inválida.");
+      const detail=cleanText(input.detail,1800),answer=cleanText(input.response,1800);if(!detail)return badRequest("Descreva a diligência realizada.");
+      const id=`dil-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`,item={id,market,hotel,clientKey:cleanText(input.clientKey,500),clientName:cleanText(input.clientName,300),clientCode:cleanText(input.clientCode,120),invoiceKeys,method,result,contactName:cleanText(input.contactName,200),contactDetail:cleanText(input.contactDetail,300),detail,response:answer,status,promisedAmount:Math.max(0,Number(input.promisedAmount||0)||0),promisedDate,nextContactDate,currency:cleanText(input.currency,20),createdAt:new Date().toISOString(),createdBy:authUser.user,createdByName:authUser.name};
+      await store.setJSON(cityDiligenceBlobKey(market,id),item);
+      await safeGovernanceAudit(store,authUser,{category:"City Ledger",action:"Diligência de cobrança registada",resource:"ops-cityledger-diligence",key:id,hotel,detail:[item.clientName,method,result,promisedDate?`promessa ${promisedDate}`:""].filter(Boolean).join(" · "),severity:status==="legal"||status==="dispute"?"warning":"info",meta:{market,invoiceCount:invoiceKeys.length,status,method,result,promisedAmount:item.promisedAmount,promisedDate}});
+      return ok({ok:true,data:item});
+    }
+    if (["ops-cityledger-snapshots","ops-cityledger-chunk","ops-cityledger-chunk-save","ops-cityledger-snapshot-save","ops-cityledger-diligences","ops-cityledger-diligence-save"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (resource.startsWith("ops-cityledger")) return forbidden("O City Ledger só pode ser acedido pelos endpoints próprios.");
+
     if (resource === "ops-scenarios" && event.httpMethod === "GET") {
       const rows=await listOperationalScenarios(store, market);
       return ok({data:rows.filter(x=>canSeeScenario(authUser,x))});

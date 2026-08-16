@@ -7,7 +7,7 @@ ok(index.includes('view-scenariocompare')&&index.includes('scenario-comparison-v
 ok(index.includes('nav-scenariocompare'),'V29 deve estar na navegação lateral');
 ok(core.includes("currentView === 'scenariocompare'")&&core.includes('scenarioComparisonRender'),'refreshAll deve renderizar V29');
 ok(forecast.includes('getState')&&forecast.includes('scenarioCompareFromForecast'),'Forecast V12 deve expor estado e atalho para o comparador');
-ok(sw.includes('vg-operations-shell-v31')&&sw.includes('scenario-comparison-v29.js')&&sw.includes('scenario-comparison-v29.css'),'PWA deve incluir shell V29');
+ok(sw.includes('vg-operations-shell-v32')&&sw.includes('scenario-comparison-v29.js')&&sw.includes('scenario-comparison-v29.css'),'PWA deve incluir shell V29');
 ok(search.includes("type:'scenario'")&&search.includes('buildScenarios(arr)'),'Pesquisa Global deve indexar cenários');
 ok(mobile.includes('data-view="revenuehub"'),'V30 deve expor Comparação de Cenários dentro de Revenue & Forecast no mobile');
 ok(server.includes('const SCENARIO_PREFIX = "ops-scenario/"')&&server.includes('resource === "ops-scenario-save"')&&server.includes('resource === "ops-scenario-delete"'),'backend deve ter endpoints próprios V29');

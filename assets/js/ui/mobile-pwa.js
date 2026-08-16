@@ -48,11 +48,13 @@
         <button class="vg-mobile-link primary" data-view="automaticreports" type="button"><i>📄</i><span>Relatórios<small>Hotel, região e consolidado</small></span></button>
         <button class="vg-mobile-link primary" data-view="documents" type="button"><i>🗂️</i><span>Documentos<small>Relatórios, atas e auditorias</small></span></button>
         <button class="vg-mobile-link primary" data-view="approvals" type="button"><i>✅</i><span>Aprovações<small>Pedidos e decisões</small></span></button>
+        <button class="vg-mobile-link primary" data-view="cityledger" type="button"><i>💳</i><span>City Ledger<small>Cobranças e diligências</small></span></button>
       </div>
       <div class="vg-mobile-group-title">Analisar</div>
       <div class="vg-mobile-grid">
         <button class="vg-mobile-link primary" data-action="assistant" type="button"><i>✦</i><span>Assistente<small>Pergunta aos dados</small></span></button>
         <button class="vg-mobile-link" data-view="benchmark" type="button"><i>◎</i><span>Benchmark<small>Hotel vs pares</small></span></button>
+        <button class="vg-mobile-link" data-view="unitEconomics" type="button"><i>⚡</i><span>Eficiência<small>Custos e receitas por atividade</small></span></button>
         <button class="vg-mobile-link" data-view="pl" type="button"><i>📊</i><span>P&amp;L<small>Resultado mensal</small></span></button>
         <button class="vg-mobile-link" data-view="ocupacao" type="button"><i>🛏</i><span>Ocupação<small>Atual e futura</small></span></button>
         <button class="vg-mobile-link" data-view="compras" type="button"><i>🧾</i><span>Compras<small>Artigos e preços</small></span></button>
@@ -161,7 +163,7 @@
   }
   function registerServiceWorker(){
     if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
-    window.addEventListener('load',()=>navigator.serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=31.2',{scope:'/',updateViaCache:'none'}).then(reg=>{
+    window.addEventListener('load',()=>navigator.serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=32.0',{scope:'/',updateViaCache:'none'}).then(reg=>{
       reg.update().catch(()=>{});
       if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
     }).catch(e=>console.warn('Service worker não registado',e)));

@@ -222,3 +222,22 @@ O frontend limita a seleção pelo hotel associado e o backend aplica a mesma re
 
 ### V31.2 — isolamento de estado visual
 O runtime `07-markets-v31.js` passa a tratar a troca de mercado como uma fronteira de estado também ao nível do DOM. Modelos derivados, cards, Ficha, Central, gráficos e contexto do mercado anterior são invalidados antes do restauro do novo banco. `02-navigation-kpis.js` sincroniza o estado de ausência de P&L mesmo quando `RAW` é nulo, evitando que o retorno antecipado de `refreshAll()` preserve HTML antigo.
+
+## V32 — City Ledger & Eficiência / Unit Economics
+
+### City Ledger & Gestão de Cobranças
+- Fonte contabilística canónica: aba `Listagem` do Excel City Ledger. As restantes abas do workbook são vistas/agregações reconstruídas pela aplicação.
+- Apenas linhas cujo campo `HOTEL` pertence à lista oficial do mercado ativo são aceites. Entidades corporativas que não são hotéis ficam fora; a coluna `ENTIDADE` continua livre para representar qualquer devedor/cliente.
+- Vencimento operacional: `DATA_DOCUMENTO + 30 dias`. O aging histórico usa `DATA_REGISTO` do snapshot como data de referência.
+- Snapshots, blocos de faturas e diligências são guardados separadamente em Netlify Blobs, com namespace de mercado.
+- Diligências são append-only e registam utilizador/data-hora server-side, meio, contacto, descrição, resposta, estado, promessa e próxima diligência.
+- Importações são reservadas à Direção; Diretores/Assistentes leem e registam diligências apenas no hotel associado.
+- Créditos (saldo negativo) são apresentados em separado e não são somados à dívida.
+
+### Eficiência & Unit Economics
+- Evolução do antigo método ABC, mantendo o módulo legado no código mas expondo uma experiência consolidada nova.
+- Numeradores: custos totais e famílias (Pessoal, Energia, Manutenção, Comidas, Bebidas, A&B, Marketing, Operacionais, Comunicações), receitas (Total, Alojamento, A&B, complementar) e GOP com sede.
+- Bases de atividade: quarto disponível, quarto ocupado, dormida, hóspede/cliente e chegada.
+- Agregados de portefólio são ponderados: soma do numerador / soma da atividade, nunca média simples entre hotéis.
+- Semântica de variação: em custos unitários menos é melhor; em receita/GOP unitários mais é melhor.
+- Respeita integralmente o mercado ativo e a moeda contextual (EUR/BRL).

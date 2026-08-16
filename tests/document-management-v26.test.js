@@ -15,7 +15,7 @@ const mobile=fs.readFileSync(path.join(ROOT,'assets/js/ui/mobile-pwa.js'),'utf8'
 cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 cp.execFileSync(process.execPath,['--check',serverPath],{stdio:'pipe'});
 assert(html.includes('Gestão de Documentos')&&html.includes('document-management-v26.js')&&html.includes('document-management-v26.css'),'V26 deve estar ligada ao HTML');
-assert(sw.includes('vg-operations-shell-v31')&&sw.includes('document-management-v26.js')&&sw.includes('document-management-v26.css'),'PWA deve incluir shell V26');
+assert(sw.includes('vg-operations-shell-v32')&&sw.includes('document-management-v26.js')&&sw.includes('document-management-v26.css'),'PWA deve incluir shell V26');
 assert(server.includes('DOCUMENT_META_PREFIX = "ops-doc-meta/"')&&server.includes('resource === "ops-document-save"')&&server.includes('resource === "ops-document-file"'),'backend deve ter endpoints próprios de documentos');
 assert(server.includes('"ops-doc-meta/","ops-doc-data/"')&&server.includes('return "Documentos"'),'Backup deve proteger metadados e conteúdo dos documentos');
 assert(search.includes("type:'document'")&&search.includes('buildDocuments(arr)'),'Pesquisa Global deve indexar documentos');

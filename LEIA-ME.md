@@ -179,3 +179,14 @@ Direção/Admin pode alternar entre os dois mercados. Diretor/Assistente fica au
 - O topo passa a 0 unidades e período “—”; o painel lateral de KPIs é ocultado enquanto não houver P&L do mercado ativo.
 - A mensagem de vazio identifica explicitamente o mercado ativo e garante que o mercado anterior não está a ser usado na análise.
 - A Ficha do Hotel continua byte-a-byte inalterada; a limpeza é feita externamente pelo runtime de mercados.
+
+## Novidades V32
+
+A V32 acrescenta dois módulos ao menu principal:
+
+- **City Ledger & Cobranças** — importa o ficheiro City Ledger, calcula vencimentos a 30 dias, aging real, detalhe por hotel/cliente/fatura, snapshots de evolução e histórico de diligências (telefone, email, reunião ou outro contacto).
+- **Eficiência & Unit Economics** — recupera o racional ABC e amplia-o para custos, receitas e GOP por quarto disponível, quarto ocupado, dormida, hóspede/cliente e chegada. A Energia é analisável em todas estas bases.
+
+O City Ledger ignora automaticamente linhas de empresas/entidades que aparecem na coluna HOTEL mas não fazem parte da lista oficial de hotéis da VG Operations. A coluna ENTIDADE não é usada para excluir devedores.
+
+As diligências de cobrança não são escritas no Excel. Ficam na VG Operations e sobrevivem a importações futuras do City Ledger.

@@ -76,6 +76,6 @@ for(const [tab,id] of Object.entries({current:'revenueint',forecast:'forecast',s
   assert(sources[id].classList.contains('v30-embedded-view')&&!sources[id].classList.contains('tab-content'),`${id} deve preservar ID mas deixar de ser tab-content global`);
 }
 
-assert(guard.includes("const BUILD='31.2'"),'build guard mantém identificador estável e updateViaCache:none');
-assert(sw.includes("vg-operations-shell-v31"),'service worker deve usar cache V30.3');
+assert(guard.includes("const BUILD='32.0'"),'build guard mantém identificador estável e updateViaCache:none');
+assert(sw.includes("vg-operations-shell-v32"),'service worker deve usar cache V30.3');
 console.log('✓ V30.3: Portefólio filtrado, Ponte GOP semântica e Revenue Hub visual preservados');
