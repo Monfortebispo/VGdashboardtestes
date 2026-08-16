@@ -265,3 +265,57 @@ Direção pode persistir os estados partilhados `ops-housekeeping`, `ops-ab` e `
 - `assets/js/modules/city-ledger-v32.js`: mantém compatibilidade V32 mas adiciona estado `filterClients[]`, filtro multi-entidade por hotel e limpeza global.
 - `assets/js/ui/vg-operations-2-v30.js`: expõe os domínios V33 no grupo `Operação Integrada` e no lançador do Resumo.
 - `assets/js/core/06-version-guard-v29_1.js` + `service-worker.js`: build 33.1, network-first e diagnóstico dos novos módulos.
+
+## V34.0 — paridade funcional, lazy loading e domínios operacionais
+
+### Micro-módulos same-origin
+Para os dois módulos operacionais onde a paridade funcional com ferramentas já validadas é prioritária, a V34 usa páginas same-origin dedicadas, integradas na shell da Dashboard:
+
+```text
+/integrated/housekeeping/index.html
+/integrated/custos-ab/index.html
+```
+
+Não são links para aplicações Netlify externas. A shell continua a controlar autenticação e âmbito. As páginas detetam `window.parent.vgAuthCurrent()` (ou `window.opener`) e criam uma sessão interna transitória compatível com os papéis originais, sem pedir um segundo login. A ferramenta isolada continua funcional quando aberta diretamente.
+
+Backends:
+
+```text
+/.netlify/functions/hk-store   -> Netlify Blob vg-hk-inventario
+/api/shared                    -> Netlify Blob vg-custos-ab
+```
+
+### Reputação semanal
+`weeklyReputation.reports[].sources` é a fonte da tabela GRI por origem. Não se reconstrói uma média artificial entre Booking/Expedia/Google/Tripadvisor; são mostrados os valores trazidos por cada relatório semanal.
+
+### Receituário e consumo teórico
+A biblioteca técnica usa paginação client-side e detalhe modal. O matching entre venda e receita técnica é deliberadamente conservador:
+
+```text
+normalização exata do nome
+OR alias explicitamente configurado
+```
+
+Não existe correspondência por substring. Linhas sem correspondência permanecem numa lista de exceções e não entram no custo/consumo teórico.
+
+### Buffets & Ementas
+`state.buffet` guarda as linhas importadas, fonte e filtros. O importador aceita grelhas Excel tabulares e procura cabeçalhos equivalentes a Hotel/Unidade, Refeição/Serviço, Prato/Artigo/Item/Descrição/Receita, Categoria/Grupo/Família, Quantidade/Capitação, Unidade, Pax/Pessoas/Couvert, Custo, Observação e Versão/Vigência. A ligação a fichas técnicas é exata pelo nome normalizado.
+
+### Lazy loading
+O ficheiro `assets/data/operations-seed-v33.json` é grande e não é descarregado no arranque. `ensureIntegratedData()` carrega-o apenas quando o utilizador entra em `reputacao`, `receitasdet` ou `ab`. O iframe de Housekeeping não depende do seed integrado.
+
+### PDF
+O botão `opsPdfAccumBtn` chama `operationalSummaryPdfOpen()` e o `index.html` carrega explicitamente:
+
+```text
+assets/js/modules/operational-summary-pdf-v32_6.js
+assets/css/operational-summary-pdf-v32_6.css
+```
+
+O formato do resumo acumulado é A3 landscape com branding Vila Galé. O export geral continua A4 landscape, com cabeçalhos corrigidos e rodapé institucional próprio.
+
+### Compatibilidade
+A API pública histórica `VG.domains33` é mantida por compatibilidade com a navegação, mas o `version` interno passa a `34.0`. A Ficha do Hotel/Comentários Fecho do Mês continua protegida e não é alterada.
+
+### Mapeamento manual validado de artigos
+A exceção `artigo vendido sem ficha exata` pode ser resolvida pelo utilizador através de uma associação explícita `artigo normalizado -> ficha técnica`. O mapa é guardado em `state.ab.recipeMap`, entra na persistência A&B e é sempre apresentado como `Mapeamento validado`. Esta associação é distinta dos aliases controlados e impede que a camada de consumo teórico volte a introduzir matching difuso.

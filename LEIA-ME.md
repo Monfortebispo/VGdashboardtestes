@@ -244,3 +244,24 @@ A V33 absorve os principais domínios operacionais que existiam em ferramentas s
 - Compras & A&B lê o mapa mensal do Departamento de Compras, rácios, resumo geral, inventários/compras e cruza vendas, receituário e reputação.
 - Housekeeping preserva inventário permanente, quebras por causa, campanhas físicas, par-stock por índice × vestido 100% e sugestão dinâmica ligada ao forecast de ocupação.
 - O export PDF do dashboard foi corrigido para alinhar todos os cabeçalhos com as colunas efetivamente impressas e usa identidade Vila Galé no cabeçalho.
+
+## V34.0 — integração funcional completa e auditada
+
+A V34.0 corrige as lacunas funcionais identificadas após o primeiro deploy integrado.
+
+- **Housekeeping & Têxtil** passa a incorporar a ferramenta original de Inventário de Roupas praticamente na íntegra, em `integrated/housekeeping/index.html`, reutilizando a sessão da Dashboard quando aberto dentro da plataforma. Mantém Painel, Inventário, Projeção de compra, Relatório executivo, Comparação de campanhas, Análise/Mapa de quebras, Valorização, Alertas de rutura, Campanhas, Utilizadores, Catálogo, Registo de alterações e modo Governanta/mobile. O backend original está em `netlify/functions/hk-store.js`.
+- **Custos & Compras A&B** passa a incorporar a ferramenta original do Departamento de Compras em `integrated/custos-ab/index.html`, com Evolução Mensal, Sub-Famílias, Detalhe de Artigos, Análise Hotel, Inventário, Receitas, Stock & Internos, Comentários, Sugestão de Encomenda, Excessos, Previsão, Previsto vs. Real e Roomnights. Reutiliza a sessão da Dashboard e o backend `netlify/functions/custos-ab-store.js` (`/api/shared`).
+- **Reputação semanal** expõe diretamente o GRI por origem/fonte — Booking.com, Expedia, Google, Tripadvisor e restantes fontes presentes no relatório — com GRI, variação, reviews e semântica/menções. A ficha do hotel inclui ainda departamentos, concorrência, idiomas, países, ranking interno, categorias e tendências.
+- **Fichas Técnicas & Receituário** passa a abrir a ficha completa ao clicar num cartão, com ingredientes, quantidades, preparação, copo, PVP, custo, Beverage Cost, margem e aplicabilidade. A biblioteca é paginada para evitar renderizar centenas de fichas simultaneamente.
+- **Consumo Teórico** deixa de usar correspondência difusa por partes do nome. Apenas associações exatas normalizadas ou aliases explicitamente controlados entram nos cálculos. O resultado mostra venda→ficha, consumo teórico por ingrediente e artigos sem associação, que ficam excluídos até validação.
+- **Buffets & Ementas** recebe uma área própria com importação de Excel, filtros de hotel/refeição e ligação às fichas técnicas. Não são inventados pratos/capitações quando a fonte original não está disponível no pacote.
+- **Resumo Operacional PDF** volta a ter um botão visível `PDF acumulado` no próprio Resumo. O módulo de geração é carregado pelo `index.html`, produz A3 horizontal, logo Vila Galé, acumulado Janeiro→mês final e aviso de meses em falta.
+- **PDF geral** mantém os cabeçalhos corrigidos e acrescenta rodapé institucional e indicação para desativar os cabeçalhos/rodapés do navegador, evitando `about:blank`, URL e data automáticos.
+- **City Ledger** mantém o filtro multi-entidade por hotel e as ações `Todos os clientes / Limpar seleção` e `Limpar filtros`.
+- **Performance**: o seed integrado pesado deixa de ser carregado no arranque da Dashboard. Só é pedido quando o utilizador abre Reputação, Receita Detalhada ou A&B; Housekeeping abre diretamente o módulo original sem depender desse seed.
+
+O build visível é `V34.0 · Integrado`; o service worker é `vg-operations-shell-v34-0`.
+
+### V34.0 — mapeamento validado no Consumo Teórico
+
+Quando um artigo de receita detalhada não corresponde exatamente a uma ficha técnica, a V34.0 não tenta adivinhar. O utilizador pode associar manualmente esse artigo a uma ficha técnica existente; a relação fica persistida em A&B, aparece identificada como `Mapeamento validado` e só então passa a entrar nos cálculos de consumo/custo teórico.
