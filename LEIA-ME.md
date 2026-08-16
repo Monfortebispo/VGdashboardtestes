@@ -265,3 +265,15 @@ O build visível é `V34.0 · Integrado`; o service worker é `vg-operations-she
 ### V34.0 — mapeamento validado no Consumo Teórico
 
 Quando um artigo de receita detalhada não corresponde exatamente a uma ficha técnica, a V34.0 não tenta adivinhar. O utilizador pode associar manualmente esse artigo a uma ficha técnica existente; a relação fica persistida em A&B, aparece identificada como `Mapeamento validado` e só então passa a entrar nos cálculos de consumo/custo teórico.
+
+
+## V35.0 — módulos A&B e Housekeeping verdadeiramente nativos
+
+A V35.0 substitui a integração por iframe da V34.0. O código das ferramentas originais de `custos-compras-main` e `inventario-main` foi reconstruído em dois módulos da VG Operations: `compras-ab-native-v35.js` e `housekeeping-native-v35.js`. Os módulos são montados diretamente no DOM da Dashboard através de Shadow DOM para isolar estilos, reutilizam a sessão e geografia da plataforma e mantêm a lógica funcional das ferramentas originais.
+
+- Custos & Compras A&B: Resumo, Evolução Mensal, Sub-Famílias, Detalhe de Artigos, Análise Hotel, Inventário por Artigo, Receitas, Stock & Internos, Comentários, Sugestão de Encomenda, Excessos, Previsão, Previsto vs Real, Roomnights, importação/publicação, regiões e auditoria. A gestão de utilizadores própria foi retirada porque a autenticação é da Dashboard.
+- Housekeeping & Têxtil: Painel, Inventário, Projeção, Relatório Executivo, Comparação de Campanhas, Quebras, Mapa de Quebras, Valorização, Alertas, Campanhas, Catálogo, Histórico e modo Governanta. A validação DO usa a sessão autenticada da Dashboard e deixa de pedir uma segunda palavra-passe do módulo.
+- Não existem `iframe` nem `integrated/custos-ab/index.html` / `integrated/housekeeping/index.html` no build V35.0.
+
+### V35.0 — módulos nativos A&B e Housekeeping
+A V35 substitui a integração por aplicações/iframes por dois módulos realmente nativos. O código funcional das ferramentas originais foi transportado para módulos isolados por Shadow DOM e adaptado à sessão, geografia, permissões, PWA e carregamento de dependências da VG Operations. Os backends operacionais exigem a sessão autenticada da Dashboard. Consulte `VALIDATION_V35_0.txt` para a auditoria de paridade e regressão.

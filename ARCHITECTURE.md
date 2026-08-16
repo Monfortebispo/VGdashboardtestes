@@ -319,3 +319,13 @@ A API pública histórica `VG.domains33` é mantida por compatibilidade com a na
 
 ### Mapeamento manual validado de artigos
 A exceção `artigo vendido sem ficha exata` pode ser resolvida pelo utilizador através de uma associação explícita `artigo normalizado -> ficha técnica`. O mapa é guardado em `state.ab.recipeMap`, entra na persistência A&B e é sempre apresentado como `Mapeamento validado`. Esta associação é distinta dos aliases controlados e impede que a camada de consumo teórico volte a introduzir matching difuso.
+
+
+## V35.0 — arquitetura nativa dos módulos operacionais
+
+`assets/js/modules/compras-ab-native-v35.js` e `assets/js/modules/housekeeping-native-v35.js` são módulos diretos da Dashboard. Cada um cria um ShadowRoot apenas para isolamento de CSS/IDs; não existe documento HTML secundário, iframe ou navegação para outra aplicação. A lógica de negócio provém das ferramentas originais e foi adaptada a `vgAuthCurrent()` e `VG.market`. Os backends Netlify existentes (`/api/shared` e `/.netlify/functions/hk-store`) continuam como persistência operacional.
+
+O módulo A&B mantém a navegação complementar da plataforma (Fichas Técnicas, Consumo Teórico, Buffets & Ementas e Inteligência), enquanto a área `Custos & Compras` monta o novo motor nativo. Housekeeping monta diretamente o novo motor de inventário têxtil.
+
+### Segurança/persistência dos módulos V35
+`compras-ab-native-v35.js` comunica com `/api/shared` e `housekeeping-native-v35.js` com `/.netlify/functions/hk-store`, enviando o Bearer token da sessão principal. As duas functions validam a assinatura HMAC, expiração e `authVersion` contra `vg-dashboard-operacoes`. O Shadow DOM serve apenas para isolamento visual/DOM: os módulos continuam no mesmo documento, sessão e ciclo de vida da Dashboard.

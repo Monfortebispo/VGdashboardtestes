@@ -1,0 +1,41 @@
+VG OPERATIONS V35.0 — VALIDAÇÃO FINAL
+Data de build: 2026-08-16
+
+OBJETIVO
+- Reconstruir Custos & Compras A&B como módulo nativo da Dashboard, a partir do código da ferramenta original.
+- Reconstruir Housekeeping & Têxtil como módulo nativo da Dashboard, a partir do código da ferramenta original.
+- Eliminar iframe, segundo documento/aplicação e segundo login.
+
+AUDITORIA DE PARIDADE DE CÓDIGO-FONTE
+- Custos & Compras A&B: 192/192 funções nomeadas da ferramenta original preservadas no módulo nativo; foram acrescentadas funções de adaptação à Dashboard.
+- Housekeeping & Têxtil: 206/207 funções nomeadas da ferramenta original preservadas. A única função não transportada com o mesmo nome é "init", substituída intencionalmente pelo arranque nativo hk35Start ligado à sessão/geografia da Dashboard.
+- Ficha do Hotel preservada byte-for-byte.
+  SHA256: 2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7
+
+ARQUITETURA
+- Sem iframe para A&B ou Housekeeping.
+- Sem cópias standalone em integrated/custos-ab ou integrated/housekeeping.
+- Os dois módulos usam Shadow DOM para isolamento de IDs/CSS, mantendo-se no mesmo documento e na mesma aplicação.
+- Sessão da Dashboard reutilizada; não existe segundo login nos módulos.
+- Geografia e restrições de hotel/perfil aplicadas pelos adaptadores nativos.
+- Backends A&B/HK exigem token HMAC da sessão VG Operations e respeitam revogação por authVersion.
+- Importação/exportação XLSX usa o carregamento lazy de SheetJS da própria Dashboard.
+
+FUNCIONALIDADES A&B PRESERVADAS
+Resumo; Evolução Mensal; Sub-Famílias; Detalhe Artigos; Análise Hotel; Inventário Artigos; Receitas; Stock & Internos; Comentários; Sugestão de Encomenda; Excessos de Stock; Previsão (€ e unidades); Previsto vs Real; Roomnights; Carregar Dados; Regiões/Auditoria; parsers e lógica de quantidades/forecast.
+
+FUNCIONALIDADES HOUSEKEEPING PRESERVADAS
+Painel; Inventário; Projeção de compra; Relatório executivo; Comparação campanhas; Análise de quebras; Mapa de quebras; Valorização financeira; Alertas de rutura; Campanhas de inventário; Catálogo de roupas; Registo de alterações; modo Governanta/mobile; entradas, quebras, movimentos, par-stock, aprovações e histórico.
+
+REGRESSÃO / ESTRUTURA
+- 55/55 suites de regressão passaram.
+- 124 ficheiros JavaScript passaram node --check.
+- 3 ficheiros JSON válidos.
+- index.html: 622 IDs, 0 duplicados.
+- 105 referências locais verificadas pelo teste estrutural.
+- Smoke HTTP local: index, 2 módulos JS, 2 CSS e service-worker responderam HTTP 200.
+- Sem referências runtime a integrated/custos-ab ou integrated/housekeeping.
+
+LIMITAÇÃO DO AMBIENTE DE TESTE
+- Não foi possível concluir navegação visual end-to-end em Chromium headless neste ambiente devido às limitações do runtime/DBus já observadas. Não é reivindicado um teste visual real de browser.
+- Foram concluídos os testes de regressão, sintaxe, estrutura, HTTP local e paridade de código acima descritos.

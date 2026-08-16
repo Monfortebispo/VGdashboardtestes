@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),assert=require('assert'),crypto=require('crypto');
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const pkg=require('../package.json'),html=read('index.html'),js=read('assets/js/modules/operations-domains-v33.js'),css=read('assets/css/operations-domains-v33.css'),nav=read('assets/js/ui/vg-operations-2-v30.js'),search=read('assets/js/ui/global-search.js'),pdf=read('assets/js/modules/pdf-export.js'),ig=read('assets/js/modules/instagram.js'),server=read('netlify/functions/dashboard-sessao.js'),sw=read('service-worker.js'),seed=require('../assets/data/operations-seed-v33.json');
-assert(Number(pkg.version.split('.')[0])>=34,'package deve identificar V34 ou superior');
+assert(Number(pkg.version.split('.')[0])>=35,'package deve identificar V35 ou superior');
 for(const id of ['view-receitasdet','view-ab','view-housekeeping'])assert(html.includes(`id="${id}"`),`view V33 em falta: ${id}`);
 assert(html.includes('operations-domains-v33.js')&&html.includes('operations-domains-v33.css'),'index deve carregar módulo/CSS V33');
 assert((nav.includes("button('receitasdet'")||html.includes('id="nav-receitasdet"'))&&(nav.includes("button('ab'")||html.includes('id="nav-ab"'))&&(nav.includes("button('housekeeping'")||html.includes('id="nav-housekeeping"')),'navegação deve expor os três novos domínios');
@@ -12,13 +12,14 @@ assert(search.includes("title:'Receita Detalhada'")&&search.includes("title:'Com
 for(const token of ['Visão Executiva','Semanal','Semestral','Hotel','Executivo','Unidades','Departamentos','Semântica','Concorrência','Respostas','Menções','Comparar'])assert(js.includes(token),`reputação integrada deve incluir ${token}`);
 for(const role of ['Indexes Evolution','My Establishments','Reviews / Competition','Reviews Management Responses','Semantic / Results','Reviews / Results'])assert(js.includes(role),`reconhecimento semestral deve cobrir ${role}`);
 assert(js.includes("window.VG.shared.get(resource,'state')")&&js.includes("ops-reputation-semester")&&js.includes("ops-ab")&&js.includes("ops-housekeeping"),'novos domínios devem restaurar estado partilhado');
-assert(server.includes('ops-reputation-semester-')&&server.includes('ops-ab-')&&server.includes('ops-housekeeping-')&&server.includes('buildVersion:"34.0"'),'backup/auditoria deve conhecer recursos V33');
+assert(server.includes('ops-reputation-semester-')&&server.includes('ops-ab-')&&server.includes('ops-housekeeping-')&&server.includes('buildVersion:"35.0"'),'backup/auditoria deve conhecer recursos V33');
 
-// Housekeeping V34: a aplicação original completa substitui a simplificação V33.
-const hkExact=read('integrated/housekeeping/index.html');
+// Housekeeping V35: módulo nativo reconstruído, sem iframe/segundo login.
+const hkExact=read('assets/js/modules/housekeeping-native-v35.js');
 for(const c of ['Fim de vida','Mancha/nódoa','Desaparecido/roubo','Dano de lavagem','Outro'])assert(hkExact.includes(c),`causa HK em falta: ${c}`);
 for(const t of ['Campanhas de inventário','Projeção de compra','Mapa de quebras','Alertas de rutura','Registo de alterações'])assert(hkExact.includes(t),`função HK original em falta: ${t}`);
-assert(hkExact.includes('activateIntegratedSession')&&hkExact.includes('vgAuthCurrent'),'Housekeeping deve reutilizar sessão da Dashboard');
+assert(hkExact.includes('hk35SessionFromDashboard')&&hkExact.includes('vgAuthCurrent'),'Housekeeping deve reutilizar sessão da Dashboard');
+assert(!hkExact.includes('integrated/housekeeping/index.html'),'Housekeeping V35 não pode voltar a iframe/standalone');
 
 // Seeds reais fornecidos pelo utilizador.
 assert.strictEqual(seed.weeklyReputation.reports.length,310,'seed semanal deve preservar 310 relatórios');
@@ -32,7 +33,7 @@ assert.strictEqual(Object.keys(seed.housekeepingSeed.vestido100).length,32,'para
 
 // Receita detalhada + A&B + fichas técnicas.
 for(const t of ['Ponto de venda','Família','Subfamília','Grupo','Artigo','Consumo Teórico','Inteligência','Fichas Técnicas'])assert(js.includes(t),`integração comercial/A&B deve incluir ${t}`);
-const abExact=read('integrated/custos-ab/index.html');assert(js.includes('RESUMO - INDICADORES')||abExact.includes('Evolução Mensal'),'A&B deve manter motor analítico');assert(abExact.includes('Sugestão de Encomenda')&&abExact.includes('Excessos de Stock')&&abExact.includes('Previsto vs. Real'),'A&B original completo deve estar integrado');
+const abExact=read('assets/js/modules/compras-ab-native-v35.js');assert(abExact.includes('Evolução Mensal'),'A&B deve manter motor analítico');assert(abExact.includes('Sugestão de Encomenda')&&abExact.includes('Excessos de Stock')&&abExact.includes('Previsto vs. Real'),'A&B original completo deve estar reconstruído como módulo nativo');assert(!abExact.includes('integrated/custos-ab/index.html'),'A&B V35 não pode voltar a iframe/standalone');
 
 // PDF/cabeçalhos e Instagram: correções da auditoria anterior.
 assert(pdf.includes('<th>Δ €</th><th>Δ %</th>'),'Resumo PDF deve separar variação absoluta e percentual');
@@ -42,8 +43,8 @@ assert(pdf.includes('Rank VG')&&pdf.includes('pdf-logo')&&pdf.includes('alt="Vil
 assert(ig.includes('Sem dados')&&ig.includes('growthValid'),'Instagram deve distinguir ausência de dados de queda real para zero');
 
 // PWA e Ficha Hotel protegida.
-assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v34-0'")&&sw.includes('/assets/js/modules/operations-domains-v33.js'),'PWA V34 deve cachear o módulo integrado');
+assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v35-0'")&&sw.includes('/assets/js/modules/operations-domains-v33.js')&&sw.includes('/assets/js/modules/compras-ab-native-v35.js')&&sw.includes('/assets/js/modules/housekeeping-native-v35.js'),'PWA V35 deve cachear os módulos nativos');
 const ficha=read('assets/js/modules/ficha-hotel.js');assert.strictEqual(crypto.createHash('sha256').update(ficha).digest('hex'),'2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7','Ficha do Hotel deve permanecer byte-a-byte inalterada');
 assert(css.includes('.od-subtabs')&&css.includes('.od-toolbar'),'UI semestral deve ter navegação/filtros próprios');
-assert(html.includes('V34.0 · Integrado')&&nav.includes('Novos módulos já disponíveis'),'V34.0 deve ser imediatamente identificável após deploy');
-console.log('✓ V34.0: integração visível e retrocompatibilidade V33 auditadas');
+assert(html.includes('V35.0 · Nativo')&&nav.includes('Novos módulos já disponíveis'),'V35.0 deve ser imediatamente identificável após deploy');
+console.log('✓ V35.0: integração nativa e retrocompatibilidade V33 auditadas');
