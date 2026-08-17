@@ -1,3 +1,22 @@
+# VG Operations — V35.3 · Robustez
+
+A V35.3 é uma versão de estabilização sobre a V35.2. Não cria um novo domínio funcional; endurece os módulos já existentes e corrige o erro de gravação da ficha de hotel reportado em produção.
+
+Principais alterações:
+
+- Hotéis: correção do erro `Assignment to constant variable`; todos os campos continuam editáveis; região passa a lista canónica; identidade interna do hotel permanece pela chave estável; gravação usa `expectedUpdatedAt` e rejeita alterações concorrentes com HTTP 409.
+- Housekeeping: permissões server-side por perfil/hotel; Compras fica em leitura; utilizadores de hotel apenas leem/escrevem o seu hotel; aprovação não pode ser forjada pelo browser.
+- Histórico Housekeeping: migração só é considerada completa com pelo menos 3 campanhas, sendo 2 fechadas e 1 aberta; o merge é por campanha/hotel/linha, preserva movimentos e cria backup antes de publicar.
+- Custos & Compras A&B: autorização server-side; perfis restritos não podem publicar configuração global nem alterar outros hotéis.
+- Documentos: MIME inferido no servidor pela extensão permitida e endpoint binário autenticado; PDF/imagens têm preview e os restantes formatos podem ser descarregados.
+- Performance: A&B e Housekeeping são carregados apenas quando abertos. O JavaScript local inicial passou de um equivalente de 2 227 480 bytes para 1 713 527 bytes (-23,1%).
+- Versão coerente: HTML, `package.json`, Version Guard e Service Worker identificam V35.3.
+- Regressão: 57/57 suites aprovadas, incluindo testes runtime de permissões, gravação concorrente de hotéis e bytes/MIME dos documentos.
+
+A Ficha do Hotel protegida (`assets/js/modules/ficha-hotel.js`) mantém o SHA-256 `2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7`.
+
+---
+
 # Atualização V32.5 — City Ledger e Assistente Analítico
 
 - PDF de extrato do City Ledger com paleta fixa para impressão: cabeçalho branco sobre azul e corpo sempre em texto escuro, independentemente do tema da dashboard.

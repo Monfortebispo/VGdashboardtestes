@@ -136,6 +136,10 @@ async function listCityLedgerDiligences(store,market,user){
   return rows.filter(x=>isDirection(user)||norm(x.hotel)===norm(user.hotel)).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).slice(0,3000);
 }
 function documentExt(name) { const p=String(name||"").toLowerCase().split("."); return p.length>1?p.pop():""; }
+function documentMimeForName(name) {
+  const ext=documentExt(name);
+  return ({pdf:"application/pdf",doc:"application/msword",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",xls:"application/vnd.ms-excel",xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",csv:"text/csv; charset=utf-8",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",txt:"text/plain; charset=utf-8"})[ext]||"application/octet-stream";
+}
 function safeDocumentFileName(name) { return cleanText(String(name||"").replace(/[\/\\<>:\"|?*\x00-\x1F]/g,"_"), 240); }
 function canManageHotel(user, hotel) {
   if (isDirection(user)) return true;
@@ -422,7 +426,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.2"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.3"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -1083,7 +1087,7 @@ exports.handler = async (event) => {
     if (["ops-agenda","ops-agenda-save","ops-agenda-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
     if (resource.startsWith("ops-agenda/")) return forbidden("A agenda só pode ser acedida pelos endpoints próprios.");
 
-    // -------------------- FICHAS EDITÁVEIS DOS HOTÉIS (V35.2) --------------------
+    // -------------------- FICHAS EDITÁVEIS DOS HOTÉIS (V35.3) --------------------
     if (resource === "ops-hotel-profiles" && event.httpMethod === "GET") {
       const listing=await store.list({prefix:HOTEL_PROFILE_PREFIX+market+"/"});
       const blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
@@ -1097,6 +1101,7 @@ exports.handler = async (event) => {
       if(!isDirection(authUser) && hotelProfileNorm(hotel)!==hotelProfileNorm(authUser.hotel) && hotelProfileNorm(profileKey)!==hotelProfileNorm(authUser.hotel))return forbidden("Não pode editar a ficha deste hotel.");
       if(!payload.data||typeof payload.data!=="object"||Array.isArray(payload.data))return badRequest("Dados da ficha inválidos.");
       const bkey=hotelProfileBlobKey(market,profileKey); const existing=await store.get(bkey,{type:"json"});
+      if(payload.expectedUpdatedAt&&existing?.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt))return conflict("Esta ficha foi alterada por outro utilizador. Reabra-a para trabalhar sobre a versão mais recente.",{data:existing});
       const now=nextIsoTimestamp(existing?.updatedAt); const item={key:profileKey,hotel,market,data:payload.data,static:(payload.static&&typeof payload.static==="object"&&!Array.isArray(payload.static))?payload.static:{},createdAt:existing?.createdAt||now,createdBy:existing?.createdBy||{user:authUser.user,name:authUser.name},updatedAt:now,updatedBy:{user:authUser.user,name:authUser.name}};
       await store.setJSON(bkey,item);
       await safeGovernanceAudit(store,authUser,{category:"Hotéis",action:existing?"Ficha de hotel atualizada":"Ficha de hotel criada",resource:"ops-hotel-profile",key:profileKey,hotel,detail:hotel,severity:"info",before:existing?{hotel:existing.hotel,updatedAt:existing.updatedAt}:null,after:{hotel,updatedAt:now}});
@@ -1126,7 +1131,7 @@ exports.handler = async (event) => {
       const safeName=safeDocumentFileName(meta.fileName||"documento").replace(/["\\r\\n]/g,"_");
       const asciiName=safeName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g,"_");
       const disposition=`inline; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`;
-      return {statusCode:200,headers:{"Content-Type":meta.mime||"application/octet-stream","Content-Disposition":disposition,"Cache-Control":"no-store, private","X-Content-Type-Options":"nosniff","Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"Content-Type, Authorization"},body:buf.toString("base64"),isBase64Encoded:true};
+      return {statusCode:200,headers:{"Content-Type":documentMimeForName(meta.fileName)||meta.mime||"application/octet-stream","Content-Disposition":disposition,"Cache-Control":"no-store, private","X-Content-Type-Options":"nosniff","Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"Content-Type, Authorization"},body:buf.toString("base64"),isBase64Encoded:true};
     }
     if (resource === "ops-document-save" && event.httpMethod === "POST") {
       if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("O documento excede o limite do endpoint. Máximo recomendado: 3,5 MB.");
@@ -1150,7 +1155,7 @@ exports.handler = async (event) => {
       if(!existing&&!replacing)return badRequest("Ficheiro obrigatório.");
       if(replacing){
         fileName=safeDocumentFileName(payload.fileName); const ext=documentExt(fileName); if(!fileName||!DOCUMENT_EXTENSIONS.has(ext))return badRequest("Formato de ficheiro não permitido.");
-        mime=cleanText(payload.mime||"application/octet-stream",120); size=Number(payload.size||0)||0;
+        mime=documentMimeForName(fileName); size=Number(payload.size||0)||0;
         try{decoded=Buffer.from(payload.contentBase64,"base64");}catch(e){return badRequest("Conteúdo do ficheiro inválido.");}
         if(!decoded.length||decoded.length>DOCUMENT_MAX_BYTES||size>DOCUMENT_MAX_BYTES)return tooLarge("O ficheiro excede 3,5 MB.");
         if(size&&Math.abs(decoded.length-size)>4)return badRequest("Tamanho do ficheiro inconsistente."); size=decoded.length;

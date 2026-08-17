@@ -6,8 +6,8 @@
 (function(){
 'use strict';
 window.VG=window.VG||{};
-if(window.VG.domains33?.version>=35.0)return;
-const VERSION=35.0;
+if(window.VG.domains33?.version>=35.3)return;
+const VERSION=35.3;
 const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 const num=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
@@ -22,6 +22,15 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const today=()=>new Date().toISOString().slice(0,10);
 const safeJson=o=>JSON.parse(JSON.stringify(o));
 const toast=(m,e=false)=>{try{showToast(m,e);}catch(x){console[e?'error':'log'](m);}};
+
+const NATIVE35={};
+function loadNative35(kind){
+  const isAB=kind==='ab',globalKey=isAB?'comprasNative35':'housekeepingNative35',src=isAB?'assets/js/modules/compras-ab-native-v35.js':'assets/js/modules/housekeeping-native-v35.js';
+  if(window.VG?.[globalKey])return Promise.resolve(window.VG[globalKey]);
+  if(NATIVE35[kind])return NATIVE35[kind];
+  NATIVE35[kind]=new Promise((resolve,reject)=>{const existing=document.querySelector(`script[data-vg-native35="${kind}"]`);if(existing){existing.addEventListener('load',()=>resolve(window.VG?.[globalKey]));existing.addEventListener('error',()=>reject(new Error('Falha ao carregar '+kind)));return;}const sc=document.createElement('script');sc.src=src;sc.async=true;sc.dataset.vgNative35=kind;sc.onload=()=>window.VG?.[globalKey]?resolve(window.VG[globalKey]):reject(new Error('Módulo '+kind+' não se registou.'));sc.onerror=()=>reject(new Error('Falha ao carregar '+src));document.head.appendChild(sc);}).catch(e=>{delete NATIVE35[kind];throw e;});
+  return NATIVE35[kind];
+}
 
 const HOTEL_ALIASES={
  'C TOMAR':'COLLECTION TOMAR','TOMAR':'COLLECTION TOMAR','VILA GALE COLLECTION TOMAR':'COLLECTION TOMAR',
@@ -425,7 +434,7 @@ function buffetHtml(){
   <div class="od-kpis compact"><article><span>Linhas</span><strong>${rows.length}</strong></article><article><span>Com ficha ligada</span><strong>${withFt}</strong></article><article><span>Custo calculável</span><strong>${money(cost,2)}</strong></article></div>
   <section class="od-card"><header><h3>Grelha</h3><span>Dados da fonte importada</span></header><div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>Refeição</th><th>Categoria</th><th>Prato / artigo</th><th>Capitação/Qtd.</th><th>Unid.</th><th>Pax</th><th>Custo</th><th>Ficha técnica</th><th>Observação</th></tr></thead><tbody>${linked.slice(0,1000).map(({x,rec})=>`<tr><td>${esc(x.hotel||'—')}</td><td>${esc(x.meal)}</td><td>${esc(x.category||'—')}</td><td>${esc(x.item)}</td><td>${fmt(x.qty,2)}</td><td>${esc(x.unit||'—')}</td><td>${fmt(x.pax,0)}</td><td>${num(x.cost)!=null?money(x.cost,2):(num(rec?.cost)!=null&&num(x.qty)!=null?money(rec.cost*x.qty,2):'—')}</td><td>${rec?`<button class="od-linkbtn" data-ftid="${esc(rec.id)}">${esc(rec.name)}</button>`:'—'}</td><td>${esc(x.note||'')}</td></tr>`).join('')}</tbody></table></div></section>`}`;
 }
-function renderAB(){
+async function renderAB(){
   const root=document.getElementById('abHubRoot');if(!root)return;const tab=root.dataset.tab||'exact';
   let body=tab==='exact'?abExactHtml():tab==='recipes'?recipesHtml():tab==='theoretical'?theoreticalSalesHtml():tab==='buffet'?buffetHtml():intelligenceHtml();
   root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Compras &amp; A&B</span><h2>Custos, Compras, Receituário &amp; Buffets</h2><p>O módulo original de Custos A&B é mantido completo; as fichas, consumo teórico e grelhas operacionais vivem ao lado e partilham a mesma sessão.</p></div></div>
@@ -439,7 +448,7 @@ function renderAB(){
   document.getElementById('theory34MapBtn')?.addEventListener('click',saveTheoryMapping);
   document.getElementById('buffet34Hotel')?.addEventListener('change',e=>{state.buffet.hotel=e.target.value;renderAB();});
   document.getElementById('buffet34Meal')?.addEventListener('change',e=>{state.buffet.meal=e.target.value;renderAB();});
-  if(tab==='exact'){const mount=document.getElementById('ab35NativeMount');if(window.VG?.comprasNative35?.mount)window.VG.comprasNative35.mount(mount);else if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>Módulo nativo A&B indisponível</h3><p>Verifique o carregamento de compras-ab-native-v35.js.</p></section>';}
+  if(tab==='exact'){const mount=document.getElementById('ab35NativeMount');if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>A carregar Custos &amp; Compras…</h3><p>O módulo é carregado apenas quando necessário para tornar a Dashboard mais rápida.</p></section>';try{const mod=await loadNative35('ab');if(document.getElementById('ab35NativeMount')===mount)await mod?.mount?.(mount);}catch(e){if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>Módulo nativo A&amp;B indisponível</h3><p>'+esc(e.message||e)+'</p></section>';}}
 }
 
 // ---------- Housekeeping / Inventário Têxtil ----------
@@ -471,10 +480,10 @@ function hkMovements(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;retur
 function hkCampaigns(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;return `<section class="od-card"><header><h3>Campanha de inventário físico</h3><span>contagem → validação → aprovação DO → acerto auditado</span></header><div class="od-help"><b>Controlo:</b> a contagem física fica pendente. O acerto ao stock teórico só é lançado quando a Direção aprova a validação.</div><form id="hk33CountForm" class="od-form"><label>Hotel<select name="hotel">${hs.map(h=>`<option>${esc(h)}</option>`).join('')}</select></label><label>Artigo<select name="item">${items.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join('')}</select></label><label>Contagem física<input name="count" type="number" min="0" step="1" required></label><label>Justificação<input name="note" placeholder="Obrigatória se existir diferença"></label><button class="od-btn primary">Submeter contagem</button></form></section><section class="od-card"><header><h3>Validações de campanha</h3><span>${db.campaigns.filter(x=>(x.status||'pending')==='pending').length} pendente(s)</span></header>${db.campaigns.length?`<div class="od-table-scroll"><table><thead><tr><th>Data</th><th>Hotel</th><th>Artigo</th><th>Teórico</th><th>Físico</th><th>Dif.</th><th>Estado</th><th>Nota</th><th></th></tr></thead><tbody>${db.campaigns.slice().reverse().slice(0,300).map(x=>`<tr><td>${x.date}</td><td>${esc(x.hotel)}</td><td>${esc(items.find(i=>i.id===x.item)?.name||x.item)}</td><td>${fmt(x.theoretical,0)}</td><td>${fmt(x.count,0)}</td><td>${signed(x.diff,'')}</td><td><span class="od-tag ${(x.status||'pending')==='approved'?'good':'warn'}">${(x.status||'pending')==='approved'?'Aprovado':'Pendente'}</span></td><td>${esc(x.note||'')}</td><td>${direction()&&(x.status||'pending')==='pending'?`<button class="od-btn small" data-hkapprove="${x.id}">Aprovar</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Ainda sem campanhas.</p>'}</section>`;}
 function hkPurchases(){const db=state.hk.db,hs=hkHotels(),items=db.catalog;const rows=[];for(const h of hs)for(const i of items){const stock=hkStock(h,i.id),target=hkTarget(h,i.id),dyn=hkDynamicTarget(h,i.id),need=Math.max(0,target-stock),needDyn=Math.max(0,dyn.target-stock);if(need>0||needDyn>0)rows.push({h,i,stock,target,dyn,need,needDyn,value:need*Number(i.unitCost||0)});}rows.sort((a,b)=>(b.need-a.need)||(b.needDyn-a.needDyn));return `<section class="od-card"><header><h3>Necessidades de compra</h3><span>par-stock normal + sugestão dinâmica ligada ao forecast de ocupação</span></header><div class="od-help"><b>Regra:</b> par-stock = índice × vestido 100% (ou par manual). A sugestão dinâmica usa o forecast de ocupação da Dashboard com piso de segurança de ${fmt(db.safetyFloor,0)}%; não altera o par-stock oficial.</div><div class="od-table-scroll"><table><thead><tr><th>Hotel</th><th>Artigo</th><th>Stock</th><th>Par oficial</th><th>Forecast OCC</th><th>Sug. normal</th><th>Sug. dinâmica</th><th>Valor normal</th></tr></thead><tbody>${rows.slice(0,600).map(x=>`<tr><td>${esc(x.h)}</td><td>${esc(x.i.name)}</td><td>${fmt(x.stock,0)}</td><td>${fmt(x.target,0)}</td><td>${x.dyn.occ==null?'—':fmt(x.dyn.occ,1)+'%'}</td><td class="${x.need?'warn':''}">${fmt(x.need,0)}</td><td>${fmt(x.needDyn,0)}</td><td>${money(x.value,2)}</td></tr>`).join('')}</tbody></table></div></section>`;}
 function hkCatalog(){const db=state.hk.db;return `<section class="od-card"><header><h3>Catálogo têxtil</h3><span>${db.catalog.length} referências · categoria, cama/medida e índice de par-stock</span></header>${direction()?`<form id="hk33CatForm" class="od-form"><label>Categoria<input name="category" required></label><label>Artigo<input name="name" required></label><label>Custo unitário<input name="cost" type="number" min="0" step="0.01"></label><label>Índice / Par base<input name="par" type="number" min="0" step="0.1"></label><button class="od-btn primary">Adicionar</button></form>`:''}<div class="od-table-scroll"><table><thead><tr><th>Categoria</th><th>Artigo / Medida</th><th>Cama</th><th>Índice</th><th>Custo</th></tr></thead><tbody>${db.catalog.map(x=>`<tr><td>${esc(x.category)}</td><td>${esc(x.name)}</td><td>${esc(x.cama||'—')}</td><td>${fmt(x.index??x.par,1)}</td><td>${money(x.unitCost,2)}</td></tr>`).join('')}</tbody></table></div></section>`;}
-function renderHK(){
+async function renderHK(){
   const root=document.getElementById('housekeepingRoot');if(!root)return;
   root.innerHTML=`<div class="od-hero"><div><span class="eyebrow">Housekeeping</span><h2>Inventário de Roupas · módulo nativo</h2><p>A lógica da ferramenta original foi reconstruída dentro da arquitetura da VG Operations, sem iframe e sem segundo login.</p></div></div><div id="hk35NativeMount" class="od-native-mount"></div>`;
-  const mount=document.getElementById('hk35NativeMount');if(window.VG?.housekeepingNative35?.mount)window.VG.housekeepingNative35.mount(mount);else if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>Módulo nativo Housekeeping indisponível</h3><p>Verifique o carregamento de housekeeping-native-v35.js.</p></section>';
+  const mount=document.getElementById('hk35NativeMount');if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>A carregar Housekeeping &amp; Têxtil…</h3><p>O módulo é carregado apenas quando necessário.</p></section>';try{const mod=await loadNative35('hk');if(document.getElementById('hk35NativeMount')===mount)await mod?.mount?.(mount);}catch(e){if(mount)mount.innerHTML='<section class="od-card od-empty"><h3>Módulo nativo Housekeeping indisponível</h3><p>'+esc(e.message||e)+'</p></section>';}
 }
 
 // ---------- Persistence helpers ----------
@@ -508,11 +517,11 @@ async function ensureIntegratedData(){
 async function refreshCurrent(){
   try{
     if(typeof currentView==='undefined')return;
-    if(currentView==='housekeeping'){renderHK();return;}
+    if(currentView==='housekeeping'){await renderHK();return;}
     if(['reputacao','receitasdet','ab'].includes(currentView))await ensureIntegratedData();
     if(currentView==='reputacao')renderReputation33();
     if(currentView==='receitasdet'){installRevenueView();if(typeof rdRender==='function')rdRender();}
-    if(currentView==='ab')renderAB();
+    if(currentView==='ab')await renderAB();
   }catch(e){console.warn(e);}
 }
 async function init(){restoreLocal();setupViews();state.ready=true;refreshCurrent();}
