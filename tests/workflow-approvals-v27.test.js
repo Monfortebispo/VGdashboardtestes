@@ -11,7 +11,6 @@ const serverPath=path.join(ROOT,'netlify/functions/dashboard-sessao.js');
 const server=fs.readFileSync(serverPath,'utf8');
 const search=fs.readFileSync(path.join(ROOT,'assets/js/ui/global-search.js'),'utf8');
 const mobile=fs.readFileSync(path.join(ROOT,'assets/js/ui/mobile-pwa.js'),'utf8');
-const lazy=fs.readFileSync(path.join(ROOT,'assets/js/core/08-performance-loader-v35_7.js'),'utf8');
 const notifications=fs.readFileSync(path.join(ROOT,'assets/js/ui/notifications-v21.js'),'utf8');
 const documents=fs.readFileSync(path.join(ROOT,'assets/js/modules/document-management-v26.js'),'utf8');
 const jsPath=path.join(ROOT,'assets/js/modules/workflow-approvals-v27.js');
@@ -19,8 +18,8 @@ const jsPath=path.join(ROOT,'assets/js/modules/workflow-approvals-v27.js');
 cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 cp.execFileSync(process.execPath,['--check',serverPath],{stdio:'pipe'});
 
-assert(html.includes('Workflow de Aprovações')&&lazy.includes('workflow-approvals-v27.js')&&lazy.includes('workflow-approvals-v27.css'),'V27 deve estar ligada ao carregador modular');
-assert(sw.includes('vg-operations-shell-v35-7')&&!sw.includes('/assets/js/modules/workflow-approvals-v27.js'),'Aprovações deve carregar por necessidade em V35.7');
+assert(html.includes('Workflow de Aprovações')&&html.includes('workflow-approvals-v27.js')&&html.includes('workflow-approvals-v27.css'),'V27 deve estar ligada ao HTML');
+assert(sw.includes('vg-operations-shell-v32')&&sw.includes('workflow-approvals-v27.js')&&sw.includes('workflow-approvals-v27.css'),'PWA deve incluir shell V27');
 assert(server.includes('APPROVAL_PREFIX = "ops-approval/"')&&server.includes('resource === "ops-approval-save"')&&server.includes('resource === "ops-approval-decide"'),'backend deve ter endpoints próprios de aprovação');
 assert(server.includes('"ops-approval/"')&&server.includes('return "Aprovações"'),'Backup deve proteger aprovações');
 assert(search.includes("type:'approval'")&&search.includes('buildApprovals(arr)'),'Pesquisa Global deve indexar aprovações');

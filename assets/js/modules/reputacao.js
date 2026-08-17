@@ -2,8 +2,8 @@
 // REP_STORE: { normalisedHotelName → [ {entry}, ... ] }
 // Each entry has a unique (hotel, week) key — no duplicates.
 // ══════════════════════════════════════════════════════════
-var REP_STORE = window.REP_STORE || (window.REP_STORE = {});
-var rtSelected = window.rtSelected instanceof Set ? window.rtSelected : (window.rtSelected = new Set()); // selected hotel keys for comparison
+const REP_STORE = {};
+let rtSelected  = new Set(); // selected hotel keys for comparison
 let rtCharts    = {};
 
 // ── Key helpers ───────────────────────────────────────────

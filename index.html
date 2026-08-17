@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- VG Operations 2.0 · v35.7 Performance · 2026-08-17 -->
+<!-- VG Operations 2.0 · v35.8 Estável · 2026-08-17 -->
 
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Vila Galé — Dashboard Operações · V35.7 Performance</title>
-<meta name="vg-build" content="35.7"/>
+<title>Vila Galé — Dashboard Operações · V35.8 Estável</title>
+<meta name="vg-build" content="35.8"/>
 <meta name="theme-color" content="#071a2b"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -21,23 +21,39 @@
 <script src="assets/js/core/06-version-guard-v29_1.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 
+<script src="assets/vendor/fflate.min.js" defer></script>
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/operations-center.css">
 <link rel="stylesheet" href="assets/css/actions-management.css">
 <link rel="stylesheet" href="assets/css/targets-rules.css">
+<link rel="stylesheet" href="assets/css/benchmarking.css">
+<link rel="stylesheet" href="assets/css/forecast-scenarios.css">
+<link rel="stylesheet" href="assets/css/scenario-comparison-v29.css">
+<link rel="stylesheet" href="assets/css/anomaly-detection.css">
+<link rel="stylesheet" href="assets/css/data-center.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/cost-detail.css">
 
 
+<link rel="stylesheet" href="assets/css/revenue-intelligence-ask.css">
 
+<link rel="stylesheet" href="assets/css/revenue-intelligence.css">
 
+<link rel="stylesheet" href="assets/css/revenue-intelligence-secondary.css">
 <link rel="stylesheet" href="assets/css/mobile-pwa.css">
 <link rel="stylesheet" href="assets/css/global-search.css">
 <link rel="stylesheet" href="assets/css/responsive-desktop-v35_6.css">
-<link rel="stylesheet" href="assets/css/performance-v35_7.css">
 <link rel="stylesheet" href="assets/css/notifications-v21.css">
+<link rel="stylesheet" href="assets/css/operational-agenda-v22.css">
+<link rel="stylesheet" href="assets/css/hotel-performance-v23.css">
+<link rel="stylesheet" href="assets/css/automatic-reports-v24.css">
+<link rel="stylesheet" href="assets/css/analytical-assistant-v25.css">
+<link rel="stylesheet" href="assets/css/document-management-v26.css">
+<link rel="stylesheet" href="assets/css/workflow-approvals-v27.css">
 <link rel="stylesheet" href="assets/css/vg-operations-2-v30.css">
 <link rel="stylesheet" href="assets/css/markets-v31.css">
+<link rel="stylesheet" href="assets/css/unit-economics-v32.css">
+<link rel="stylesheet" href="assets/css/city-ledger-v32.css">
 </head>
 <body>
 <div id="cdnWarningBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#9c0006;color:#fff;text-align:center;padding:10px 16px;font-family:Arial,sans-serif;font-size:13px;font-weight:700">
@@ -175,7 +191,7 @@
 </div>
 </div>
 <div class="topbar-right">
-<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V35.7 · Performance</div>
+<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V35.8 · Estável</div>
 <div id="onlineUsersWrap" style="display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 10px;cursor:pointer" title="Utilizadores online agora" onclick="onlineShowDetail()">
   <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 6px #4ade80"></span>
   <span id="onlineCount" style="font-size:11px;font-weight:700;color:#e2e8f0">—</span>
@@ -1932,20 +1948,28 @@
 <!-- /view-content -->
 </main>
 <script src="assets/js/core/00-runtime.js" defer></script>
-<script id="vg-performance-loader-v35-7" src="assets/js/core/08-performance-loader-v35_7.js" defer></script>
 <script id="vg-performance-v18" src="assets/js/core/05-performance.js" defer></script>
 <script src="assets/js/core/01-data-import.js" defer></script>
 <script src="assets/js/core/02-navigation-kpis.js" defer></script>
 <script src="assets/js/modules/ficha-hotel.js" defer></script>
+<script src="assets/js/modules/pl-usali.js" defer></script>
+<script src="assets/js/modules/custo-atividade.js" defer></script>
+<script id="vg-unit-economics-v32" src="assets/js/modules/unit-economics-v32.js" defer></script>
+<script src="assets/js/modules/analysis-tools.js" defer></script>
+<script src="assets/js/modules/cost-analysis.js" defer></script>
 <script src="assets/js/ui/context-panel.js" defer></script>
+<script src="assets/js/modules/reputacao.js" defer></script>
 <script src="assets/js/core/03-persistence-sharing.js" defer></script>
 <script id="vg-targets-rules" src="assets/js/modules/targets-rules.js" defer></script>
 <script src="assets/js/modules/ocupacao.js" defer></script>
 <script src="assets/js/modules/instagram.js" defer></script>
 <script src="assets/js/modules/pdf-export.js" defer></script>
+<script src="assets/js/modules/agenda-tempo.js" defer></script>
+<script id="vg-operational-agenda-v22" src="assets/js/modules/operational-agenda-v22.js" defer></script>
 <script src="assets/js/modules/hoteis.js" defer></script>
 <script src="assets/js/modules/receitas-detalhe.js" defer></script>
 <script id="vg-markets-v31" src="assets/js/core/07-markets-v31.js" defer></script>
+<script id="vg-city-ledger-v32" src="assets/js/modules/city-ledger-v32.js" defer></script>
 <script src="assets/js/core/04-bootstrap.js" defer></script>
 <!-- GESTÃO DE AÇÕES v8.1 -->
 <div class="ops-action-modal" id="opsActionModal" role="dialog" aria-modal="true" aria-labelledby="opsActionModalTitle">
@@ -2090,14 +2114,34 @@
 </div>
 </div>
 </div>
+<link rel="stylesheet" href="assets/css/audit-governance.css">
+<link rel="stylesheet" href="assets/css/backup-recovery.css">
+<link rel="stylesheet" href="assets/css/whatsapp.css">
+<script src="assets/js/modules/whatsapp.js" defer></script>
 <script id="vg-auth-script" src="assets/js/auth/auth-client.js" defer></script>
 
+<script id="vg-restore-after-auth" src="assets/js/auth/restore-after-auth.js" defer></script>
 <script id="vg-compat-stubs" src="assets/js/core/compat-stubs.js" defer></script>
 <link rel="stylesheet" href="assets/css/compras.css">
 <script src="assets/js/modules/compras.js" defer></script>
+<script id="vg-data-center" src="assets/js/modules/data-center.js" defer></script>
+<script id="vg-audit-governance" src="assets/js/modules/audit-governance.js" defer></script>
+<script id="vg-backup-recovery" src="assets/js/modules/backup-recovery.js" defer></script>
+<script src="assets/js/modules/orcamento.js" defer></script>
+<script id="vg-benchmarking" src="assets/js/modules/benchmarking.js" defer></script>
+
+<script id="ri-script" src="assets/js/modules/revenue-intelligence.js" defer></script>
+<script id="vg-forecast-scenarios" src="assets/js/modules/forecast-scenarios.js" defer></script>
+<script id="vg-scenario-comparison-v29" src="assets/js/modules/scenario-comparison-v29.js" defer></script>
 <script id="vg-hotel-performance-v23" src="assets/js/modules/hotel-performance-v23.js" defer></script>
 <script id="vg-operational-score-v30" src="assets/js/modules/operational-score-v28.js" defer></script>
-
+<script id="vg-hotel-360-v30" src="assets/js/modules/hotel-360-v30.js" defer></script>
+<script id="vg-revenue-hub-v30" src="assets/js/modules/revenue-hub-v30.js" defer></script>
+<script id="vg-automatic-reports-v24" src="assets/js/modules/automatic-reports-v24.js" defer></script>
+<script id="vg-analytical-assistant-v25" src="assets/js/modules/analytical-assistant-v25.js" defer></script>
+<script id="vg-document-management-v26" src="assets/js/modules/document-management-v26.js" defer></script>
+<script id="vg-workflow-approvals-v27" src="assets/js/modules/workflow-approvals-v27.js" defer></script>
+<script id="vg-anomaly-detection" src="assets/js/modules/anomaly-detection.js" defer></script>
 <script id="ops-actions-script" src="assets/js/modules/actions-management.js" defer></script>
 <script id="ops-center-script" src="assets/js/ui/operations-center.js" defer></script>
 
@@ -2126,8 +2170,10 @@
 
 <link rel="stylesheet" href="assets/css/logo-fix.css">
 <link rel="stylesheet" href="assets/css/uniformizacao-v32_2.css">
+<link id="vg-domains-v33-css" rel="stylesheet" href="assets/css/operations-domains-v33.css">
 <link id="vg-operational-summary-pdf-css" rel="stylesheet" href="assets/css/operational-summary-pdf-v32_6.css">
 <script id="vg-operational-summary-pdf" src="assets/js/modules/operational-summary-pdf-v32_6.js" defer></script>
+<script id="vg-domains-v33" src="assets/js/modules/operations-domains-v33.js" defer></script>
 <script id="vg-mobile-pwa" src="assets/js/ui/mobile-pwa.js" defer></script>
 <script id="vg-global-search-v19" src="assets/js/ui/global-search.js" defer></script>
 <script id="vg-notifications-v21" src="assets/js/ui/notifications-v21.js" defer></script>

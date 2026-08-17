@@ -26,12 +26,6 @@
   const TYPE_MODULE={assistant:'analyticalassistant',report:'automaticreports',performance:'hotel360',hotel:'hoteis',kpi:'fichahotel',action:'actions',event:'agenda',alert:'alertas',anomaly:'anomalies',target:'fichahotel',article:'compras',supplier:'compras',comment:'fichahotel',data:'datacenter',governance:'governance',document:'documents',approval:'approvals',scenario:'revenuehub',cityledger:'cityledger',efficiency:'unitEconomics'};
   const add=(arr,item)=>{if(!item||!item.title)return;item.type=item.type||'hotel';const mod=item.module||TYPE_MODULE[item.type];if(mod&&typeof window.vgAuthCanAccessModule==='function'&&!window.vgAuthCanAccessModule(mod))return;if(item.hotel&&typeof window.vgAuthCanAccessHotel==='function'&&!window.vgAuthCanAccessHotel(item.hotel))return;item.group=GROUP[item.type]||item.type;item.search=norm([item.title,item.subtitle,item.hotel,item.value,item.keywords,KIND[item.type]].filter(Boolean).join(' '));arr.push(item);};
 
-  function ensureLazy(view,after){
-    const run=()=>{try{return after?after():window.setView?.(view);}catch(e){console.warn('Pesquisa global: abertura lazy falhou',e);}};
-    const lazy=window.VG?.lazy;
-    if(lazy?.needsView?.(view)&&!lazy.isViewReady?.(view))return lazy.ensureView(view).then(run).catch(e=>window.showToast?.('Não foi possível carregar o módulo: '+e.message,true));
-    return Promise.resolve(run());
-  }
   function navigateHotel(h,month){
     if(typeof window.setView==='function')window.setView('fichahotel');
     setTimeout(()=>{try{const hs=document.getElementById('hsHotel');if(hs&&h){hs.value=h;}const ms=document.getElementById('hsMes');if(ms&&month)ms.value=String(month);if(typeof window.hsRender==='function')window.hsRender();}catch(e){}},40);
@@ -40,28 +34,28 @@
     close();
     try{
       if(typeof it.open==='function'){it.open();return;}
-      if(it.type==='assistant'){ensureLazy('analyticalassistant',()=>window.VG?.analyticalAssistant?.open?.());return;}
-      if(it.type==='report'){ensureLazy('automaticreports',()=>window.VG?.automaticReports?.open?.());return;}
-      if(it.type==='performance'){ensureLazy('hotel360',()=>window.VG?.hotelPerformance?.openHotel?.(it.hotel));return;}
+      if(it.type==='assistant'){window.VG?.analyticalAssistant?.open?.();return;}
+      if(it.type==='report'){window.VG?.automaticReports?.open?.();return;}
+      if(it.type==='performance'){window.VG?.hotelPerformance?.openHotel?.(it.hotel);return;}
       if(it.type==='hotel'||it.type==='kpi'||it.type==='target'||it.type==='comment'){navigateHotel(it.hotel,it.month);return;}
       if(it.type==='action'&&window.VG?.actions?.openById){window.VG.actions.openById(it.id);return;}
-      if(it.type==='event'){ensureLazy('agenda',()=>{window.setView?.('agenda');setTimeout(()=>window.VG?.agenda?.openById?.(it.id),0);});return;}
+      if(it.type==='event'){window.setView?.('agenda');setTimeout(()=>window.VG?.agenda?.openById?.(it.id),40);return;}
       if(it.type==='alert'){window.setView?.('alertas');return;}
       if(it.type==='anomaly'){if(it.anomalyType==='price')window.setView?.('compras');else navigateHotel(it.hotel,it.month);return;}
       if(it.type==='article'||it.type==='supplier'){window.setView?.('compras');return;}
       if(it.type==='data'){window.setView?.('datacenter');return;}
       if(it.type==='governance'&&isDirection()){window.setView?.('governance');return;}
-      if(it.type==='document'){ensureLazy('documents',()=>window.VG?.documents?.openFor?.({hotel:it.hotel,query:it.title}));return;}
-      if(it.type==='approval'){ensureLazy('approvals',()=>window.VG?.approvals?.openById?.(it.id));return;}
-      if(it.type==='scenario'){ensureLazy('revenuehub',()=>window.VG?.scenarioComparison?.openFor?.({hotel:it.hotel,month:it.month}));return;}
+      if(it.type==='document'){window.VG?.documents?.openFor?.({hotel:it.hotel,query:it.title});return;}
+      if(it.type==='approval'){window.VG?.approvals?.openById?.(it.id);return;}
+      if(it.type==='scenario'){window.VG?.scenarioComparison?.openFor?.({hotel:it.hotel,month:it.month});return;}
     }catch(e){console.warn('Pesquisa global: navegação falhou',e);}
   }
 
   function buildHotelsAndKpis(arr){
     add(arr,{type:'assistant',title:'Assistente Analítico',subtitle:'Perguntas em linguagem natural sobre os dados da dashboard',keywords:'assistente analitico perguntas dados ai inteligencia analise comparar ranking forecast gop ocupacao'});
     add(arr,{type:'report',title:'Relatórios Automáticos',subtitle:'Hotel, região ou consolidado · PDF e Word',keywords:'relatorio relatorios automaticos pdf word semanal mensal executivo consolidado regiao'});
-    add(arr,{type:'efficiency',title:'Eficiência & Unit Economics',subtitle:'Custos, receitas e GOP por unidade de atividade',keywords:'abc eficiencia unit economics energia quarto ocupado quarto disponivel dormida cliente hospede chegada',open:()=>window.setView?.('unitEconomics')});
-    add(arr,{type:'cityledger',title:'City Ledger & Cobranças',subtitle:'Faturas, aging, diligências e recuperação',keywords:'city ledger cobranca divida faturas diligencias telefone email aging credito',open:()=>window.setView?.('cityledger')});
+    add(arr,{type:'efficiency',title:'Eficiência & Unit Economics',subtitle:'Custos, receitas e GOP por unidade de atividade',keywords:'abc eficiencia unit economics energia quarto ocupado quarto disponivel dormida cliente hospede chegada',open:()=>window.VG?.unitEconomics?.open?.()});
+    add(arr,{type:'cityledger',title:'City Ledger & Cobranças',subtitle:'Faturas, aging, diligências e recuperação',keywords:'city ledger cobranca divida faturas diligencias telefone email aging credito',open:()=>window.VG?.cityLedger?.open?.()});
     add(arr,{type:'data',module:'receitasdet',title:'Receita Detalhada',subtitle:'PdV, família, subfamília, grupo e artigo',keywords:'receita detalhada vendas artigos ponto venda pvd mix',open:()=>window.setView?.('receitasdet')});
     add(arr,{type:'article',module:'ab',title:'Compras & A&B',subtitle:'Food Cost, Beverage Cost, stock, receituário e inteligência',keywords:'compras ab food cost beverage stock fichas tecnicas receitas cocktails',open:()=>window.setView?.('ab')});
     add(arr,{type:'data',module:'housekeeping',title:'Housekeeping · Inventário Têxtil',subtitle:'Stock, quebras, campanhas e necessidades de compra',keywords:'housekeeping inventario textil roupas quebras turcos lencois par stock',open:()=>window.setView?.('housekeeping')});
@@ -195,7 +189,6 @@
   async function hydrate(){
     if(state.hydrating||state.hydrated)return;state.hydrating=true;renderResults();
     try{
-      try{await window.VG?.lazy?.ensureFeature?.('searchExtended');}catch(e){console.warn('Pesquisa global: módulos complementares indisponíveis',e);}
       const jobs=[];
       if(window.VG?.actions?.ensureLoaded)jobs.push(window.VG.actions.ensureLoaded(false));
       if(window.VG?.agenda?.ensureLoaded)jobs.push(window.VG.agenda.ensureLoaded(false));

@@ -1,13 +1,13 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const index=read('index.html'),lazy=read('assets/js/core/08-performance-loader-v35_7.js'),server=read('netlify/functions/dashboard-sessao.js'),sw=read('service-worker.js'),forecast=read('assets/js/modules/forecast-scenarios.js'),search=read('assets/js/ui/global-search.js'),mobile=read('assets/js/ui/mobile-pwa.js'),core=read('assets/js/core/02-navigation-kpis.js'),moduleText=read('assets/js/modules/scenario-comparison-v29.js');
+const index=read('index.html'),server=read('netlify/functions/dashboard-sessao.js'),sw=read('service-worker.js'),forecast=read('assets/js/modules/forecast-scenarios.js'),search=read('assets/js/ui/global-search.js'),mobile=read('assets/js/ui/mobile-pwa.js'),core=read('assets/js/core/02-navigation-kpis.js'),moduleText=read('assets/js/modules/scenario-comparison-v29.js');
 function ok(v,m){assert(v,m)}
-ok(index.includes('view-scenariocompare')&&lazy.includes('scenario-comparison-v29.js')&&lazy.includes('scenario-comparison-v29.css'),'V29 deve estar ligada ao carregador modular');
+ok(index.includes('view-scenariocompare')&&index.includes('scenario-comparison-v29.js')&&index.includes('scenario-comparison-v29.css'),'V29 deve estar ligada no index');
 ok(index.includes('nav-scenariocompare'),'V29 deve estar na navegação lateral');
 ok(core.includes("currentView === 'scenariocompare'")&&core.includes('scenarioComparisonRender'),'refreshAll deve renderizar V29');
 ok(forecast.includes('getState')&&forecast.includes('scenarioCompareFromForecast'),'Forecast V12 deve expor estado e atalho para o comparador');
-ok(sw.includes('vg-operations-shell-v35-7')&&!sw.includes('/assets/js/modules/scenario-comparison-v29.js'),'V29 deve carregar por necessidade fora do pre-cache inicial');
+ok(sw.includes('vg-operations-shell-v32')&&sw.includes('scenario-comparison-v29.js')&&sw.includes('scenario-comparison-v29.css'),'PWA deve incluir shell V29');
 ok(search.includes("type:'scenario'")&&search.includes('buildScenarios(arr)'),'Pesquisa Global deve indexar cenários');
 ok(mobile.includes('data-view="revenuehub"'),'V30 deve expor Comparação de Cenários dentro de Revenue & Forecast no mobile');
 ok(server.includes('const SCENARIO_PREFIX = "ops-scenario/"')&&server.includes('resource === "ops-scenario-save"')&&server.includes('resource === "ops-scenario-delete"'),'backend deve ter endpoints próprios V29');
