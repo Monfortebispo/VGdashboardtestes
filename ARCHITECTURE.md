@@ -1,3 +1,38 @@
+# Arquitetura — reforços V35.3
+
+## Princípio
+
+A V35.3 mantém a arquitetura da V35 e reforça as fronteiras entre UI e servidor. A interface deixa de ser a única camada de autorização para Housekeeping e Custos & Compras A&B.
+
+## Hotéis
+
+A chave canónica da ficha (`profileKey`) é a identidade estável. O nome apresentado pode ser editado sem mudar essa identidade. A gravação envia `expectedUpdatedAt`; o backend compara com a versão atual e devolve conflito 409 em caso de edição concorrente. A região é selecionada a partir das regiões canónicas existentes.
+
+## Housekeeping
+
+`netlify/functions/hk-store.js` filtra e funde dados server-side:
+
+- Direção/Admin: leitura e escrita global;
+- Compras: leitura global, sem escrita de inventário;
+- perfis de hotel: apenas o hotel da sessão;
+- campos de aprovação e reabertura não podem ser forjados por perfis restritos.
+
+A sincronização histórica com `inventariovg.netlify.app` valida explicitamente 3 campanhas / 2 fechadas / 1 aberta antes de marcar a migração como concluída e cria backup pré-merge.
+
+## Custos & Compras A&B
+
+`netlify/functions/custos-ab-store.js` aplica autorização server-side. Configuração global e operações administrativas ficam restritas a Direção/Admin/Compras. Utilizadores de hotel recebem apenas estruturas compatíveis com o seu hotel e, quando permitido, apenas conseguem fundir a sua própria previsão.
+
+## Documentos
+
+Os metadados continuam separados dos bytes. `ops-document-content` é o endpoint binário autenticado; o servidor deriva o MIME a partir da extensão permitida do nome do ficheiro e devolve `nosniff`. O limite continua 3,5 MB por ficheiro devido ao transporte base64 no pedido.
+
+## Performance
+
+`compras-ab-native-v35.js` e `housekeeping-native-v35.js` deixaram de fazer parte do primeiro paint e do precache inicial. `operations-domains-v33.js` carrega cada módulo dinamicamente quando a vista correspondente é aberta. Depois de pedidos uma vez, o Service Worker pode mantê-los como fallback offline através da estratégia network-first já existente.
+
+---
+
 # Arquitetura — VG Operations 2.0 v30
 
 ## Princípio

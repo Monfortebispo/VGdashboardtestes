@@ -4123,5 +4123,5 @@ async function ab35Mount(container){
   ab35InstallDispatchers();
   AB35_INIT=ab35Start();return AB35_INIT;
 }
-window.VG.comprasNative35={version:35.0,mount:ab35Mount,reload:()=>recarregarCloud(true),getRoot:()=>AB35_SHADOW,source:'custos-compras-main/index.html',architecture:'native-shadow-module'};
+window.VG.comprasNative35={version:35.3,mount:ab35Mount,reload:()=>recarregarCloud(true),getRoot:()=>AB35_SHADOW,source:'custos-compras-main/index.html',architecture:'native-shadow-module'};
 })();
