@@ -1,96 +1,579 @@
-/* VG Operations V32.2 — uniformização visual transversal */
-/* Barra flutuante de atalhos removida em todas as geografias e modos. */
-#vgNavDock{display:none!important}
+/* VG Operations V36 — sistema visual transversal
+   Objetivo: uma linguagem única de tipografia, cor, espaçamento, controlos,
+   cartões, tabelas e estados. A área #view-fichahotel é deliberadamente
+   excluída de todas as regras de conteúdo desta camada. */
+
+:root{
+  --ui-fs-xs:11px;
+  --ui-fs-sm:12px;
+  --ui-fs-md:13px;
+  --ui-fs-lg:15px;
+  --ui-fs-xl:18px;
+  --ui-fs-2xl:22px;
+  --ui-fs-display:30px;
+
+  --ui-radius-sm:8px;
+  --ui-radius-md:12px;
+  --ui-radius-lg:16px;
+  --ui-radius-pill:999px;
+
+  --ui-space-1:4px;
+  --ui-space-2:8px;
+  --ui-space-3:12px;
+  --ui-space-4:16px;
+  --ui-space-5:20px;
+  --ui-space-6:24px;
+
+  --ui-control-min-h:34px;
+  --ui-shadow-card:0 10px 28px rgba(0,0,0,.14);
+  --ui-shadow-float:0 16px 44px rgba(0,0,0,.22);
+  --ui-transition:160ms ease;
+}
+
+/* Dark: reforço do texto secundário sem mudar a identidade aprovada. */
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2){
+  --text-3:#7890aa;
+}
+body.theme-erp,
+body.theme-vilagale,
+body.theme-v2{
+  --ui-shadow-card:0 8px 22px rgba(15,23,42,.06);
+  --ui-shadow-float:0 18px 48px rgba(15,23,42,.14);
+}
+
+/* ──────────────────────────────────────────────────────────
+   BASE / SHELL — fora da Ficha Hotel
+────────────────────────────────────────────────────────── */
+html{font-size:14px}
+body{
+  font-family:var(--font);
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font-family:var(--font)}
 .main{padding-bottom:28px!important}
 body.vg-interface-modern .main{padding-bottom:28px!important}
 
-/* Contraste consistente no topo claro da Interface 2.0. */
+/* Barra flutuante de atalhos: removida transversalmente. */
+#vgNavDock{display:none!important}
+
+/* Topo */
+.topbar{
+  min-height:58px;
+  border-bottom:1px solid var(--border)!important;
+  box-shadow:none!important;
+}
+.logo-text strong{
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-md)!important;
+  font-weight:800!important;
+  letter-spacing:-.01em;
+}
+.logo-text span{
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  letter-spacing:.12em!important;
+}
+.topbar-pill{
+  min-height:30px;
+  border-radius:var(--ui-radius-pill)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  font-weight:600;
+  line-height:1.2;
+}
+.topbar-pill strong{font-weight:800!important}
+.vg-build-badge{
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  letter-spacing:.02em;
+}
+
+/* Sidebar / navegação */
+.sb-nav-group-label,
+.sb-label,
+.gfb-label{
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  line-height:1.2;
+  font-weight:800!important;
+  letter-spacing:.10em!important;
+  text-transform:uppercase;
+}
+.sb-nav-btn{
+  min-height:34px;
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  font-weight:650!important;
+  line-height:1.25;
+  transition:background var(--ui-transition),color var(--ui-transition),border-color var(--ui-transition);
+}
+.sb-nav-btn.active{
+  color:var(--text-1)!important;
+  border-color:var(--border)!important;
+}
+.sb-action-btn,
+.sb-mes-all,
+.sb-mes-btn,
+.sb-region-item{
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  font-weight:700!important;
+}
+.sb-action-btn.primary,
+.sb-mes-btn.active{
+  background:var(--gold)!important;
+  border-color:var(--gold)!important;
+  color:#fff!important;
+}
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .sb-action-btn.primary,
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .sb-mes-btn.active{
+  color:var(--navy)!important;
+}
+.sb-hotel-search,
+.hs-hotel-search{
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+}
+.sb-status{
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  line-height:1.4;
+}
+
+/* Contexto */
+.context-panel{
+  border-left:1px solid var(--border)!important;
+}
+.ctx-title{
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.09em!important;
+  text-transform:uppercase;
+}
+.ctx-region-badge,
+.ctx-kpi{
+  border-radius:var(--ui-radius-md)!important;
+}
+.ctx-kpi{
+  border:1px solid var(--border-2)!important;
+  box-shadow:none!important;
+}
+
+/* Filtros globais */
+.global-filter-bar{
+  border-bottom:1px solid var(--border)!important;
+}
+.pl-region-btn,
+.ht-filter-btn,
+.pl-usali-tab,
+.wa-sel-btn{
+  min-height:32px;
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  font-weight:700!important;
+  transition:background var(--ui-transition),color var(--ui-transition),border-color var(--ui-transition),box-shadow var(--ui-transition);
+}
+.pl-region-btn.active,
+.ht-filter-btn.active,
+.pl-usali-tab.active,
+.wa-sel-btn.active{
+  background:var(--gold)!important;
+  border-color:var(--gold)!important;
+  color:#fff!important;
+}
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .pl-region-btn.active,
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .ht-filter-btn.active,
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .pl-usali-tab.active,
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .wa-sel-btn.active{
+  color:var(--navy)!important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   CONTEÚDO — EXCLUI EXPLICITAMENTE #view-fichahotel
+────────────────────────────────────────────────────────── */
+:where(.tab-content:not(#view-fichahotel)){
+  color:var(--text-1);
+}
+:where(.tab-content:not(#view-fichahotel)) .section-title{
+  min-height:38px;
+  margin-bottom:var(--ui-space-4)!important;
+  color:var(--text-1)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-lg)!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  letter-spacing:-.015em!important;
+  text-transform:none!important;
+}
+:where(.tab-content:not(#view-fichahotel)) .section-title::after{
+  background:var(--border)!important;
+}
+
+/* Títulos e subtítulos dos módulos */
+:where(.tab-content:not(#view-fichahotel))
+:where(.chart-title,.ops-title,.ops-panel-title,.ri-title,.ri2-head h2,.occ-intel-title,.occ-chart-title,.ig-chart-title,.vg-agenda-title,.table-header h3,.cd-head h3){
+  color:var(--text-1)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-md)!important;
+  line-height:1.3!important;
+  font-weight:800!important;
+  letter-spacing:-.01em!important;
+  text-transform:none!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.chart-sub,.ops-sub,.ops-panel-meta,.hint,.ri-sub,.occ-intel-note,.occ-chart-sub,.ig-chart-sub,.vg-agenda-sub,.cd-meta,.note){
+  color:var(--text-2)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  line-height:1.5!important;
+  opacity:1!important;
+}
+
+/* Cartões / superfícies principais */
+:where(.tab-content:not(#view-fichahotel))
+:where(.kpi-card,.chart-card,.ai-insights-card,.table-wrapper,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel,.vg-agenda-calendar-card,.vg-agenda-list-card,.vg-agenda-side-card,.wx-card){
+  background:var(--surface-1)!important;
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-radius-lg)!important;
+  box-shadow:var(--ui-shadow-card)!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.kpi-card,.chart-card,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel){
+  overflow:hidden;
+}
+
+/* KPI: mesma hierarquia, sem alterar cores semânticas. */
+:where(.tab-content:not(#view-fichahotel)) .kpi-card{
+  padding:var(--ui-space-4)!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.kpi-label,.kpi-lbl,.ri-kpi-label,.occ-kpi-label){
+  color:var(--text-2)!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.07em!important;
+  text-transform:uppercase!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.kpi-value,.kpi-val,.ri-kpi-value,.occ-kpi-value){
+  color:var(--text-1)!important;
+  font-family:var(--font)!important;
+  font-weight:800!important;
+  letter-spacing:-.025em!important;
+}
+
+/* Formulários: mesma superfície, contraste e foco. */
+:where(.tab-content:not(#view-fichahotel))
+:where(input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],input[type="email"],input[type="password"],select,textarea){
+  background:var(--surface-2)!important;
+  color:var(--text-1)!important;
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  line-height:1.35!important;
+  box-shadow:none!important;
+  outline:none!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],input[type="email"],input[type="password"],select){
+  min-height:var(--ui-control-min-h);
+  padding:7px 10px!important;
+}
+:where(.tab-content:not(#view-fichahotel)) textarea{
+  padding:9px 10px!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],input[type="email"],input[type="password"],select,textarea):focus{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 0 3px var(--gold-dim)!important;
+}
+:where(.tab-content:not(#view-fichahotel)) ::placeholder{
+  color:var(--text-3)!important;
+  opacity:1!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(label,.fgrp label,.ri-control label,.occ-sel-label,.ig-sel-label,.vg-agenda-field label){
+  color:var(--text-2)!important;
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.06em!important;
+}
+
+/* Botões de ação recorrentes */
+:where(.tab-content:not(#view-fichahotel))
+:where(.btn,.vg-btn,.ops-btn,.ri-btn,.occ-clear-btn,.rt-clear-btn,.ig-clear-btn,.vg-agenda-btn,.vg-auth-smallbtn){
+  min-height:32px;
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  line-height:1.2!important;
+  font-weight:750!important;
+  letter-spacing:0!important;
+  transition:background var(--ui-transition),color var(--ui-transition),border-color var(--ui-transition),box-shadow var(--ui-transition),transform var(--ui-transition);
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.btn,.vg-btn,.ops-btn,.ri-btn,.occ-clear-btn,.rt-clear-btn,.ig-clear-btn,.vg-agenda-btn,.vg-auth-smallbtn):hover{
+  filter:none!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.ops-btn.primary,.ri-btn:not(.ghost),.vg-agenda-btn.primary){
+  background:var(--gold)!important;
+  border-color:var(--gold)!important;
+  color:#fff!important;
+}
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2)
+:where(.tab-content:not(#view-fichahotel))
+:where(.ops-btn.primary,.ri-btn:not(.ghost),.vg-agenda-btn.primary){
+  color:var(--navy)!important;
+}
+
+/* Tabs segmentadas */
+:where(.tab-content:not(#view-fichahotel))
+:where(.cd-tabs,.v30-tabs,.vg-agenda-view-toggle){
+  border-radius:var(--ui-radius-md)!important;
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.cd-tabs button,.v30-tabs button,.vg-agenda-view-toggle button){
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  font-weight:700!important;
+}
+
+/* Tabelas: tipografia, cabeçalho, separadores e hover uniformes.
+   Heatmaps/pickup visuais são excluídos para preservar a leitura cromática. */
+:where(.tab-content:not(#view-fichahotel)) table{
+  color:var(--text-1);
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+}
+:where(.tab-content:not(#view-fichahotel)) table:not(.occ-heatmap):not(.piu-table) th{
+  background:var(--surface-2)!important;
+  color:var(--text-2)!important;
+  border-bottom:1px solid var(--border)!important;
+  padding:9px 10px!important;
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  letter-spacing:.035em!important;
+  text-transform:none!important;
+  white-space:nowrap;
+}
+:where(.tab-content:not(#view-fichahotel)) table:not(.occ-heatmap):not(.piu-table) td{
+  color:var(--text-1);
+  border-bottom:1px solid var(--border-2)!important;
+  padding:9px 10px!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  line-height:1.35!important;
+}
+:where(.tab-content:not(#view-fichahotel)) table:not(.occ-heatmap):not(.piu-table) tbody tr:hover td{
+  background:var(--surface-2);
+}
+:where(.tab-content:not(#view-fichahotel))
+:where(.table-wrapper,[class*="table-wrap"],[class*="table-wrapper"]){
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+}
+
+/* Estados / pills */
+:where(.tab-content:not(#view-fichahotel))
+:where(.delta-badge,.status-pill,.badge,.ri-badge,.occ-insight-badge){
+  border-radius:var(--ui-radius-pill)!important;
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+}
+:where(.tab-content:not(#view-fichahotel)) .delta-badge.pos{
+  color:var(--pos)!important;
+}
+:where(.tab-content:not(#view-fichahotel)) .delta-badge.neg{
+  color:var(--neg)!important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   COMPRAS & ARTIGOS — deixa de ter identidade paralela
+────────────────────────────────────────────────────────── */
+#view-compras .cd-head,
+#view-compras .cd-tabs,
+#view-compras .kpi,
+#view-compras .card{
+  background:var(--surface-1)!important;
+  color:var(--text-1)!important;
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-radius-lg)!important;
+  box-shadow:var(--ui-shadow-card)!important;
+}
+#view-compras .cd-head{padding:var(--ui-space-4)!important}
+#view-compras .cd-meta{color:var(--text-2)!important;opacity:1!important}
+#view-compras .fgrp label{color:var(--text-2)!important;opacity:1!important}
+#view-compras .fgrp select{
+  background:var(--surface-2)!important;
+  color:var(--text-1)!important;
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-radius-sm)!important;
+}
+#view-compras .seg{
+  background:var(--surface-2)!important;
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-radius-md)!important;
+}
+#view-compras .seg button{
+  color:var(--text-2)!important;
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+  font-size:var(--ui-fs-xs)!important;
+  font-weight:700!important;
+}
+#view-compras .seg button.on{
+  background:var(--gold)!important;
+  color:#fff!important;
+  border-color:var(--gold)!important;
+}
+body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) #view-compras .seg button.on{
+  color:var(--navy)!important;
+}
+#view-compras .kpi{
+  position:relative;
+  overflow:hidden;
+}
+#view-compras .kpi::before{
+  content:'';
+  position:absolute;
+  left:0;right:0;top:0;
+  height:3px;
+  background:var(--gold);
+}
+#view-compras .kpi .v,
+#view-compras .card h3,
+#view-compras .clk{color:var(--text-1)!important}
+#view-compras .kpi .l,
+#view-compras .kpi .s,
+#view-compras .note,
+#view-compras .bc{color:var(--text-2)!important}
+#view-compras .cd-tabs button{color:var(--text-2)!important}
+#view-compras .cd-tabs button.on{
+  background:transparent!important;
+  color:var(--text-1)!important;
+  border-bottom-color:var(--gold)!important;
+}
+#view-compras .bar{background:var(--surface-3)!important}
+#view-compras .bar i{background:var(--gold)!important}
+#view-compras .btn:not(.gold){
+  background:var(--surface-2)!important;
+  color:var(--text-1)!important;
+  border:1px solid var(--border)!important;
+}
+#view-compras .btn.gold{
+  background:var(--gold)!important;
+  color:#fff!important;
+  border-color:var(--gold)!important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   HOTÉIS / FICHAS TÉCNICAS — mesma linguagem dos módulos
+   (não confundir com #view-fichahotel, que permanece intocado)
+────────────────────────────────────────────────────────── */
+#view-hoteis .ht-card{
+  background:var(--surface-1)!important;
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-radius-lg)!important;
+  box-shadow:var(--ui-shadow-card)!important;
+}
+#view-hoteis .ht-filter-btn.active{
+  background:var(--gold)!important;
+  border-color:var(--gold)!important;
+  color:#fff!important;
+}
+.ht-empty-state{
+  grid-column:1/-1;
+  padding:var(--ui-space-6);
+  border:1px dashed var(--border);
+  border-radius:var(--ui-radius-lg);
+  background:var(--surface-1);
+  color:var(--text-2);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.ht-empty-state strong{color:var(--text-1);font-size:var(--ui-fs-md)}
+.ht-empty-state span{font-size:var(--ui-fs-xs);line-height:1.55}
+
+/* ──────────────────────────────────────────────────────────
+   INTERFACE 2.0 / MODERN — tipografia e contraste sem paleta paralela
+────────────────────────────────────────────────────────── */
+body.vg-interface-modern{
+  --text-2:#526174;
+  --text-3:#718096;
+}
 body.vg-interface-modern .vg-notif-trigger,
 body.vg-interface-modern .vg-search-top-trigger,
 body.vg-interface-modern .v30-top-assistant{
   min-height:34px!important;
-  border:1px solid rgba(15,23,42,.12)!important;
-  background:#fff!important;
-  color:#334155!important;
-  box-shadow:0 7px 18px rgba(15,23,42,.05)!important;
+  border:1px solid var(--border)!important;
+  background:var(--surface-1)!important;
+  color:var(--text-1)!important;
+  border-radius:var(--ui-radius-sm)!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.05)!important;
+  font-family:var(--font)!important;
 }
 body.vg-interface-modern .vg-notif-trigger:hover,
 body.vg-interface-modern .vg-search-top-trigger:hover,
-body.vg-interface-modern .v30-top-assistant:hover{background:#f8fafc!important;border-color:rgba(6,182,212,.30)!important;color:#0f172a!important}
-body.vg-interface-modern .vg-search-top-trigger .vg-search-key{color:#475569!important;background:#f1f5f9!important;border-color:#cbd5e1!important}
-body.vg-interface-modern .vg-notif-trigger-label,
-body.vg-interface-modern .vg-search-label{color:#334155!important}
-body.vg-interface-modern .vg-notif-trigger b{border-color:#fff!important}
-
-
-/* Geografia usa o mesmo estado ativo da navegação principal. */
-body.vg-interface-modern .vg-market-switch{background:#fff!important;border-color:rgba(15,23,42,.10)!important;box-shadow:0 7px 18px rgba(15,23,42,.04)!important}
-body.vg-interface-modern .vg-market-switch>span{color:#64748b!important}
-body.vg-interface-modern .vg-market-switch button{color:#475569!important}
-body.vg-interface-modern .vg-market-switch button.active{background:linear-gradient(135deg,var(--vgs-cyan),var(--vgs-violet))!important;color:#fff!important;border-color:transparent!important}
-
-/* Página Hotéis recuperada, na mesma linguagem dos restantes módulos. */
-.ht-empty-state{grid-column:1/-1;padding:24px;border:1px dashed var(--border-2);border-radius:16px;background:var(--surface-1);color:var(--text-2);display:flex;flex-direction:column;gap:6px}
-.ht-empty-state strong{color:var(--text-1);font-size:13px}.ht-empty-state span{font-size:11px;line-height:1.55}
-body.vg-interface-modern #view-hoteis .ht-card{border-radius:22px!important;border:1px solid rgba(15,23,42,.08)!important;box-shadow:0 16px 38px rgba(15,23,42,.07)!important;background:rgba(255,255,255,.92)!important}
-body.vg-interface-modern #view-hoteis .ht-filter-btn.active{background:linear-gradient(135deg,var(--vgs-cyan),var(--vgs-violet))!important;color:#fff!important;border-color:transparent!important}
-
-/* Compras & Artigos deixa de ter uma identidade visual paralela. */
-#view-compras .cd-head{background:var(--surface-1)!important;color:var(--text-1)!important;border:1px solid var(--border-2)!important;border-radius:14px!important;box-shadow:0 12px 30px rgba(15,23,42,.06)!important}
-#view-compras .cd-meta{color:var(--text-2)!important;opacity:1!important}
-#view-compras .fgrp label{color:var(--text-2)!important;opacity:1!important;font-weight:800!important}
-#view-compras .fgrp select{background:var(--surface-2)!important;color:var(--text-1)!important;border:1px solid var(--border-2)!important;border-radius:9px!important}
-#view-compras .seg{background:var(--surface-2)!important;border:1px solid var(--border-2)!important;border-radius:10px!important}
-#view-compras .seg button{color:var(--text-2)!important;border-radius:8px!important}
-#view-compras .seg button.on{background:var(--gold)!important;color:var(--navy)!important;font-weight:800!important}
-#view-compras .kpi,#view-compras .card,#view-compras .cd-tabs{background:var(--surface-1)!important;border:1px solid var(--border-2)!important;box-shadow:0 12px 30px rgba(15,23,42,.06)!important}
-#view-compras .kpi{border-top:1px solid var(--border-2)!important;position:relative;overflow:hidden}
-#view-compras .kpi::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:var(--gold)}
-#view-compras .kpi .v,#view-compras .card h3,#view-compras .clk{color:var(--text-1)!important}
-#view-compras .kpi .l,#view-compras .kpi .s,#view-compras .note,#view-compras .bc{color:var(--text-2)!important}
-#view-compras th{background:var(--surface-2)!important;color:var(--text-2)!important;border-color:var(--border-2)!important}
-#view-compras td{color:var(--text-1)!important;border-color:var(--border-2)!important}
-#view-compras tr:hover td{background:var(--surface-2)!important}
-#view-compras .cd-tabs button{color:var(--text-2)!important}
-#view-compras .cd-tabs button.on{color:var(--text-1)!important;border-bottom-color:var(--gold)!important}
-#view-compras .bar{background:var(--surface-3)!important}
-#view-compras .bar i{background:linear-gradient(90deg,var(--gold),var(--teal))!important}
-
-
-#view-compras .btn:not(.gold){background:var(--text-1)!important;color:var(--surface-1)!important}
-#view-compras .btn:not(.gold):hover{filter:brightness(.92)}
-
-/* Interface 2.0: mesmo tratamento de seleção usado no menu lateral. */
-body.vg-interface-modern #view-compras .seg button.on,
-body.vg-interface-modern #view-compras .btn.gold,
-body.vg-interface-modern #view-compras .cd-tabs button.on{
-  background:linear-gradient(135deg,var(--vgs-cyan),var(--vgs-violet))!important;
-  color:#fff!important;
-  border-color:transparent!important;
+body.vg-interface-modern .v30-top-assistant:hover{
+  background:var(--surface-2)!important;
+  border-color:var(--gold)!important;
+  color:var(--text-1)!important;
 }
-body.vg-interface-modern #view-compras .cd-tabs button.on{background:transparent!important;color:#0f172a!important;border-bottom:3px solid var(--vgs-cyan)!important}
-body.vg-interface-modern #view-compras .kpi::before{background:linear-gradient(90deg,var(--vgs-cyan),var(--vgs-violet),var(--vgs-gold))}
-body.vg-interface-modern #view-compras .card,
-body.vg-interface-modern #view-compras .kpi,
-body.vg-interface-modern #view-compras .cd-tabs,
-body.vg-interface-modern #view-compras .cd-head{border-radius:22px!important;background:rgba(255,255,255,.90)!important;border-color:rgba(15,23,42,.08)!important;box-shadow:0 16px 42px rgba(15,23,42,.07)!important}
-body.vg-interface-modern #view-compras .btn:not(.gold){background:#0f172a!important;color:#fff!important}
+body.vg-interface-modern .vg-search-top-trigger .vg-search-key{
+  color:var(--text-2)!important;
+  background:var(--surface-2)!important;
+  border-color:var(--border)!important;
+}
+body.vg-interface-modern .vg-notif-trigger-label,
+body.vg-interface-modern .vg-search-label{color:var(--text-1)!important}
+body.vg-interface-modern .vg-notif-trigger b{border-color:var(--surface-1)!important}
 
-/* Texto secundário: nunca usar contraste tão baixo que pareça desativado. */
-body.vg-interface-modern{--text-2:#526174;--text-3:#718096}
+body.vg-interface-modern .vg-market-switch{
+  background:var(--surface-1)!important;
+  border-color:var(--border)!important;
+  border-radius:var(--ui-radius-md)!important;
+  box-shadow:0 6px 16px rgba(15,23,42,.04)!important;
+}
+body.vg-interface-modern .vg-market-switch>span{color:var(--text-2)!important}
+body.vg-interface-modern .vg-market-switch button{
+  color:var(--text-2)!important;
+  border-radius:var(--ui-radius-sm)!important;
+  font-family:var(--font)!important;
+}
+body.vg-interface-modern .vg-market-switch button.active{
+  background:var(--gold)!important;
+  color:#fff!important;
+  border-color:var(--gold)!important;
+}
 
-
-/* V32.4 — contraste explícito nos dois temas claros do cabeçalho.
-   O tema escuro mantém o tratamento original. */
+/* ──────────────────────────────────────────────────────────
+   DOIS TEMAS CLAROS — contraste explícito e idêntica hierarquia
+────────────────────────────────────────────────────────── */
 body.theme-erp .vg-notif-trigger,
 body.theme-erp .vg-search-top-trigger,
 body.theme-erp .v30-top-assistant,
 body.theme-vilagale .vg-notif-trigger,
 body.theme-vilagale .vg-search-top-trigger,
 body.theme-vilagale .v30-top-assistant{
-  background:rgba(255,255,255,.88)!important;
+  background:var(--surface-1)!important;
   border-color:var(--border)!important;
   color:var(--text-1)!important;
+  border-radius:var(--ui-radius-sm)!important;
   box-shadow:0 5px 14px rgba(15,23,42,.05)!important;
 }
 body.theme-erp .vg-notif-trigger-label,
@@ -103,7 +586,10 @@ body.theme-vilagale .v30-top-assistant span{
   opacity:1!important;
 }
 body.theme-erp .vg-search-top-trigger svg,
-body.theme-vilagale .vg-search-top-trigger svg{color:var(--text-2)!important;opacity:1!important}
+body.theme-vilagale .vg-search-top-trigger svg{
+  color:var(--text-2)!important;
+  opacity:1!important;
+}
 body.theme-erp .vg-search-top-trigger .vg-search-key,
 body.theme-vilagale .vg-search-top-trigger .vg-search-key{
   color:var(--text-2)!important;
@@ -113,7 +599,7 @@ body.theme-vilagale .vg-search-top-trigger .vg-search-key{
 }
 body.theme-erp #onlineUsersWrap,
 body.theme-vilagale #onlineUsersWrap{
-  background:rgba(255,255,255,.76)!important;
+  background:var(--surface-1)!important;
   border-color:var(--border)!important;
 }
 body.theme-erp #onlineCount,
@@ -131,4 +617,24 @@ body.theme-vilagale .vg-search-top-trigger:hover,
 body.theme-vilagale .v30-top-assistant:hover{
   background:var(--surface-2)!important;
   color:var(--text-1)!important;
+}
+
+/* Semântica: cor informa estado, não módulo. */
+:where(.tab-content:not(#view-fichahotel)) .good{--ui-semantic:var(--pos)}
+:where(.tab-content:not(#view-fichahotel)) .bad{--ui-semantic:var(--neg)}
+:where(.tab-content:not(#view-fichahotel)) .pos{--ui-semantic:var(--pos)}
+:where(.tab-content:not(#view-fichahotel)) .neg{--ui-semantic:var(--neg)}
+
+/* WhatsApp mantém a cor funcional da marca. */
+body button[onclick="waShareResumo()"]{background:#25D366!important;color:#fff!important}
+
+/* Responsividade visual: sem aumentar densidade em portátil. */
+@media (max-width:1180px){
+  :where(.tab-content:not(#view-fichahotel)) .section-title{
+    font-size:var(--ui-fs-md)!important;
+  }
+  :where(.tab-content:not(#view-fichahotel))
+  :where(.kpi-card,.chart-card,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel){
+    border-radius:var(--ui-radius-md)!important;
+  }
 }
