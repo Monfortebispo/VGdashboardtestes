@@ -6,7 +6,7 @@
 (function(){
   'use strict';
   window.VG=window.VG||{};
-  if(window.VG.documents?.version>=26)return;
+  if(window.VG.documents?.version>=26.2)return;
 
   const MAX_FILE_BYTES=3.5*1024*1024;
   const CATEGORIES={report:'Relatório',audit:'Auditoria',minutes:'Ata',procedure:'Procedimento',evidence:'Evidência',other:'Outro'};
@@ -127,10 +127,20 @@
       const idx=state.rows.findIndex(x=>x.id===res.data.id);if(idx>=0)state.rows[idx]=res.data;else state.rows.unshift(res.data);state.fetchedAt=Date.now();state.loaded=true;closeEditor();render();window.VG.events?.emit?.('documents:changed',{reason:'saved',id:res.data.id});window.showToast?.('✓ Documento guardado');
     }catch(err){if(status)status.textContent=err.message||String(err);}
   }
+  function documentPreviewModal(){let m=document.getElementById('docPreviewModal');if(m)return m;m=document.createElement('div');m.id='docPreviewModal';m.style.cssText='display:none;position:fixed;inset:0;z-index:1800;background:rgba(2,6,23,.72);padding:18px;backdrop-filter:blur(4px)';m.innerHTML='<div style="height:calc(100vh - 36px);max-width:1180px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;display:flex;flex-direction:column"><div style="height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid #e5e7eb;color:#111827"><strong id="docPreviewTitle" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Documento</strong><button id="docPreviewDownload" type="button" class="doc-btn">Descarregar</button><button id="docPreviewClose" type="button" class="doc-btn">✕</button></div><div id="docPreviewBody" style="flex:1;min-height:0;background:#f3f4f6;display:flex;align-items:center;justify-content:center"></div></div>';document.body.appendChild(m);m.addEventListener('click',e=>{if(e.target===m||e.target.closest('#docPreviewClose')){const old=m.dataset.url;if(old)URL.revokeObjectURL(old);m.dataset.url='';m.style.display='none';document.getElementById('docPreviewBody').innerHTML='';}});return m;}
+  async function fetchDocumentBlob(r){
+    const url=window.VG?.shared?.url?.('ops-document-content',r.id);if(!url)throw new Error('Endpoint de documentos indisponível.');
+    const token=typeof window.vgAuthToken==='function'?(window.vgAuthToken()||''):'';if(!token)throw new Error('Sessão não iniciada.');
+    const res=await fetch(url,{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    if(!res.ok){let msg='HTTP '+res.status;try{const j=await res.json();if(j?.error)msg=j.error;}catch(e){}throw new Error(msg);}
+    const blob=await res.blob();if(!blob.size)throw new Error('O ficheiro está vazio.');return {blob,fileName:r.fileName||'documento',mime:res.headers.get('content-type')||r.mime||blob.type||'application/octet-stream'};
+  }
+  function triggerBlobDownload(blob,fileName){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fileName||'documento';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
+  function showDocumentPreview(r,blob,mime){const m=documentPreviewModal(),body=document.getElementById('docPreviewBody'),title=document.getElementById('docPreviewTitle'),dl=document.getElementById('docPreviewDownload');const old=m.dataset.url;if(old)URL.revokeObjectURL(old);const url=URL.createObjectURL(blob);m.dataset.url=url;title.textContent=r.title||r.fileName||'Documento';dl.onclick=()=>triggerBlobDownload(blob,r.fileName);if(mime==='application/pdf'||String(mime).includes('pdf'))body.innerHTML=`<iframe title="${esc(r.title||r.fileName)}" src="${url}" style="width:100%;height:100%;border:0;background:#fff"></iframe>`;else if(String(mime).startsWith('image/'))body.innerHTML=`<img alt="${esc(r.title||r.fileName)}" src="${url}" style="max-width:100%;max-height:100%;object-fit:contain">`;else if(String(mime).startsWith('text/')){blob.text().then(t=>{body.innerHTML=`<pre style="align-self:stretch;margin:0;padding:18px;overflow:auto;white-space:pre-wrap;color:#111827;background:#fff;font:13px/1.45 ui-monospace,monospace">${esc(t)}</pre>`;});}else{body.innerHTML='<div style="padding:24px;text-align:center;color:#374151"><strong>Este formato não tem pré-visualização no browser.</strong><br><span>Use “Descarregar” para abrir no programa adequado.</span></div>';}m.style.display='block';}
   function base64ToBlob(base64,mime){const bin=atob(base64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:mime||'application/octet-stream'});}
   async function openFile(r,preview){
-    try{window.showToast?.('A obter documento…');const res=await window.VG.shared.get('ops-document-file',r.id);const d=res?.data;if(!d?.contentBase64)throw new Error('Conteúdo indisponível.');const blob=base64ToBlob(d.contentBase64,d.mime),url=URL.createObjectURL(blob);if(preview&&(['application/pdf'].includes(d.mime)||String(d.mime).startsWith('image/'))){window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000);}else{const a=document.createElement('a');a.href=url;a.download=d.fileName||r.fileName||'documento';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);}}
-    catch(e){window.showToast?.('Erro ao obter documento: '+e.message,true);}
+    try{window.showToast?.('A obter documento…');const d=await fetchDocumentBlob(r);if(preview)showDocumentPreview(r,d.blob,d.mime);else triggerBlobDownload(d.blob,d.fileName);}
+    catch(e){window.showToast?.('Erro ao obter documento: '+(e.message||e),true);console.error('Documento '+(r?.id||''),e);}
   }
   async function remove(r){if(!canManageHotel(r.hotel))return;if(!confirm(`Eliminar definitivamente “${r.title||r.fileName}”?`))return;try{await window.VG.shared.post('ops-document-delete','',{id:r.id,expectedUpdatedAt:r.updatedAt});state.rows=state.rows.filter(x=>x.id!==r.id);render();window.VG.events?.emit?.('documents:changed',{reason:'deleted',id:r.id});window.showToast?.('Documento eliminado');}catch(e){window.showToast?.('Erro ao eliminar: '+e.message,true);}}
 
@@ -138,7 +148,7 @@
   function all(){return state.rows.slice();}
   function searchItems(){return state.rows.map(r=>({id:r.id,title:r.title||r.fileName,hotel:r.hotel,subtitle:[CATEGORIES[r.category],r.fileName,r.linkLabel].filter(Boolean).join(' · '),keywords:[r.tags,r.description,r.fileName,LINK_TYPES[r.linkType]].filter(Boolean).join(' ')}));}
   async function renderPage(){render();await ensureLoaded(false);render();}
-  window.VG.documents={version:26,state,ensureLoaded,render:renderPage,all,searchItems,openFor,categories:CATEGORIES,maxFileBytes:MAX_FILE_BYTES};
+  window.VG.documents={version:26.2,state,ensureLoaded,render:renderPage,all,searchItems,openFor,categories:CATEGORIES,maxFileBytes:MAX_FILE_BYTES};
   window.VG?.events?.on?.('market:before-change',()=>{state.rows=[];state.loaded=false;state.fetchedAt=0;state.loading=null;state.hotel='';});
   window.VG?.events?.on?.('market:changed',()=>ensureLoaded(true).then(()=>{try{renderPage();}catch(e){}}));
   window.documentManagementRender=renderPage;window.documentManagementOpen=openFor;
