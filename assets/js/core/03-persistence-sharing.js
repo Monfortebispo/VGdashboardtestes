@@ -63,9 +63,13 @@ function buildSessionSnapshot() {
     STORE_ACUM: JSON.parse(JSON.stringify(STORE_ACUM)),
     REP_STORE: JSON.parse(JSON.stringify(REP_STORE)),
     OCC_SNAPSHOTS: JSON.parse(JSON.stringify(OCC_SNAPSHOTS || [])),
+    IG_SNAPSHOTS: JSON.parse(JSON.stringify(typeof IG_SNAPSHOTS!=='undefined' ? IG_SNAPSHOTS : [])),
+    RD_STORE: JSON.parse(JSON.stringify(typeof RD_STORE!=='undefined' ? RD_STORE : [])),
+    HOTEIS_XLSX: JSON.parse(JSON.stringify(typeof HOTEIS_XLSX!=='undefined' ? HOTEIS_XLSX : {})),
     PIU_SNAPSHOTS: JSON.parse(JSON.stringify(PIU_SNAPSHOTS || [])),
     NOTAS_STORE: JSON.parse(JSON.stringify(NOTAS_STORE || {})),
     CD_STORE: (typeof cdGetData==='function' ? cdGetData() : null),
+    cacheScope: idbAutoCacheScope(),
     rtSelected: [...rtSelected],
     selectedMeses: [...selectedMeses],
   };
@@ -91,8 +95,11 @@ function restoreFromSnapshot(snap) {
   if (typeof rtNormalizeStore === 'function') rtNormalizeStore();
   if (typeof cdSetData==='function') cdSetData(snap.CD_STORE || null);
 
-  // Restore OCC_SNAPSHOTS
+  // Restore OCC / Instagram / Receita detalhada / ficheiros por hotel.
   if (snap.OCC_SNAPSHOTS) { OCC_SNAPSHOTS = snap.OCC_SNAPSHOTS; if (typeof occSortSnapshots === 'function') occSortSnapshots(); }
+  if (snap.IG_SNAPSHOTS && typeof IG_SNAPSHOTS !== 'undefined') IG_SNAPSHOTS = snap.IG_SNAPSHOTS;
+  if (snap.RD_STORE && typeof RD_STORE !== 'undefined') RD_STORE = snap.RD_STORE;
+  if (snap.HOTEIS_XLSX && typeof HOTEIS_XLSX !== 'undefined') HOTEIS_XLSX = snap.HOTEIS_XLSX;
 
   // Restore PIU_SNAPSHOTS (referência 2025)
   if (snap.PIU_SNAPSHOTS) {
@@ -128,6 +135,7 @@ async function idbSaveAll() {
     const db = await idbOpen();
     const snap = buildSessionSnapshot();
     await idbPut(db, 'session', snap);
+    await idbPut(db, idbAutoCacheKey(), snap);
     db.close();
     const meses = Object.keys(snap.STORE).length;
     const hoteis = Object.keys(snap.REP_STORE).length;
@@ -250,8 +258,9 @@ function importSession(event) {
 
   const reader = new FileReader();
   if (String(file.name || '').toLowerCase().endsWith('.zip')) {
-    reader.onload = e => {
+    reader.onload = async e => {
       try {
+        if (!window.fflate || typeof window.fflate.unzipSync !== 'function') await window.VG?.lazy?.ensureFeature?.('fflate');
         if (!window.fflate || typeof window.fflate.unzipSync !== 'function') throw new Error('Leitor ZIP não carregado.');
         const files = window.fflate.unzipSync(new Uint8Array(e.target.result));
         const jsonName = Object.keys(files).find(k => /\.json$/i.test(k));
@@ -270,37 +279,75 @@ function importSession(event) {
   try { event.target.value = ''; } catch(e) {}
 }
 
-// Auto-restauro silencioso ao arrancar
-async function idbAutoRestore() {
-  // 1) Tenta primeiro os dados partilhados no servidor — para que todos vejam o mesmo.
-  const gotFromServer = await fetchSharedData(false);
-  if (gotFromServer) { lastSavedFingerprint = snapshotFingerprint(); return; }
+// Auto-restauro silencioso ao arrancar — V35.7
+// Estratégia: cache local primeiro (instantâneo) e validação remota apenas por metadados.
+// Se a versão publicada for a mesma, evita descarregar novamente todos os meses/hotéis/chunks.
+let __vgIdbRestorePromise = null;
+let __vgIdbRestoreAuthKey = '';
+let __vgBackgroundSharedRefresh = null;
 
-  // 2) Sem servidor disponível/sem dados lá — usa a sessão guardada neste browser.
+function idbSnapshotHasData(snap) {
+  if (!snap) return false;
+  return Object.keys(snap.STORE || {}).length > 0 || Object.keys(snap.REP_STORE || {}).length > 0 ||
+    (snap.OCC_SNAPSHOTS || []).length > 0 || Object.keys(snap.NOTAS_STORE || {}).length > 0 ||
+    !!snap.CD_STORE || (snap.IG_SNAPSHOTS || []).length > 0 || (snap.RD_STORE || []).length > 0;
+}
+function idbAutoCacheScope(){
+  try{
+    const u=(typeof window.vgAuthCurrent==='function' ? window.vgAuthCurrent() : null)||{};
+    const market=window.VG?.market?.id?.()||'iberia';
+    const hotels=Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]);
+    return [market,String(u.user||''),String(u.role||''),hotels.map(String).sort().join('|')].join('::');
+  }catch(e){return 'iberia::anonymous';}
+}
+function idbAutoCacheKey(){return 'auto-v357::'+idbAutoCacheScope();}
+async function idbReadSessionSnapshot() {
   try {
-    const db = await idbOpen();
-    const snap = await idbGet(db, 'session');
+    const db=await idbOpen();
+    const snap=await idbGet(db,idbAutoCacheKey());
     db.close();
-    if (!snap) { lastSavedFingerprint = snapshotFingerprint(); return; }
-
-    // Restaurar sempre que exista sessão válida guardada, mesmo que só contenha meses base.
-    const hasStore = Object.keys(snap.STORE || {}).length > 0;
-    const hasRep   = Object.keys(snap.REP_STORE || {}).length > 0;
-    const hasOcc   = (snap.OCC_SNAPSHOTS || []).length > 0;
-    const hasNotas = Object.keys(snap.NOTAS_STORE || {}).length > 0;
-    if (!hasStore && !hasRep && !hasOcc && !hasNotas) { lastSavedFingerprint = snapshotFingerprint(); return; }
-
-    restoreFromSnapshot(snap);
-    const meses  = Object.keys(STORE).length;
-    const hoteis = Object.keys(REP_STORE).length;
-    const dt = snap.savedAt ? new Date(snap.savedAt).toLocaleString('pt-PT') : '—';
-    idbSetStatus(`✓ Auto-restauro · ${meses} meses P&L · ${hoteis} hotéis rep. · guardado ${dt}`);
-    showToast(`✓ Sessão restaurada — ${meses} meses P&L, ${hoteis} hotéis reputação`);
-  } catch(e) {
-    console.warn('[idbAutoRestore] erro:', e);
-    // Silently fail — first run or private browsing
+    return snap&&snap.cacheScope===idbAutoCacheScope()?snap:null;
   }
-  lastSavedFingerprint = snapshotFingerprint();
+  catch(e){ console.warn('[V35.7] cache local indisponível',e); return null; }
+}
+async function idbCacheSnapshotSilent(snap) {
+  if(!snap)return false;
+  try {
+    snap.cacheScope=idbAutoCacheScope();
+    const db=await idbOpen(); await idbPut(db,idbAutoCacheKey(),snap); db.close(); return true;
+  }
+  catch(e){ console.warn('[V35.7] não foi possível atualizar cache local',e); return false; }
+}
+
+async function idbAutoRestore() {
+  const token = (typeof window.vgAuthToken==='function' ? window.vgAuthToken() : '');
+  // Nunca carregar dados empresariais antes da autenticação. O auth-client volta a chamar após login.
+  if (!token) return false;
+  const authKey = String(token).slice(-16);
+  if (__vgIdbRestorePromise && __vgIdbRestoreAuthKey===authKey) return __vgIdbRestorePromise;
+  __vgIdbRestoreAuthKey=authKey;
+  __vgIdbRestorePromise=(async()=>{
+    const snap=await idbReadSessionSnapshot();
+    if(idbSnapshotHasData(snap)){
+      try{
+        restoreFromSnapshot(snap);
+        lastSharedMetaSavedAt=snap.savedAt||null;
+        lastSavedFingerprint=snapshotFingerprint();
+        const meses=Object.keys(STORE).length,hoteis=Object.keys(REP_STORE).length;
+        idbSetStatus(`✓ Cache local · ${meses} meses P&L · ${hoteis} hotéis rep.`);
+        setSharedSyncStatus('✓ Dados locais prontos · a verificar atualização no servidor…',false);
+        try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
+        // Stale-while-revalidate: a interface fica utilizável já; a rede só transfere o dataset se mudou.
+        __vgBackgroundSharedRefresh=fetchSharedData(false,{localSavedAt:snap.savedAt||null,background:true,preserveView:true});
+        __vgBackgroundSharedRefresh.catch(e=>console.warn('[V35.7] atualização em segundo plano',e));
+        return true;
+      }catch(e){console.warn('[V35.7] restauro local falhou; a usar servidor',e);}
+    }
+    const ok=await fetchSharedData(false,{background:false,preserveView:true});
+    lastSavedFingerprint=snapshotFingerprint();
+    return ok;
+  })().finally(()=>{ /* a Promise permanece reutilizável durante esta sessão/auth */ });
+  return __vgIdbRestorePromise;
 }
 
 // ==========================================================
@@ -929,11 +976,25 @@ async function publishSharedData(manual) {
 
 // Vai buscar a sessão partilhada ao servidor (índice + cada pedaço).
 // Devolve true se restaurou alguma coisa.
-async function fetchSharedData(manual) {
-  try { if (typeof vgShowLoading === 'function') vgShowLoading('A obter dados…', 'A ligar ao servidor partilhado…'); } catch(_){}
-  setSharedSyncStatus('A ligar ao servidor partilhado...', false);
+async function fetchSharedData(manual, opts={}) {
+  const background=!!opts.background,preserveView=!!opts.preserveView,previousView=(typeof currentView!=='undefined'?currentView:'resumo');
+  if(!background){try { if (typeof vgShowLoading === 'function') vgShowLoading('A obter dados…', 'A ligar ao servidor partilhado…'); } catch(_){}}
+  setSharedSyncStatus(background?'A verificar se existem dados mais recentes…':'A ligar ao servidor partilhado...', false);
   try {
-    await sharedLoadOperationalSettings(!!manual);
+    const settingsPromise=sharedLoadOperationalSettings(!!manual).catch(e=>console.warn('Definições operacionais não atualizadas',e));
+    // Primeiro pedido: apenas metadados. Se o cache local tiver o mesmo savedAt, evitamos dezenas/centenas de pedidos.
+    const metaRes = await sharedGet('meta');
+    const meta = metaRes.data;
+    const metaSavedAt = meta && meta.savedAt ? meta.savedAt : null;
+    if(!manual && opts.localSavedAt && metaSavedAt && String(opts.localSavedAt)===String(metaSavedAt)){
+      await settingsPromise;
+      lastSharedMetaSavedAt=metaSavedAt;
+      const dt=new Date(metaSavedAt).toLocaleString('pt-PT');
+      setSharedSyncStatus(`✓ Cache local atualizado · publicado em ${dt}.`,false);
+      try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
+      return true;
+    }
+    await settingsPromise;
     const idxRes = await sharedGet('index');
     const idx = idxRes.data || {};
     const meses   = idx.meses   || [];
@@ -945,9 +1006,6 @@ async function fetchSharedData(manual) {
     const piuKeys = idx.piuKeys || [];
     const hxKeys  = idx.hxKeys  || [];
 
-    const metaRes = await sharedGet('meta');
-    const meta = metaRes.data;
-
     const nadaPublicado = !meses.length && !hoteis.length && !occIds.length && !igIds.length &&
                            !rdIds.length && !piuKeys.length && !hxKeys.length && !idx.hasCd && !meta;
     if (nadaPublicado) {
@@ -957,7 +1015,6 @@ async function fetchSharedData(manual) {
       return false;
     }
 
-    const metaSavedAt = meta && meta.savedAt ? meta.savedAt : null;
     if (manual && metaSavedAt && metaSavedAt === lastSharedMetaSavedAt) {
       showToast('Já estás com os dados partilhados mais recentes.');
       try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
@@ -1037,6 +1094,9 @@ async function fetchSharedData(manual) {
 
     try {
       restoreFromSnapshot(snap);
+      if(preserveView && previousView && previousView!=='resumo' && typeof setView==='function'){
+        try{setView(previousView);}catch(_){}
+      }
     } catch(uiErr) {
       // Os dados já chegaram e ficaram em memória (STORE/REP_STORE/...); um erro aqui é só
       // ao atualizar algum ecrã específico (ex.: um separador nunca aberto nesta sessão).
@@ -1044,6 +1104,8 @@ async function fetchSharedData(manual) {
       try { setView('resumo'); } catch(e2) { /* ignora */ }
     }
     lastSharedMetaSavedAt = metaSavedAt;
+    await idbCacheSnapshotSilent(snap);
+    lastSavedFingerprint=snapshotFingerprint();
     try { if (typeof window.vgTargetsRulesLoad === 'function') await window.vgTargetsRulesLoad(true); } catch(e) { console.warn('Metas & Regras não foram atualizadas na sincronização', e); }
     try { if (typeof renderAll === 'function') renderAll(); } catch(e) { console.warn('Re-render após Metas & Regras falhou', e); }
     const mesesN = Object.keys(STORE).length;
