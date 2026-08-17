@@ -822,6 +822,8 @@ td:first-child { text-align: left; font-family: var(--font); font-size: 12px; fo
 ═══════════════════════════════════════════════════════════ */
 .tab-content { display: none; }
 .tab-content.active { display: block; }
+/* V35.7 hotfix: overlays cujo CSS completo é lazy nunca podem aparecer crus no arranque. */
+.vg-agenda-modal { display:none; }
 
 .empty-state {
   text-align: center; padding: 100px 40px; color: var(--text-3);

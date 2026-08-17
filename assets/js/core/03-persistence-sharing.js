@@ -1,6 +1,11 @@
 // ==========================================================
 // PERSISTÊNCIA — IndexedDB + Export/Import JSON
 // ==========================================================
+// V35.7 hotfix: o estado semanal de Reputação faz parte da sessão partilhada e
+// tem de existir no arranque, mesmo quando a UI de Reputação é carregada por necessidade.
+var REP_STORE = window.REP_STORE || (window.REP_STORE = {});
+var rtSelected = window.rtSelected instanceof Set ? window.rtSelected : (window.rtSelected = new Set());
+
 const IDB_NAME    = 'VG_Dashboard_PL';
 const IDB_VERSION = 1;
 const IDB_STORE   = 'session';
