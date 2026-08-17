@@ -103,7 +103,7 @@
   function bindKeys(){
     document.addEventListener('keydown',function(ev){
       var tag=(ev.target&&ev.target.tagName||'').toLowerCase(); var typing=['input','textarea','select'].indexOf(tag)>=0;
-      if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();openCmd();return;}
+      // V35.6: Ctrl/Cmd+K pertence exclusivamente à Pesquisa Global.
       if(ev.ctrlKey&&ev.shiftKey&&ev.key.toLowerCase()==='i'&&!typing){ev.preventDefault();document.getElementById('vgInterfacePicker')?.classList.toggle('open');return;}
       if(ev.key==='Escape'){closeCmd();return;}
       if(ev.altKey&&/^[1-6]$/.test(ev.key)){ev.preventDefault();go(quick[parseInt(ev.key,10)-1]);return;}
