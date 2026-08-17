@@ -111,7 +111,7 @@
     document.querySelectorAll('#vgMobileNav .vg-mnav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
     if(!['resumo','hotel360'].includes(v)){const more=qs('vgMobileNav')?.querySelector('[data-action="more"]');more?.classList.add('active');}
   }
-  function updateUserLine(){const u=authUser();const line=qs('vgMobileUserLine');if(line)line.textContent=u?(u.name||u.user)+(u.hotel?' · '+u.hotel:''):'Acesso rápido';document.querySelectorAll('.vg-mobile-governance').forEach(el=>el.style.display=(u&&(u.role==='direcao'||u.role==='admin'))?'':'none');}
+  function updateUserLine(){const u=authUser(),hs=u?(Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[])):[];const line=qs('vgMobileUserLine');if(line)line.textContent=u?(u.name||u.user)+(hs.length?(hs.length<=2?' · '+hs.join(' · '):' · '+hs.length+' hotéis'):''):'Acesso rápido';document.querySelectorAll('.vg-mobile-governance').forEach(el=>el.style.display=(u&&(u.role==='direcao'||u.role==='admin'))?'':'none');if(typeof window.vgAuthApplyMenuPermissions==='function')window.vgAuthApplyMenuPermissions();}
 
   function showSync(text,offline){const x=qs('vgMobileSyncToast'),t=qs('vgMobileSyncToastText');if(!x)return;if(t)t.textContent=text;x.classList.toggle('offline',!!offline);x.classList.add('show');clearTimeout(showSync._t);showSync._t=setTimeout(()=>x.classList.remove('show'),3200);}
   function updateSyncLine(){const el=qs('vgMobileSyncLine');if(!el)return;let val='Sincronizar Blobs e estado';try{const ts=localStorage.getItem('vg_mobile_last_sync_v17');if(ts){const d=new Date(ts);if(!isNaN(d))val='Última sincronização '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});}}catch(e){}el.textContent=val;}
@@ -164,7 +164,7 @@
   }
   function registerServiceWorker(){
     if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
-    window.addEventListener('load',()=>navigator.serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=34.0',{scope:'/',updateViaCache:'none'}).then(reg=>{
+    window.addEventListener('load',()=>navigator.serviceWorker.register(window.__VG_SW_URL__||'/service-worker.js?vg=35.4',{scope:'/',updateViaCache:'none'}).then(reg=>{
       reg.update().catch(()=>{});
       if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
     }).catch(e=>console.warn('Service worker não registado',e)));

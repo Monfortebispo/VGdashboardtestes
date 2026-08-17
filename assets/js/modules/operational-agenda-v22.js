@@ -33,19 +33,19 @@
   const fmtDateTime=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?v:d.toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
   const timeLabel=e=>e.allDay||!e.startTime?'Dia inteiro':e.endTime?`${e.startTime}–${e.endTime}`:e.startTime;
   const isActionActive=a=>a&& !['resolved','closed','cancelled'].includes(String(a.status||'').toLowerCase());
-  const canManage=e=>{const u=currentUser();if(!u||e?.source==='action')return false;if(isDirection())return true;return norm(e?.hotel)===norm(u.hotel)||String(e?.ownerUser||'').toLowerCase()===String(u.user||'').toLowerCase();};
-  const canCreateHotel=h=>{const u=currentUser();if(!u)return false;if(isDirection())return true;return !!h&&norm(h)===norm(u.hotel);};
+  const canManage=e=>{const u=currentUser();if(!u||e?.source==='action')return false;if(isDirection())return true;const hotelOk=typeof window.vgAuthCanAccessHotel==='function'?window.vgAuthCanAccessHotel(e?.hotel):(Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(e?.hotel)===norm(x));return hotelOk||String(e?.ownerUser||'').toLowerCase()===String(u.user||'').toLowerCase();};
+  const canCreateHotel=h=>{const u=currentUser();if(!u)return false;if(isDirection())return true;if(typeof window.vgAuthCanAccessHotel==='function')return window.vgAuthCanAccessHotel(h);return !!h&&(Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(h)===norm(x));};
 
   function allHotels(){
     const u=currentUser();if(!u)return [];
-    if(!isDirection()&&u.hotel)return [u.hotel];
+    if(!isDirection()){const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]));if(hs.length)return hs;}
     let rows=[];
     try{if(typeof RAW!=='undefined'&&RAW){rows=(RAW.hotel_list||Object.keys(RAW.hotels_ops||{})).filter(Boolean);}}catch(e){}
     try{if(typeof window.getActiveHotels==='function'){const a=window.getActiveHotels();if(Array.isArray(a)&&a.length)rows=rows.concat(a);}}catch(e){}
     rows=rows.concat(state.manual.map(x=>x.hotel).filter(Boolean));
     return [...new Set(rows)].sort((a,b)=>String(a).localeCompare(String(b),'pt'));
   }
-  function scopeAllowed(h,ownerUser){const u=currentUser();if(!u)return false;if(isDirection())return true;return norm(h)===norm(u.hotel)||String(ownerUser||'').toLowerCase()===String(u.user||'').toLowerCase();}
+  function scopeAllowed(h,ownerUser){const u=currentUser();if(!u)return false;if(isDirection())return true;const hotelOk=typeof window.vgAuthCanAccessHotel==='function'?window.vgAuthCanAccessHotel(h):(Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(h)===norm(x));return hotelOk||String(ownerUser||'').toLowerCase()===String(u.user||'').toLowerCase();}
 
   async function ensureLoaded(force){
     if(!currentUser())return state.manual;
@@ -161,7 +161,7 @@
   function ownerOptions(hotel,selected){
     let rows=[];try{rows=window.VG?.actions?.assignees?.()||[];}catch(e){}
     const u=currentUser();
-    if(u&&!rows.some(x=>String(x.user)===String(u.user)))rows.push({user:u.user,name:u.name,hotel:u.hotel,active:true});
+    if(u&&!rows.some(x=>String(x.user)===String(u.user)))rows.push({user:u.user,name:u.name,hotel:u.hotel,hotels:Array.isArray(u.hotels)?u.hotels:[],active:true});
     rows=rows.filter(x=>x&&x.active!==false&&(isDirection()||String(x.user)===String(u?.user)||norm(x.hotel)===norm(hotel)||String(x.user)===String(selected||'')));
     if(selected&&!rows.some(x=>String(x.user)===String(selected)))rows.push({user:selected,name:selected,hotel});
     return rows.sort((a,b)=>String(a.name||a.user).localeCompare(String(b.name||b.user),'pt'));
@@ -221,7 +221,7 @@
     document.getElementById('vgAgendaClose')?.addEventListener('click',closeEditor);document.getElementById('vgAgendaSave')?.addEventListener('click',saveEditor);document.getElementById('vgAgendaDelete')?.addEventListener('click',deleteEditor);
     window.VG.events?.on?.('actions:changed',scheduleRender);window.VG.events?.on?.('state:changed',scheduleRender);
   }
-  async function init(){initDate();bind();const u=currentUser();if(u&&!isDirection())state.hotel=u.hotel||'';render();await ensureLoaded(false);render();try{if(typeof window.wxInit==='function')window.wxInit();}catch(e){}
+  async function init(){initDate();bind();const u=currentUser();if(u&&!isDirection()){const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]));state.hotel=hs.length===1?hs[0]:'';}render();await ensureLoaded(false);render();try{if(typeof window.wxInit==='function')window.wxInit();}catch(e){}
   }
   function onView(){if((typeof currentView!=='undefined'?currentView:'')!=='agenda')return;init();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();onView();},{once:true});else{bind();onView();}

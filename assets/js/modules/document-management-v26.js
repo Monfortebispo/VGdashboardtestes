@@ -21,11 +21,11 @@
   const fmtDate=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?String(v):d.toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
   const fmtSize=n=>{n=Number(n)||0;if(n<1024)return `${n} B`;if(n<1024*1024)return `${(n/1024).toFixed(0)} KB`;return `${(n/(1024*1024)).toFixed(1)} MB`;};
   const extOf=n=>String(n||'').split('.').pop().toLowerCase();
-  const canManageHotel=h=>{const u=currentUser();if(!u)return false;return isDirection()||norm(h)===norm(u.hotel);};
+  const canManageHotel=h=>{const u=currentUser();if(!u)return false;if(isDirection())return true;if(typeof window.vgAuthCanAccessHotel==='function')return window.vgAuthCanAccessHotel(h);return (Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(h)===norm(x));};
 
   function allHotels(){
     const u=currentUser();if(!u)return [];
-    if(!isDirection()&&u.hotel)return [u.hotel];
+    if(!isDirection()){const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]));if(hs.length)return hs;}
     let rows=[];
     try{if(typeof RAW!=='undefined'&&RAW)rows=(RAW.hotel_list||Object.keys(RAW.hotels_ops||{})).filter(Boolean);}catch(e){}
     try{if(typeof window.getActiveHotels==='function'){const a=window.getActiveHotels();if(Array.isArray(a))rows=rows.concat(a);}}catch(e){}

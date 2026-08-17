@@ -27,7 +27,7 @@
 
   function model(h){
     const hp=window.VG?.hotelPerformance;if(!hp?.buildModel)return {available:false};
-    let hotel=h||state.hotel;const u=user();if(u&&['diretor','assistente'].includes(u.role)&&u.hotel&&u.hotel!=='*')hotel=u.hotel;
+    let hotel=h||state.hotel;const u=user();if(u&&typeof window.vgAuthCanAccessHotel==='function'&&!['direcao','admin'].includes(u.role)&&!window.vgAuthCanAccessHotel(hotel)){const hs=window.VG?.hotelPerformance?.allHotels?.()||[];hotel=hs[0]||'';}
     const m=hp.buildModel(hotel);if(m?.hotel)state.hotel=m.hotel;return m;
   }
   function costConvention(h,cy,py){

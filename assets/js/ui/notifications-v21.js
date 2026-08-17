@@ -62,7 +62,7 @@
   }
   function scopedHotels(){
     const u=authUser();if(!u)return [];
-    if(!isDirection()&&u.hotel)return [u.hotel];
+    if(!isDirection()){const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]));if(hs.length)return hs;}
     try{if(typeof window.getActiveHotels==='function'){const h=window.getActiveHotels();if(Array.isArray(h)&&h.length)return h.slice();}}catch(e){}
     try{if(typeof RAW!=='undefined'&&Array.isArray(RAW?.hotel_list))return RAW.hotel_list.slice();}catch(e){}
     return [];

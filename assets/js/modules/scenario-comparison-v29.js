@@ -33,14 +33,14 @@
   }
   function allHotels(){
     const u=currentUser();if(!u)return [];
-    if(!isDirection()&&u.hotel)return [u.hotel];
+    if(!isDirection()){const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]));if(hs.length)return hs;}
     let rows=[];
     try{if(typeof RAW!=='undefined'&&RAW)rows=rows.concat(RAW.hotel_list||Object.keys(RAW.hotels_ops||{}));}catch(e){}
     try{const a=typeof window.getActiveHotels==='function'?window.getActiveHotels():[];if(Array.isArray(a))rows=rows.concat(a);}catch(e){}
     rows=rows.concat(state.rows.map(x=>x.hotel).filter(Boolean));
     return [...new Set(rows.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'pt'));
   }
-  function canManageHotel(h){const u=currentUser();return !!u&&(isDirection()||norm(h)===norm(u.hotel));}
+  function canManageHotel(h){const u=currentUser();if(!u)return false;if(isDirection())return true;if(typeof window.vgAuthCanAccessHotel==='function')return window.vgAuthCanAccessHotel(h);return (Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(h)===norm(x));}
   function baseFor(h,m){try{return window.VG?.forecast?.buildBase?.(h,Number(m))||{available:false,reason:'Motor de Forecast indisponível.'};}catch(e){return {available:false,reason:e.message||'Falha no Forecast.'};}}
   function calculate(base,adj){try{return base?.available?window.VG?.forecast?.calculateScenario?.(base,cleanAdjustments(adj)):null;}catch(e){return null;}}
   function baselineSnapshot(base){
@@ -148,7 +148,7 @@
   }
   function render(){
     const root=document.getElementById('scenarioComparisonRoot');if(!root)return;
-    const hotels=allHotels();if(!state.hotel||!hotels.some(h=>norm(h)===norm(state.hotel)))state.hotel=hotels[0]||currentUser()?.hotel||'';
+    const hotels=allHotels();if(!state.hotel||!hotels.some(h=>norm(h)===norm(state.hotel)))state.hotel=hotels[0]||'';
     normalizeSelection();
     root.innerHTML=`<div class="sc29-head"><div><div class="sc29-eyebrow">Comparação de Cenários · V29</div><h2>Guardar alternativas. Comparar decisões.</h2><p>Compara premissas financeiras e operacionais lado a lado usando o mesmo motor do Forecast & Cenários V12.</p></div><div class="sc29-head-actions"><button type="button" class="sc29-btn secondary" onclick="scenarioCompareRefresh()">↻ Atualizar</button><button type="button" class="sc29-btn primary" onclick="scenarioCompareNew()">＋ Novo cenário</button></div></div>
       <div class="sc29-controls"><label>Hotel<select onchange="scenarioComparePeriod(this.value,null)">${hotels.map(h=>`<option value="${esc(h)}" ${norm(h)===norm(state.hotel)?'selected':''}>${esc(h)}</option>`).join('')}</select></label><label>Mês<select onchange="scenarioComparePeriod(null,this.value)">${MONTHS.slice(1).map((m,i)=>`<option value="${i+1}" ${i+1===Number(state.month)?'selected':''}>${esc(m)}</option>`).join('')}</select></label><div class="sc29-period"><span>Período</span><strong>${MONTHS[state.month]} ${esc(currentYear())}</strong></div></div>

@@ -27,7 +27,7 @@
   function allowedHotels(){
     try{if(window.VG?.hotelPerformance?.allHotels)return window.VG.hotelPerformance.allHotels();}catch(e){}
     const r=raw(),u=currentUser();let hs=(r?.hotel_list||Object.keys(r?.hotels_ops||{})).filter(Boolean);
-    if(u&&['diretor','assistente'].includes(u.role)&&u.hotel&&u.hotel!=='*')hs=hs.filter(h=>norm(h)===norm(u.hotel));
+    if(u&&typeof window.vgAuthCanAccessHotel==='function'&&!['direcao','admin'].includes(u.role))hs=hs.filter(h=>window.vgAuthCanAccessHotel(h));
     return [...new Set(hs)].sort((a,b)=>String(a).localeCompare(String(b),'pt'));
   }
   function model(h){try{return window.VG?.hotelPerformance?.buildModel?.(h)||null;}catch(e){return null;}}

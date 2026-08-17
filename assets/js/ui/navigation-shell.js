@@ -92,7 +92,7 @@
   function renderCmd(){
     var input=q('#vgNavInput'); var list=q('#vgNavList'); if(!list) return;
     var term=(input&&input.value||'').toLowerCase().trim();
-    results=modules.filter(function(m){return !term || (m[0]+' '+m[2]+' '+m[3]).toLowerCase().indexOf(term)>=0});
+    results=modules.filter(function(m){var allowed=typeof window.vgAuthCanAccessModule!=='function'||!window.vgAuthCurrent?.()||window.vgAuthCanAccessModule(m[0]);return allowed&&(!term || (m[0]+' '+m[2]+' '+m[3]).toLowerCase().indexOf(term)>=0)});
     if(idx>=results.length) idx=Math.max(0,results.length-1);
     if(!results.length){list.innerHTML='<div style="padding:20px;color:#64748b;font-weight:800">Sem resultados.</div>';return;}
     list.innerHTML=results.map(function(m,i){return '<div class="vg-nav-cmd-item '+(i===idx?'active':'')+'" data-view="'+esc(m[0])+'"><div><strong>'+esc(m[1])+' '+esc(m[2])+'</strong><br><span>'+esc(m[3])+'</span></div><span>Enter</span></div>';}).join('');

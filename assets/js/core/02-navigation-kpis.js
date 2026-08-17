@@ -3,12 +3,14 @@
 // ==========================================================
 function initPills() {
   const container = document.getElementById('hotelPills');
-  const allOn = selectedHotels.size === RAW.hotel_list.length;
+  const scopedHotels = (typeof window.vgAuthCanAccessHotel==='function' && window.vgAuthCurrent?.() && !['direcao','admin'].includes(window.vgAuthCurrent()?.role)) ? RAW.hotel_list.filter(h=>window.vgAuthCanAccessHotel(h)) : RAW.hotel_list.slice();
+  const allOn = selectedHotels.size === scopedHotels.length;
   let html = '';
   RAW.hotel_list.forEach(h => {
-    const on = selectedHotels.has(h);
+    const allowed = typeof window.vgAuthCanAccessHotel!=='function' || !window.vgAuthCurrent?.() || window.vgAuthCanAccessHotel(h);
+    const on = allowed && selectedHotels.has(h);
     const label = h.replace('COLLECTION ', 'C. ');
-    html += `<button class="sb-hotel-item ${on?'on':''}" data-hotel="${h}" onclick="toggleHotel(this)">
+    html += `<button class="sb-hotel-item ${on?'on':''}" data-hotel="${h}" style="${allowed?'':'display:none'}" onclick="toggleHotel(this)">
       <span class="sb-check"><span class="sb-check-tick">✓</span></span>
       ${label}
     </button>`;
@@ -17,25 +19,26 @@ function initPills() {
   // Update region counts
   for (const [r, lista] of Object.entries(REGIOES)) {
     const el = document.getElementById('rCount-' + r);
-    if (el) el.textContent = lista.filter(h => RAW.hotel_list.includes(h)).length;
+    if (el) el.textContent = lista.filter(h => scopedHotels.includes(h)).length;
   }
   const el = document.getElementById('rCount-todos');
-  if (el) el.textContent = RAW.hotel_list.length;
+  if (el) el.textContent = scopedHotels.length;
 }
 
 function filterHotelSidebar() {
   const q = (document.getElementById('sidebarHotelSearch')?.value || '').toLowerCase().trim();
   document.querySelectorAll('.sb-hotel-item[data-hotel]').forEach(el => {
     const name = (el.dataset.hotel || '').toLowerCase();
-    el.style.display = (!q || name.includes(q)) ? '' : 'none';
+    const allowed=typeof window.vgAuthCanAccessHotel!=='function'||!window.vgAuthCurrent?.()||window.vgAuthCanAccessHotel(el.dataset.hotel);el.style.display = allowed&&(!q || name.includes(q)) ? '' : 'none';
   });
 }
 
 function toggleAll(selectAll) {
   const items = document.querySelectorAll('.sb-hotel-item[data-hotel]');
-  if (selectAll || selectedHotels.size < RAW.hotel_list.length) {
-    RAW.hotel_list.forEach(h => selectedHotels.add(h));
-    items.forEach(p => p.classList.add('on'));
+  const allowed=RAW.hotel_list.filter(h=>typeof window.vgAuthCanAccessHotel!=='function'||!window.vgAuthCurrent?.()||window.vgAuthCanAccessHotel(h));
+  if (selectAll || selectedHotels.size < allowed.length) {
+    selectedHotels=new Set(allowed);
+    items.forEach(p => p.classList.toggle('on',allowed.includes(p.dataset.hotel)));
   } else {
     selectedHotels.clear();
     items.forEach(p => p.classList.remove('on'));
@@ -46,6 +49,7 @@ function toggleAll(selectAll) {
 
 function toggleHotel(el) {
   const h = el.dataset.hotel;
+  if(typeof window.vgAuthCanAccessHotel==='function'&&window.vgAuthCurrent?.()&&!window.vgAuthCanAccessHotel(h)){showToast('Este hotel não está no seu âmbito de acesso.',true);return;}
   if (selectedHotels.has(h)) { selectedHotels.delete(h); el.classList.remove('on'); }
   else { selectedHotels.add(h); el.classList.add('on'); }
   syncRegionFromPills();
@@ -68,6 +72,12 @@ function requireUploadAccess() {
 }
 
 function setView(v) {
+  const au=(typeof window.vgAuthCurrent==='function')?window.vgAuthCurrent():null;
+  if(au&&typeof window.vgAuthCanAccessModule==='function'&&!window.vgAuthCanAccessModule(v)){
+    const fallback=(typeof window.vgAuthFirstAllowedModule==='function'?window.vgAuthFirstAllowedModule():'resumo')||'resumo';
+    if(v!==fallback)showToast('Este módulo não está autorizado para o seu perfil.',true);
+    if(v!==fallback){history.replaceState(null,'','#'+fallback);return setView(fallback);}
+  }
   if (v === 'governance' || v === 'backup') {
     const gu = (typeof window.vgAuthCurrent === 'function') ? window.vgAuthCurrent() : null;
     if (!gu || !['direcao','admin'].includes(gu.role)) {
@@ -525,7 +535,7 @@ function ratioAB(hotel,year){
   const r = revAB(hotel,year), c = costComidas(hotel,year) + costBebidas(hotel,year);
   return r > 0 ? c / r * 100 : null;
 }
-function getActiveHotels(){ return RAW.hotel_list.filter(h=>selectedHotels.has(h)); }
+function getActiveHotels(){ return RAW.hotel_list.filter(h=>selectedHotels.has(h)&&(typeof window.vgAuthCanAccessHotel!=='function'||!window.vgAuthCurrent?.()||window.vgAuthCanAccessHotel(h))); }
 
 // ==========================================================
 // REGIÕES
@@ -595,7 +605,8 @@ function selectRegion(r) {
   (ids[r] || []).forEach(id => document.getElementById(id)?.classList.add('active'));
 
   // Apply hotel selection
-  const hoteis = r === 'todos' ? RAW.hotel_list : REGIOES[r].filter(h => RAW.hotel_list.includes(h));
+  let hoteis = r === 'todos' ? RAW.hotel_list : REGIOES[r].filter(h => RAW.hotel_list.includes(h));
+  if(typeof window.vgAuthCanAccessHotel==='function'&&window.vgAuthCurrent?.())hoteis=hoteis.filter(h=>window.vgAuthCanAccessHotel(h));
   selectedHotels = new Set(hoteis);
 
   // Sync sidebar hotel pills
@@ -614,7 +625,7 @@ function syncRegionFromPills() {
   const map = {todos:'rbTodos', norte:'rbNorte', lisboa:'rbLisboa', alentejo:'rbAlentejo', algarve:'rbAlgarve'};
 
   for (const [r, lista] of Object.entries(REGIOES)) {
-    const hotelsDaRegiao = lista.filter(h => RAW.hotel_list.includes(h));
+    const hotelsDaRegiao = lista.filter(h => RAW.hotel_list.includes(h)&&(typeof window.vgAuthCanAccessHotel!=='function'||!window.vgAuthCurrent?.()||window.vgAuthCanAccessHotel(h)));
     if (hotelsDaRegiao.length === selectedHotels.size &&
         hotelsDaRegiao.every(h => selectedHotels.has(h))) {
       activeRegion = r;
@@ -622,7 +633,8 @@ function syncRegionFromPills() {
       return;
     }
   }
-  if (selectedHotels.size === RAW.hotel_list.length) {
+  const scopedTotal=RAW.hotel_list.filter(h=>typeof window.vgAuthCanAccessHotel!=='function'||!window.vgAuthCurrent?.()||window.vgAuthCanAccessHotel(h)).length;
+  if (selectedHotels.size === scopedTotal) {
     activeRegion = 'todos';
     document.getElementById(map['todos'])?.classList.add('active');
   } else {

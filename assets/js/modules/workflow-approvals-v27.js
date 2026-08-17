@@ -29,7 +29,7 @@
   const fmtDate=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?String(v):d.toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
   const fmtDateOnly=v=>{if(!v)return '—';const d=new Date(String(v).length<=10?String(v)+'T12:00:00':v);return isNaN(d)?String(v):d.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});};
   const daysUntil=v=>{if(!v)return null;const d=new Date(String(v)+'T12:00:00');if(isNaN(d))return null;const t=new Date();t.setHours(12,0,0,0);return Math.ceil((d-t)/86400000);};
-  const canCreateHotel=h=>{const u=currentUser();return !!u&&(isDirection()||norm(h)===norm(u.hotel));};
+  const canCreateHotel=h=>{const u=currentUser();if(!u)return false;if(isDirection())return true;if(typeof window.vgAuthCanAccessHotel==='function')return window.vgAuthCanAccessHotel(h);return (Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(h)===norm(x));};
   const isRequester=r=>norm(r?.requesterUser)===norm(currentUser()?.user);
   const canEdit=r=>r?.status==='pending'&&(isDirection()||isRequester(r));
   const canCancel=r=>r?.status==='pending'&&(isDirection()||isRequester(r));
@@ -37,7 +37,7 @@
 
   function allHotels(){
     const u=currentUser();if(!u)return [];
-    if(!isDirection()&&u.hotel)return [u.hotel];
+    if(!isDirection()){const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]));if(hs.length)return hs;}
     let rows=[];
     try{if(typeof RAW!=='undefined'&&RAW)rows=(RAW.hotel_list||Object.keys(RAW.hotels_ops||{})).filter(Boolean);}catch(e){}
     try{if(typeof window.getActiveHotels==='function'){const a=window.getActiveHotels();if(Array.isArray(a))rows=rows.concat(a);}}catch(e){}

@@ -47,7 +47,7 @@ function canonHotel(v){
   return x;
 }
 function isCurrentHotel(h){try{return !window.VG?.market||window.VG.market.isCurrentHotel(h);}catch(e){return true;}}
-function allowedHotel(h){const u=user();return direction()||!u?.hotel||u.hotel==='*'||canonHotel(h)===canonHotel(u.hotel);}
+function allowedHotel(h){const u=user();if(!u)return false;if(direction())return true;if(typeof window.vgAuthCanAccessHotel==='function')return window.vgAuthCanAccessHotel(h);const hs=Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]);return hs.some(x=>canonHotel(h)===canonHotel(x));}
 function hotelRegion(h){try{for(const[k,arr] of Object.entries(REGIOES||{}))if((arr||[]).some(x=>canonHotel(x)===canonHotel(h)))return window.VG?.market?.regionLabel?.(k)||k;}catch(e){}return '—';}
 
 const state={seed:null,ready:false,repTab:'executive',weekly:{hotel:'',reportId:''},semester:{periods:[],selectedId:null,subtab:'overview',dimension:'categories',region:'Todas',hotel:'Todas',loadedAt:null},ab:{imports:[],selected:null,recipeMap:{}},recipes:{query:'',kind:'all',page:1,pageSize:36},theoretical:{cacheKey:'',data:null},buffet:{rows:[],sourceFile:'',loadedAt:null,hotel:'Todas',meal:'Todos'},hk:{tab:'exact',db:null},cross:[]};

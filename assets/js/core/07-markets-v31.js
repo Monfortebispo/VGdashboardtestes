@@ -79,7 +79,7 @@
   function moneyUnit(){return symbol();}
   function currentUser(){try{return typeof window.vgAuthCurrent==='function'?window.vgAuthCurrent():null;}catch(e){return null;}}
   function isDirection(){const u=currentUser();return !!u&&['direcao','admin'].includes(String(u.role||'').toLowerCase());}
-  function userMarket(){const u=currentUser();if(!u||isDirection()||!u.hotel||u.hotel==='*')return null;return hotelMarket(u.hotel);}
+  function userMarket(){const u=currentUser();if(!u||isDirection())return null;const hs=typeof window.vgAuthHotels==='function'?window.vgAuthHotels():(Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[]));if(!hs.length)return null;const ms=[...new Set(hs.map(hotelMarket))];return ms.length===1?ms[0]:null;}
   function enforceUserMarket(){const m=userMarket();if(m&&DEFINITIONS[m]&&state.current!==m)state.current=m;return state.current;}
 
   function detectHotels(hotels){
@@ -203,7 +203,7 @@
         if(!['todos',...Object.keys(typeof REGIOES!=='undefined'?REGIOES:{})].includes(r))r='todos';
         activeRegion=r;document.querySelectorAll('.pl-region-btn').forEach(b=>b.classList.toggle('active',b.dataset.r===r));
         if(!RAW){try{if(currentView==='reputacao')rtRender();}catch(e){};window.VG?.events?.emit?.('region:changed',{region:r,market:id()});return;}
-        const hotels=r==='todos'?RAW.hotel_list:(REGIOES[r]||[]).filter(h=>RAW.hotel_list.includes(h));selectedHotels=new Set(hotels);
+        const candidate=r==='todos'?RAW.hotel_list:(REGIOES[r]||[]).filter(h=>RAW.hotel_list.includes(h));const hotels=candidate.filter(h=>typeof window.vgAuthCanAccessHotel!=='function'||window.vgAuthCanAccessHotel(h));selectedHotels=new Set(hotels);
         document.querySelectorAll('.sb-hotel-item[data-hotel]').forEach(p=>p.classList.toggle('on',selectedHotels.has(p.dataset.hotel)));
         try{updateContextPanel();}catch(e){}try{refreshAll();}catch(e){}try{if(currentView==='ocupacao')occRender();}catch(e){}
         window.VG?.events?.emit?.('region:changed',{region:r,market:id(),hotels:hotels.slice()});
@@ -213,8 +213,8 @@
       window.__VG_V31_SYNC_REGION__=syncRegionFromPills;
       syncRegionFromPills=function(){
         document.querySelectorAll('.pl-region-btn').forEach(b=>b.classList.remove('active'));let found=null;
-        for(const [r,lista] of Object.entries(REGIOES||{})){const hs=lista.filter(h=>RAW?.hotel_list?.includes(h));if(hs.length===selectedHotels.size&&hs.every(h=>selectedHotels.has(h))){found=r;break;}}
-        activeRegion=found||(RAW&&selectedHotels.size===RAW.hotel_list.length?'todos':null);if(activeRegion)document.querySelectorAll(`.pl-region-btn[data-r="${activeRegion}"]`).forEach(b=>b.classList.add('active'));try{updateContextPanel();}catch(e){}
+        for(const [r,lista] of Object.entries(REGIOES||{})){const hs=lista.filter(h=>RAW?.hotel_list?.includes(h)).filter(h=>typeof window.vgAuthCanAccessHotel!=='function'||window.vgAuthCanAccessHotel(h));if(hs.length===selectedHotels.size&&hs.every(h=>selectedHotels.has(h))){found=r;break;}}
+        const scopedAll=RAW?(RAW.hotel_list||[]).filter(h=>typeof window.vgAuthCanAccessHotel!=='function'||window.vgAuthCanAccessHotel(h)):[];activeRegion=found||(RAW&&selectedHotels.size===scopedAll.length&&scopedAll.every(h=>selectedHotels.has(h))?'todos':null);if(activeRegion)document.querySelectorAll(`.pl-region-btn[data-r="${activeRegion}"]`).forEach(b=>b.classList.add('active'));try{updateContextPanel();}catch(e){}
         window.VG?.events?.emit?.('region:changed',{region:activeRegion,market:id()});
       };
     }
@@ -294,7 +294,7 @@
   function currentScopeLabel(){return def().label;}
   function applyMarketUi(){
     applyRegionUi();updateSelector();updateCurrencyLabels();
-    try{if(RAW){RAW.hotel_list=(RAW.hotel_list||[]).filter(isCurrentHotel);selectedHotels=new Set(RAW.hotel_list);initPills();activeRegion='todos';}}
+    try{if(RAW){RAW.hotel_list=(RAW.hotel_list||[]).filter(isCurrentHotel);const hs=RAW.hotel_list.filter(h=>typeof window.vgAuthCanAccessHotel!=='function'||window.vgAuthCanAccessHotel(h));selectedHotels=new Set(hs);initPills();activeRegion='todos';}}
     catch(e){}
     try{buildMesButtons();}catch(e){}try{applyMesSelection();}catch(e){}try{window.VG?.operations2?.renderProfileHome?.();}catch(e){}
     try{syncMarketDataUi();}catch(e){}

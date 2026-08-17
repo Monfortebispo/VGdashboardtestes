@@ -419,7 +419,7 @@ function mudarPassword(){
       saveDB(); closeModal(); toast('Palavra-passe alterada com sucesso');
     }},{t:'Cancelar',cls:'btn-ghost',fn:closeModal}]);
 }
-function logout(){ if(SESSION){ pararPresenca(); pararSync(); logAdd('Logout','Sessão terminada'); saveDB(); } SESSION=null; location.reload(); }
+function logout(){ const dashboardSession=!!SESSION?._dashboard; if(SESSION){ pararPresenca(); pararSync(); logAdd('Logout','Sessão terminada'); saveDB(); } SESSION=null; if(dashboardSession&&typeof window.vgAuthLogout==='function'){ window.vgAuthLogout(); return; } location.reload(); }
 function roleBadge(r){ return r==='DO'?'<span class="badge b-do">Direção Operações</span>':r==='Compras'?'<span class="badge b-compras">Compras</span>':r==='Governanta'?'<span class="badge b-gov">Governanta</span>':r==='Diretor'?'<span class="badge b-dir">Diretor</span>':'<span class="badge b-ass">Assistente</span>'; }
 
 /* ---------- Navegação ---------- */
@@ -2816,7 +2816,7 @@ function govGravar(){
 
 function hk35SessionFromDashboard(){
   const u=hk35DashUser()||{name:'Utilizador VG',user:'vg',role:'direcao',hotel:'*'};const role=hk35Role(u);let ids=[];
-  if(DB&&Array.isArray(DB.hoteis)&&!['DO','Compras'].includes(role)){const wanted=hk35Norm(u.hotel);ids=DB.hoteis.filter(h=>hk35Norm(h.nome)===wanted||hk35Norm(h.nome).replace(/^COLLECTION\s+/,'')===wanted.replace(/^COLLECTION\s+/,'')).map(h=>h.id);}
+  if(DB&&Array.isArray(DB.hoteis)&&!['DO','Compras'].includes(role)){const wanted=(Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[])).map(hk35Norm);ids=DB.hoteis.filter(h=>wanted.some(w=>hk35Norm(h.nome)===w||hk35Norm(h.nome).replace(/^COLLECTION\s+/,'')===w.replace(/^COLLECTION\s+/,''))).map(h=>h.id);}
   return {id:'dashboard:'+String(u.user||u.name||'vg'),username:String(u.user||u.name||'vg'),password:'',nome:u.name||u.user||'Utilizador VG',role,hoteis:ids,ativo:true,_dashboard:true};
 }
 function hk35InstallDispatchers(){

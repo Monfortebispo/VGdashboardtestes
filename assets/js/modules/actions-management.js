@@ -83,7 +83,7 @@
     if(u.role==='direcao'||u.role==='admin')return true;
     const a=typeof actionOrHotel==='object'?actionOrHotel:null;
     const hotel=a?a.hotel:actionOrHotel;
-    if(norm(hotel)===norm(u.hotel))return true;
+    if(typeof window.vgAuthCanAccessHotel==='function'?window.vgAuthCanAccessHotel(hotel):(Array.isArray(u.hotels)?u.hotels:[u.hotel]).some(x=>norm(hotel)===norm(x)))return true;
     return !!a && String(a.ownerUser||'').toLowerCase()===String(u.user||'').toLowerCase();
   }
 
@@ -118,7 +118,7 @@
     const u=currentUser();
     if(!u)return [];
     if(u.role==='direcao'||u.role==='admin')return assignees.slice();
-    return assignees.filter(x=>String(x.user)===String(u.user)||norm(x.hotel)===norm(hotel)||String(x.user)===String(existing?.ownerUser||''));
+    return assignees.filter(x=>{const hs=Array.isArray(x.hotels)&&x.hotels.length?x.hotels:(x.hotel?[x.hotel]:[]);return String(x.user)===String(u.user)||hs.some(h=>norm(h)===norm(hotel))||String(x.user)===String(existing?.ownerUser||'');});
   }
   function fillOwnerSelect(hotel,existing){
     const el=document.getElementById('opsActionOwner'); if(!el)return;

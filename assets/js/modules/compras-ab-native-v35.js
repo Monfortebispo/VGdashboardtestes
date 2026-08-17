@@ -18,7 +18,7 @@ function ab35Norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u03
 function ab35Role(u){const r=String(u?.role||'').toLowerCase();return ['admin','direcao'].includes(r)?'DO':r==='diretor'?'DIRETOR':r==='assistente'?'ASSISTENTE':r==='compras'?'DO':'ASSISTENTE';}
 function ab35CurrentMarket(){try{return window.VG?.market?.id?.()||'iberia'}catch(e){return'iberia'}}
 function ab35MarketAllows(h){try{return !window.VG?.market?.isCurrentHotel||window.VG.market.isCurrentHotel(h)}catch(e){return true}}
-function ab35ProfileAllows(h){const u=ab35DashUser();if(!u||['direcao','admin'].includes(String(u.role||'').toLowerCase())||!u.hotel||u.hotel==='*')return true;return ab35Norm(h)===ab35Norm(u.hotel);}
+function ab35ProfileAllows(h){const u=ab35DashUser();if(!u||['direcao','admin'].includes(String(u.role||'').toLowerCase()))return true;const hs=Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[]);return hs.some(x=>ab35Norm(h)===ab35Norm(x));}
 
 /* =====================================================================
    VG · Custos A&B — constantes e estado
@@ -4098,13 +4098,13 @@ function ab35InstallDispatchers(){
 }
 async function ab35Start(){
   const u=ab35DashUser()||{name:'Utilizador VG',user:'vg',role:'direcao',hotel:'*'};
-  CURRENT_USER={nome:u.name||u.user||'Utilizador VG',login:u.user||u.login||'vg',role:ab35Role(u),hotel:(u.hotel&&u.hotel!=='*')?ab35Norm(u.hotel):'',ativo:1};
+  const hs=Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[]);CURRENT_USER={nome:u.name||u.user||'Utilizador VG',login:u.user||u.login||'vg',role:ab35Role(u),hotel:hs.length===1?ab35Norm(hs[0]):'',hoteis:hs.map(ab35Norm),ativo:1};
   USERS=[CURRENT_USER];
   const isDO=CURRENT_USER.role==='DO';
   const el=id=>window.AB35Root.getElementById(id);
   if(el('tbUserName'))el('tbUserName').textContent=CURRENT_USER.nome;
   if(el('tbAvatar'))el('tbAvatar').textContent=(CURRENT_USER.nome||'VG').slice(0,1).toUpperCase();
-  if(el('tbUserRole'))el('tbUserRole').textContent=roleLabel(CURRENT_USER.role)+(CURRENT_USER.hotel?' · '+CURRENT_USER.hotel:'');
+  if(el('tbUserRole'))el('tbUserRole').textContent=roleLabel(CURRENT_USER.role)+(CURRENT_USER.hoteis?.length?(CURRENT_USER.hoteis.length<=2?' · '+CURRENT_USER.hoteis.join(' · '):' · '+CURRENT_USER.hoteis.length+' hotéis'):'');
   if(el('adminCap'))el('adminCap').style.display=isDO?'':'none';
   if(el('navCarregar'))el('navCarregar').style.display=isDO?'':'none';
   if(el('navSetup'))el('navSetup').style.display=isDO?'':'none';

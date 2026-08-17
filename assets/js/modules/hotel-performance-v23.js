@@ -24,7 +24,7 @@
   function allHotels(){
     let list=[];try{list=(RAW?.hotel_list||Object.keys(RAW?.hotels_ops||{})).filter(Boolean);}catch(e){}
     const u=currentUser();
-    if(u&&['diretor','assistente'].includes(u.role)&&u.hotel&&u.hotel!=='*') list=list.filter(h=>norm(h)===norm(u.hotel));
+    if(u&&!['direcao','admin'].includes(u.role)){if(typeof window.vgAuthCanAccessHotel==='function')list=list.filter(h=>window.vgAuthCanAccessHotel(h));else{const hs=Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]);list=list.filter(h=>hs.some(x=>norm(x)===norm(h)));}}
     return [...new Set(list)].sort((a,b)=>String(a).localeCompare(String(b),'pt'));
   }
   function activeMonths(){try{return window.VG?.state?.selectedMonths?.()||[];}catch(e){return [];}}
@@ -138,7 +138,7 @@
     return defs;
   }
   function buildModel(hotel){
-    const hs=allHotels();let h=hotel||state.hotel;const u=currentUser();if(u&&['diretor','assistente'].includes(u.role)&&u.hotel&&u.hotel!=='*')h=hs.find(x=>norm(x)===norm(u.hotel))||hs[0]||'';if(!h||!hs.includes(h))h=hs[0]||'';state.hotel=h;
+    const hs=allHotels();let h=hotel||state.hotel;const u=currentUser();if(u&&!['direcao','admin'].includes(u.role)){const ok=typeof window.vgAuthCanAccessHotel==='function'?window.vgAuthCanAccessHotel(h):(Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[])).some(x=>norm(x)===norm(h));if(!ok)h=hs[0]||'';}if(!h||!hs.includes(h))h=hs[0]||'';state.hotel=h;
     if(!h)return {available:false,hotel:'',hotels:hs};
     const benchmarkInfo=benchmark(h),forecastInfo=forecast(h),alertInfo=alerts(h),quality=dataQuality(h),anomalyInfo=anomalies(h),actionInfo=actions(h),rep=reputation(h);
     const model={available:true,hotel:h,hotels:hs,period:periodLabel(),year:year(),prevYear:prevYear(),benchmarkInfo,forecast:forecastInfo,alerts:alertInfo,quality,anomalyInfo,actionInfo,reputation:rep};
