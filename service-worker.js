@@ -1,6 +1,6 @@
-// VG Operations v35.0 — service worker · hotfix histórico Housekeeping 2026-08-17
+// VG Operations v35.1 — service worker
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
-const CACHE_NAME = 'vg-operations-shell-v35-0';
+const CACHE_NAME = 'vg-operations-shell-v35-1';
 // Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-5.
 const STATIC_ASSETS = [
   "/assets/js/modules/housekeeping-native-v35.js",
@@ -117,7 +117,6 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    // v31: correções de Portefólio, Ponte GOP e Revenue Hub; dados empresariais continuam network-only.
     const batchSize=8;
     for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
       const batch=STATIC_ASSETS.slice(i,i+batchSize);
@@ -149,9 +148,8 @@ function isSensitive(req,url) {
 self.addEventListener('fetch', event => {
   const req=event.request;
   const url=new URL(req.url);
-  if (isSensitive(req,url)) return; // network-only: nunca cachear dados empresariais/API
+  if (isSensitive(req,url)) return;
 
-  // Navegação: rede primeiro, shell apenas como fallback offline.
   if (req.mode==='navigate') {
     event.respondWith((async()=>{
       try {
@@ -168,10 +166,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // v30.3: recursos estáticos da própria aplicação são NETWORK-FIRST.
-  // Isto impede misturas do tipo HTML novo + JavaScript antigo. O browser
-  // continua a poder usar a sua cache HTTP e o Cache Storage fica como
-  // fallback offline, nunca como fonte prioritária quando há rede.
   if (url.origin===self.location.origin) {
     event.respondWith((async()=>{
       try {
@@ -186,5 +180,4 @@ self.addEventListener('fetch', event => {
       }
     })());
   }
-  // Recursos CDN são network-only. A app abre offline, mas gráficos/Excel podem ficar indisponíveis.
 });
