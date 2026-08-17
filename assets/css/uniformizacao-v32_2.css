@@ -1,640 +1,576 @@
-/* VG Operations V36 — sistema visual transversal
-   Objetivo: uma linguagem única de tipografia, cor, espaçamento, controlos,
-   cartões, tabelas e estados. A área #view-fichahotel é deliberadamente
-   excluída de todas as regras de conteúdo desta camada. */
+/* ============================================================
+   VG OPERATIONS V36.1 — UNIFORMIZAÇÃO GLOBAL COMPACTA
+   Camada final de estilo: vence os CSS históricos carregados antes.
+   Regra: interface corrente 10–11 px; títulos apenas ligeiramente maiores.
+   #view-fichahotel mantém o seu conteúdo/estrutura sem uniformização interna.
+   ============================================================ */
 
 :root{
-  --ui-fs-xs:11px;
-  --ui-fs-sm:12px;
-  --ui-fs-md:13px;
-  --ui-fs-lg:15px;
-  --ui-fs-xl:18px;
-  --ui-fs-2xl:22px;
-  --ui-fs-display:30px;
-
-  --ui-radius-sm:8px;
-  --ui-radius-md:12px;
-  --ui-radius-lg:16px;
-  --ui-radius-pill:999px;
-
-  --ui-space-1:4px;
-  --ui-space-2:8px;
-  --ui-space-3:12px;
-  --ui-space-4:16px;
-  --ui-space-5:20px;
-  --ui-space-6:24px;
-
-  --ui-control-min-h:34px;
-  --ui-shadow-card:0 10px 28px rgba(0,0,0,.14);
-  --ui-shadow-float:0 16px 44px rgba(0,0,0,.22);
-  --ui-transition:160ms ease;
+  --ui-xs:9px;
+  --ui-sm:10px;
+  --ui-md:11px;
+  --ui-title:12px;
+  --ui-page:14px;
+  --ui-r-sm:6px;
+  --ui-r-md:9px;
+  --ui-r-lg:12px;
+  --ui-r-pill:999px;
+  --ui-topbar-h:48px;
+  --ui-control-h:28px;
+  --ui-shadow:0 5px 16px rgba(15,23,42,.055);
 }
 
-/* Dark: reforço do texto secundário sem mudar a identidade aprovada. */
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2){
-  --text-3:#7890aa;
-}
-body.theme-erp,
-body.theme-vilagale,
-body.theme-v2{
-  --ui-shadow-card:0 8px 22px rgba(15,23,42,.06);
-  --ui-shadow-float:0 18px 48px rgba(15,23,42,.14);
-}
-
-/* ──────────────────────────────────────────────────────────
-   BASE / SHELL — fora da Ficha Hotel
-────────────────────────────────────────────────────────── */
-html{font-size:14px}
-body{
-  font-family:var(--font);
-  line-height:1.45;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-}
-button,input,select,textarea{font-family:var(--font)}
-.main{padding-bottom:28px!important}
-body.vg-interface-modern .main{padding-bottom:28px!important}
-
-/* Barra flutuante de atalhos: removida transversalmente. */
+html{font-size:10px!important}
+body{font-family:var(--font)!important;line-height:1.35!important}
+button,input,select,textarea{font-family:var(--font)!important}
 #vgNavDock{display:none!important}
 
-/* Topo */
-.topbar{
-  min-height:58px;
+/* ============================================================
+   SHELL — resolve definitivamente a sobreposição topo/sidebar
+   ============================================================ */
+html body .topbar,
+html body.vg-interface-modern .topbar{
+  height:var(--ui-topbar-h)!important;
+  min-height:var(--ui-topbar-h)!important;
+  max-height:var(--ui-topbar-h)!important;
+  padding:0 7px 0 0!important;
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  overflow:visible!important;
   border-bottom:1px solid var(--border)!important;
   box-shadow:none!important;
+  z-index:500!important;
 }
-.logo-text strong{
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-md)!important;
+html body .logo-block,
+html body.vg-interface-modern .logo-block{
+  height:var(--ui-topbar-h)!important;
+  min-height:var(--ui-topbar-h)!important;
+  padding:0 9px!important;
+  gap:7px!important;
+  flex:0 0 var(--sidebar-w)!important;
+}
+html body .logo-mark{
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  min-height:28px!important;
+  border-radius:7px!important;
+}
+html body .logo-text{line-height:1.08!important}
+html body .logo-text strong{
+  font-size:10px!important;
+  line-height:1.1!important;
   font-weight:800!important;
-  letter-spacing:-.01em;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
 }
-.logo-text span{
-  font-family:var(--font)!important;
-  font-size:10px!important;
-  font-weight:700!important;
-  letter-spacing:.12em!important;
-}
-.topbar-pill{
-  min-height:30px;
-  border-radius:var(--ui-radius-pill)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  font-weight:600;
-  line-height:1.2;
-}
-.topbar-pill strong{font-weight:800!important}
-.vg-build-badge{
-  font-family:var(--font)!important;
-  font-size:10px!important;
-  letter-spacing:.02em;
+html body .logo-text span{
+  font-size:8px!important;
+  line-height:1.05!important;
+  letter-spacing:.08em!important;
+  white-space:nowrap!important;
 }
 
-/* Sidebar / navegação */
-.sb-nav-group-label,
-.sb-label,
-.gfb-label{
-  font-family:var(--font)!important;
-  font-size:10px!important;
-  line-height:1.2;
-  font-weight:800!important;
-  letter-spacing:.10em!important;
-  text-transform:uppercase;
+html body .sidebar,
+html body.vg-interface-modern .sidebar{
+  top:var(--ui-topbar-h)!important;
+  height:calc(100vh - var(--ui-topbar-h))!important;
+  max-height:calc(100vh - var(--ui-topbar-h))!important;
+  padding-top:0!important;
+  z-index:300!important;
 }
-.sb-nav-btn{
-  min-height:34px;
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
+
+html body .main,
+html body.vg-interface-modern .main{
+  padding:0!important;
+  min-width:0!important;
+  overflow-x:hidden!important;
+}
+html body .view-content{
+  padding:10px 14px 42px!important;
+  min-width:0!important;
+}
+
+/* ============================================================
+   TOPBAR — uma só linha e sem elementos a empurrarem os restantes
+   ============================================================ */
+html body .topbar-center{
+  min-width:0!important;
+  flex:1 1 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  gap:3px!important;
+  padding:0 5px!important;
+  overflow:hidden!important;
+}
+html body .topbar-pill{
+  min-width:0!important;
+  min-height:25px!important;
+  height:25px!important;
+  padding:3px 6px!important;
+  gap:4px!important;
+  border-radius:var(--ui-r-pill)!important;
+  font-size:9px!important;
+  line-height:1!important;
   font-weight:650!important;
-  line-height:1.25;
-  transition:background var(--ui-transition),color var(--ui-transition),border-color var(--ui-transition);
+  white-space:nowrap!important;
+  flex:0 1 auto!important;
 }
-.sb-nav-btn.active{
-  color:var(--text-1)!important;
-  border-color:var(--border)!important;
-}
-.sb-action-btn,
-.sb-mes-all,
-.sb-mes-btn,
-.sb-region-item{
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  font-weight:700!important;
-}
-.sb-action-btn.primary,
-.sb-mes-btn.active{
-  background:var(--gold)!important;
-  border-color:var(--gold)!important;
-  color:#fff!important;
-}
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .sb-action-btn.primary,
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .sb-mes-btn.active{
-  color:var(--navy)!important;
-}
-.sb-hotel-search,
-.hs-hotel-search{
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-}
-.sb-status{
-  font-family:var(--font)!important;
-  font-size:10px!important;
-  line-height:1.4;
+html body .topbar-pill strong{font-size:9px!important;font-weight:800!important}
+html body .topbar-pill-dot{width:5px!important;height:5px!important}
+html body .vg-build-badge{display:none!important}
+
+html body .topbar-right{
+  min-width:0!important;
+  flex:0 1 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  gap:3px!important;
+  white-space:nowrap!important;
 }
 
-/* Contexto */
-.context-panel{
-  border-left:1px solid var(--border)!important;
+html body .vg-search-top-trigger,
+html body .vg-notif-trigger,
+html body .v30-top-assistant,
+html body .vg-interface-trigger{
+  min-height:27px!important;
+  height:27px!important;
+  padding:3px 6px!important;
+  gap:4px!important;
+  margin:0!important;
+  border-radius:7px!important;
+  font-size:9px!important;
+  line-height:1!important;
+  font-weight:700!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
 }
-.ctx-title{
-  font-size:10px!important;
+html body .vg-search-top-trigger .vg-search-key{display:none!important}
+html body .vg-search-top-trigger svg{width:11px!important;height:11px!important}
+html body .vg-notif-bell{font-size:11px!important}
+html body .vg-notif-trigger b{min-width:15px!important;height:15px!important;font-size:8px!important;top:-5px!important;right:-5px!important}
+
+html body .vg-market-switch{
+  min-height:29px!important;
+  height:29px!important;
+  padding:2px 3px!important;
+  gap:2px!important;
+  border-radius:8px!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
+}
+html body .vg-market-switch>span{display:none!important}
+html body .vg-market-switch>div{gap:2px!important}
+html body .vg-market-switch button{
+  min-height:23px!important;
+  height:23px!important;
+  padding:3px 6px!important;
+  border-radius:6px!important;
+  font-size:8.5px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+
+html body .theme-dots{gap:2px!important;flex:0 0 auto!important}
+html body .theme-dot{width:13px!important;height:13px!important;border-width:1px!important}
+
+html body #onlineUsersWrap{
+  min-height:27px!important;
+  height:27px!important;
+  padding:3px 6px!important;
+  gap:3px!important;
+  border-radius:var(--ui-r-pill)!important;
+  white-space:nowrap!important;
+}
+html body #onlineCount,
+html body #onlineUsersWrap span:last-child{font-size:8.5px!important}
+html body #onlineUsersWrap span:first-child{width:5px!important;height:5px!important}
+
+html body .vg-auth-pill{
+  min-height:27px!important;
+  height:27px!important;
+  padding:3px 7px!important;
+  gap:4px!important;
+  border-radius:var(--ui-r-pill)!important;
+  font-size:9px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+html body .vg-auth-pill b{font-size:9px!important;line-height:1!important;white-space:nowrap!important}
+/* perfil e âmbito duplicavam informação e obrigavam o cartão a crescer em altura */
+html body .vg-auth-pill span{display:none!important}
+html body .vg-auth-btn{
+  min-height:27px!important;
+  height:27px!important;
+  padding:3px 7px!important;
+  margin:0!important;
+  border-radius:6px!important;
+  font-size:9px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+}
+
+/* ============================================================
+   SIDEBAR — 10 px, mais espaço útil e sem cartões gigantes
+   ============================================================ */
+html body .sb-section,
+html body.vg-interface-modern .sb-section{
+  margin:3px 5px!important;
+  padding:6px 7px 4px!important;
+  border-radius:8px!important;
+}
+html body .sb-nav-group{margin-bottom:3px!important}
+html body .sb-nav-group-label,
+html body .sb-label{
+  margin:4px 0 4px!important;
+  padding:0 2px!important;
+  font-size:8.5px!important;
+  line-height:1.1!important;
   font-weight:800!important;
   letter-spacing:.09em!important;
-  text-transform:uppercase;
 }
-.ctx-region-badge,
-.ctx-kpi{
-  border-radius:var(--ui-radius-md)!important;
-}
-.ctx-kpi{
-  border:1px solid var(--border-2)!important;
+html body .sb-nav-btn,
+html body.vg-interface-modern .sb-nav-btn{
+  min-height:25px!important;
+  margin:1px 2px!important;
+  padding:4px 6px!important;
+  gap:6px!important;
+  border-radius:6px!important;
+  font-size:10px!important;
+  line-height:1.15!important;
+  font-weight:650!important;
+  transform:none!important;
   box-shadow:none!important;
 }
+html body .sb-nav-icon{font-size:10px!important;min-width:13px!important}
+html body .sb-actions{gap:3px!important}
+html body .sb-action-btn,
+html body .sb-mes-all,
+html body .sb-mes-btn,
+html body .sb-region-item{
+  min-height:25px!important;
+  padding:4px 6px!important;
+  border-radius:6px!important;
+  font-size:9.5px!important;
+  line-height:1.15!important;
+  font-weight:650!important;
+}
+html body .sb-months{gap:3px!important;padding:0 1px!important}
+html body .sb-mes-btn{min-width:48px!important}
+html body .sb-hotel-search{
+  min-height:27px!important;
+  height:27px!important;
+  padding:4px 7px!important;
+  font-size:9.5px!important;
+  border-radius:6px!important;
+}
+html body .sb-status{font-size:8.5px!important;line-height:1.3!important}
 
-/* Filtros globais */
-.global-filter-bar{
+/* ============================================================
+   FILTRO GLOBAL
+   ============================================================ */
+html body .global-filter-bar,
+html body.vg-interface-modern .global-filter-bar{
+  min-height:39px!important;
+  margin:0!important;
+  padding:5px 12px!important;
+  gap:6px!important;
+  border-radius:0!important;
+  border:0!important;
   border-bottom:1px solid var(--border)!important;
-}
-.pl-region-btn,
-.ht-filter-btn,
-.pl-usali-tab,
-.wa-sel-btn{
-  min-height:32px;
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  font-weight:700!important;
-  transition:background var(--ui-transition),color var(--ui-transition),border-color var(--ui-transition),box-shadow var(--ui-transition);
-}
-.pl-region-btn.active,
-.ht-filter-btn.active,
-.pl-usali-tab.active,
-.wa-sel-btn.active{
-  background:var(--gold)!important;
-  border-color:var(--gold)!important;
-  color:#fff!important;
-}
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .pl-region-btn.active,
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .ht-filter-btn.active,
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .pl-usali-tab.active,
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) .wa-sel-btn.active{
-  color:var(--navy)!important;
-}
-
-/* ──────────────────────────────────────────────────────────
-   CONTEÚDO — EXCLUI EXPLICITAMENTE #view-fichahotel
-────────────────────────────────────────────────────────── */
-:where(.tab-content:not(#view-fichahotel)){
-  color:var(--text-1);
-}
-:where(.tab-content:not(#view-fichahotel)) .section-title{
-  min-height:38px;
-  margin-bottom:var(--ui-space-4)!important;
-  color:var(--text-1)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-lg)!important;
-  line-height:1.25!important;
-  font-weight:800!important;
-  letter-spacing:-.015em!important;
-  text-transform:none!important;
-}
-:where(.tab-content:not(#view-fichahotel)) .section-title::after{
-  background:var(--border)!important;
-}
-
-/* Títulos e subtítulos dos módulos */
-:where(.tab-content:not(#view-fichahotel))
-:where(.chart-title,.ops-title,.ops-panel-title,.ri-title,.ri2-head h2,.occ-intel-title,.occ-chart-title,.ig-chart-title,.vg-agenda-title,.table-header h3,.cd-head h3){
-  color:var(--text-1)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-md)!important;
-  line-height:1.3!important;
-  font-weight:800!important;
-  letter-spacing:-.01em!important;
-  text-transform:none!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.chart-sub,.ops-sub,.ops-panel-meta,.hint,.ri-sub,.occ-intel-note,.occ-chart-sub,.ig-chart-sub,.vg-agenda-sub,.cd-meta,.note){
-  color:var(--text-2)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  line-height:1.5!important;
-  opacity:1!important;
-}
-
-/* Cartões / superfícies principais */
-:where(.tab-content:not(#view-fichahotel))
-:where(.kpi-card,.chart-card,.ai-insights-card,.table-wrapper,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel,.vg-agenda-calendar-card,.vg-agenda-list-card,.vg-agenda-side-card,.wx-card){
-  background:var(--surface-1)!important;
-  border:1px solid var(--border-2)!important;
-  border-radius:var(--ui-radius-lg)!important;
-  box-shadow:var(--ui-shadow-card)!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.kpi-card,.chart-card,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel){
-  overflow:hidden;
-}
-
-/* KPI: mesma hierarquia, sem alterar cores semânticas. */
-:where(.tab-content:not(#view-fichahotel)) .kpi-card{
-  padding:var(--ui-space-4)!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.kpi-label,.kpi-lbl,.ri-kpi-label,.occ-kpi-label){
-  color:var(--text-2)!important;
-  font-size:10px!important;
-  font-weight:800!important;
-  letter-spacing:.07em!important;
-  text-transform:uppercase!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.kpi-value,.kpi-val,.ri-kpi-value,.occ-kpi-value){
-  color:var(--text-1)!important;
-  font-family:var(--font)!important;
-  font-weight:800!important;
-  letter-spacing:-.025em!important;
-}
-
-/* Formulários: mesma superfície, contraste e foco. */
-:where(.tab-content:not(#view-fichahotel))
-:where(input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],input[type="email"],input[type="password"],select,textarea){
-  background:var(--surface-2)!important;
-  color:var(--text-1)!important;
-  border:1px solid var(--border-2)!important;
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  line-height:1.35!important;
   box-shadow:none!important;
-  outline:none!important;
+  backdrop-filter:none!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  white-space:nowrap!important;
 }
-:where(.tab-content:not(#view-fichahotel))
-:where(input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],input[type="email"],input[type="password"],select){
-  min-height:var(--ui-control-min-h);
-  padding:7px 10px!important;
-}
-:where(.tab-content:not(#view-fichahotel)) textarea{
-  padding:9px 10px!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],input[type="email"],input[type="password"],select,textarea):focus{
-  border-color:var(--gold)!important;
-  box-shadow:0 0 0 3px var(--gold-dim)!important;
-}
-:where(.tab-content:not(#view-fichahotel)) ::placeholder{
-  color:var(--text-3)!important;
-  opacity:1!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(label,.fgrp label,.ri-control label,.occ-sel-label,.ig-sel-label,.vg-agenda-field label){
-  color:var(--text-2)!important;
-  font-family:var(--font)!important;
-  font-size:10px!important;
+html body .gfb-group{gap:4px!important;flex-wrap:nowrap!important}
+html body .gfb-label{
+  font-size:8.5px!important;
+  letter-spacing:.08em!important;
   font-weight:800!important;
-  letter-spacing:.06em!important;
+}
+html body .gfb-sep{height:18px!important}
+html body .pl-region-btn,
+html body .ht-filter-btn,
+html body .pl-usali-tab,
+html body .wa-sel-btn{
+  min-height:25px!important;
+  height:auto!important;
+  padding:4px 8px!important;
+  border-radius:var(--ui-r-pill)!important;
+  font-size:9.5px!important;
+  line-height:1!important;
+  font-weight:700!important;
 }
 
-/* Botões de ação recorrentes */
-:where(.tab-content:not(#view-fichahotel))
-:where(.btn,.vg-btn,.ops-btn,.ri-btn,.occ-clear-btn,.rt-clear-btn,.ig-clear-btn,.vg-agenda-btn,.vg-auth-smallbtn){
-  min-height:32px;
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
+/* ============================================================
+   CONTEÚDO — NÃO APLICA À FICHA HOTEL
+   ============================================================ */
+html body .tab-content:not(#view-fichahotel){font-size:10px!important;color:var(--text-1)}
+html body .tab-content:not(#view-fichahotel) p,
+html body .tab-content:not(#view-fichahotel) li,
+html body .tab-content:not(#view-fichahotel) span,
+html body .tab-content:not(#view-fichahotel) small{
+  font-size:inherit;
+}
+
+html body .tab-content:not(#view-fichahotel) .section-title{
+  min-height:27px!important;
+  margin:5px 0 8px!important;
+  padding:0!important;
+  gap:7px!important;
+  font-size:11px!important;
   line-height:1.2!important;
-  font-weight:750!important;
+  font-weight:800!important;
   letter-spacing:0!important;
-  transition:background var(--ui-transition),color var(--ui-transition),border-color var(--ui-transition),box-shadow var(--ui-transition),transform var(--ui-transition);
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.btn,.vg-btn,.ops-btn,.ri-btn,.occ-clear-btn,.rt-clear-btn,.ig-clear-btn,.vg-agenda-btn,.vg-auth-smallbtn):hover{
-  filter:none!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.ops-btn.primary,.ri-btn:not(.ghost),.vg-agenda-btn.primary){
-  background:var(--gold)!important;
-  border-color:var(--gold)!important;
-  color:#fff!important;
-}
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2)
-:where(.tab-content:not(#view-fichahotel))
-:where(.ops-btn.primary,.ri-btn:not(.ghost),.vg-agenda-btn.primary){
-  color:var(--navy)!important;
-}
-
-/* Tabs segmentadas */
-:where(.tab-content:not(#view-fichahotel))
-:where(.cd-tabs,.v30-tabs,.vg-agenda-view-toggle){
-  border-radius:var(--ui-radius-md)!important;
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.cd-tabs button,.v30-tabs button,.vg-agenda-view-toggle button){
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  font-weight:700!important;
-}
-
-/* Tabelas: tipografia, cabeçalho, separadores e hover uniformes.
-   Heatmaps/pickup visuais são excluídos para preservar a leitura cromática. */
-:where(.tab-content:not(#view-fichahotel)) table{
-  color:var(--text-1);
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-}
-:where(.tab-content:not(#view-fichahotel)) table:not(.occ-heatmap):not(.piu-table) th{
-  background:var(--surface-2)!important;
-  color:var(--text-2)!important;
-  border-bottom:1px solid var(--border)!important;
-  padding:9px 10px!important;
-  font-family:var(--font)!important;
-  font-size:10px!important;
-  line-height:1.25!important;
-  font-weight:800!important;
-  letter-spacing:.035em!important;
   text-transform:none!important;
-  white-space:nowrap;
+  color:var(--text-1)!important;
 }
-:where(.tab-content:not(#view-fichahotel)) table:not(.occ-heatmap):not(.piu-table) td{
-  color:var(--text-1);
-  border-bottom:1px solid var(--border-2)!important;
-  padding:9px 10px!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
+html body .tab-content:not(#view-fichahotel) .section-title::after{background:var(--border)!important}
+
+html body .tab-content:not(#view-fichahotel) :where(
+  .chart-title,.ops-title,.ops-panel-title,.ri-title,.occ-intel-title,.occ-chart-title,
+  .ig-chart-title,.vg-agenda-title,.table-header h3,.cd-head h3,.hp-title,.ar-title,
+  .aa-title,.doc-title,.ap-title
+){
+  font-size:11px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  color:var(--text-1)!important;
+}
+html body .tab-content:not(#view-fichahotel) :where(
+  .chart-sub,.ops-sub,.ops-panel-meta,.hint,.ri-sub,.ri-note,.occ-intel-note,.occ-chart-sub,
+  .ig-chart-sub,.vg-agenda-sub,.cd-meta,.note
+){
+  font-size:9.5px!important;
   line-height:1.35!important;
-}
-:where(.tab-content:not(#view-fichahotel)) table:not(.occ-heatmap):not(.piu-table) tbody tr:hover td{
-  background:var(--surface-2);
-}
-:where(.tab-content:not(#view-fichahotel))
-:where(.table-wrapper,[class*="table-wrap"],[class*="table-wrapper"]){
-  scrollbar-width:thin;
-  scrollbar-color:var(--border) transparent;
+  color:var(--text-2)!important;
+  opacity:1!important;
 }
 
-/* Estados / pills */
-:where(.tab-content:not(#view-fichahotel))
-:where(.delta-badge,.status-pill,.badge,.ri-badge,.occ-insight-badge){
-  border-radius:var(--ui-radius-pill)!important;
+/* V30: títulos históricos de 24–34px reduzidos para escala operacional. */
+html body .tab-content:not(#view-fichahotel) .v30-profile-home h2,
+html body .tab-content:not(#view-fichahotel) .v30-page-head h2,
+html body .tab-content:not(#view-fichahotel) .ri2-head h2{
+  margin:2px 0!important;
+  font-size:14px!important;
+  line-height:1.15!important;
+  letter-spacing:-.01em!important;
+}
+html body .tab-content:not(#view-fichahotel) .v30-profile-home p,
+html body .tab-content:not(#view-fichahotel) .v30-page-head p{font-size:9.5px!important}
+html body .tab-content:not(#view-fichahotel) .v30-profile-home,
+html body .tab-content:not(#view-fichahotel) .v30-page-head{padding:10px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-kpis{gap:6px!important;margin-top:8px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-kpis article{padding:8px!important;border-radius:8px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-kpis span{font-size:8.5px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-kpis strong{margin-top:3px!important;font-size:16px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-priority{margin-top:8px!important;gap:4px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-priority>strong{font-size:10px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-priority button{padding:6px 8px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-priority button small{font-size:8.5px!important}
+html body .tab-content:not(#view-fichahotel) .v30-home-priority button em{font-size:9px!important}
+
+/* ============================================================
+   CARTÕES / KPIs / PAINÉIS
+   ============================================================ */
+html body .tab-content:not(#view-fichahotel) :where(
+  .kpi-card,.chart-card,.ai-insights-card,.table-wrapper,.ops-panel,.ri-card,.ri2-card,
+  .occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel,.vg-agenda-calendar-card,
+  .vg-agenda-list-card,.vg-agenda-side-card,.wx-card,.v30-panel,.v30-score,.v30-hero
+){
+  border:1px solid var(--border-2)!important;
+  border-radius:var(--ui-r-lg)!important;
+  box-shadow:var(--ui-shadow)!important;
+}
+html body .tab-content:not(#view-fichahotel) :where(.kpi-card,.chart-card,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.pl-panel,.v30-panel){
+  padding:10px!important;
+}
+html body .tab-content:not(#view-fichahotel) :where(.kpi-grid,.charts-grid,.ri-grid,.ri2-grid,.occ-exec-grid,.ig-chart-grid,.v30-two,.v30-kpi-grid){gap:8px!important}
+
+/* valores KPI ficam maiores de propósito; rótulos ficam a 9–10px */
+html body .tab-content:not(#view-fichahotel) :where(.kpi-label,.kpi-lbl,.ri-kpi-label,.ri-kpi-l,.occ-kpi-label,.occ-kpi-l,.rt-kpi-l){
+  font-size:8.5px!important;
+  line-height:1.1!important;
+  letter-spacing:.05em!important;
+  font-weight:800!important;
+}
+html body .tab-content:not(#view-fichahotel) :where(.kpi-value,.kpi-val,.ri-kpi-value,.ri-kpi-v,.occ-kpi-value,.occ-kpi-v,.rt-kpi-v){
+  font-size:17px!important;
+  line-height:1.05!important;
+  font-weight:800!important;
+  letter-spacing:-.02em!important;
+}
+
+/* ============================================================
+   FORMULÁRIOS / BOTÕES / TABS
+   ============================================================ */
+html body .tab-content:not(#view-fichahotel) :where(
+ input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="time"],
+ input[type="email"],input[type="password"],select
+){
+  min-height:var(--ui-control-h)!important;
+  height:auto!important;
+  padding:4px 7px!important;
+  border-radius:6px!important;
+  font-size:10px!important;
+  line-height:1.15!important;
+  box-shadow:none!important;
+}
+html body .tab-content:not(#view-fichahotel) textarea{
+  padding:6px 8px!important;
+  border-radius:6px!important;
+  font-size:10px!important;
+  line-height:1.3!important;
+  box-shadow:none!important;
+}
+html body .tab-content:not(#view-fichahotel) :where(label,.fgrp label,.ri-control label,.occ-sel-label,.ig-sel-label,.vg-agenda-field label){
+  font-size:8.5px!important;
+  line-height:1.1!important;
+  letter-spacing:.05em!important;
+  font-weight:800!important;
+}
+html body .tab-content:not(#view-fichahotel) :where(
+ .btn,.vg-btn,.ops-btn,.ri-btn,.occ-clear-btn,.rt-clear-btn,.ig-clear-btn,.vg-agenda-btn,.vg-auth-smallbtn,
+ .v30-soft-btn,.v30-tabs button,.cd-tabs button,.seg button
+){
+  min-height:var(--ui-control-h)!important;
+  height:auto!important;
+  padding:4px 8px!important;
+  border-radius:6px!important;
+  font-size:9.5px!important;
+  line-height:1.1!important;
+  font-weight:700!important;
+  letter-spacing:0!important;
+  box-shadow:none!important;
+}
+
+/* ============================================================
+   TABELAS — 10px, mais linhas visíveis por ecrã
+   ============================================================ */
+html body .tab-content:not(#view-fichahotel) table{
   font-family:var(--font)!important;
   font-size:10px!important;
+  line-height:1.2!important;
+  border-radius:8px!important;
+}
+html body .tab-content:not(#view-fichahotel) table:not(.occ-heatmap):not(.piu-table) th{
+  padding:6px 7px!important;
+  font-size:9px!important;
+  line-height:1.15!important;
   font-weight:800!important;
+  letter-spacing:.02em!important;
+  text-transform:none!important;
+  white-space:nowrap!important;
+}
+html body .tab-content:not(#view-fichahotel) table:not(.occ-heatmap):not(.piu-table) td{
+  padding:6px 7px!important;
+  font-size:10px!important;
   line-height:1.2!important;
 }
-:where(.tab-content:not(#view-fichahotel)) .delta-badge.pos{
-  color:var(--pos)!important;
-}
-:where(.tab-content:not(#view-fichahotel)) .delta-badge.neg{
-  color:var(--neg)!important;
-}
-
-/* ──────────────────────────────────────────────────────────
-   COMPRAS & ARTIGOS — deixa de ter identidade paralela
-────────────────────────────────────────────────────────── */
-#view-compras .cd-head,
-#view-compras .cd-tabs,
-#view-compras .kpi,
-#view-compras .card{
-  background:var(--surface-1)!important;
-  color:var(--text-1)!important;
-  border:1px solid var(--border-2)!important;
-  border-radius:var(--ui-radius-lg)!important;
-  box-shadow:var(--ui-shadow-card)!important;
-}
-#view-compras .cd-head{padding:var(--ui-space-4)!important}
-#view-compras .cd-meta{color:var(--text-2)!important;opacity:1!important}
-#view-compras .fgrp label{color:var(--text-2)!important;opacity:1!important}
-#view-compras .fgrp select{
-  background:var(--surface-2)!important;
-  color:var(--text-1)!important;
-  border:1px solid var(--border-2)!important;
-  border-radius:var(--ui-radius-sm)!important;
-}
-#view-compras .seg{
-  background:var(--surface-2)!important;
-  border:1px solid var(--border-2)!important;
-  border-radius:var(--ui-radius-md)!important;
-}
-#view-compras .seg button{
-  color:var(--text-2)!important;
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-  font-size:var(--ui-fs-xs)!important;
-  font-weight:700!important;
-}
-#view-compras .seg button.on{
-  background:var(--gold)!important;
-  color:#fff!important;
-  border-color:var(--gold)!important;
-}
-body:not(.theme-erp):not(.theme-vilagale):not(.theme-v2) #view-compras .seg button.on{
-  color:var(--navy)!important;
-}
-#view-compras .kpi{
-  position:relative;
-  overflow:hidden;
-}
-#view-compras .kpi::before{
-  content:'';
-  position:absolute;
-  left:0;right:0;top:0;
-  height:3px;
-  background:var(--gold);
-}
-#view-compras .kpi .v,
-#view-compras .card h3,
-#view-compras .clk{color:var(--text-1)!important}
-#view-compras .kpi .l,
-#view-compras .kpi .s,
-#view-compras .note,
-#view-compras .bc{color:var(--text-2)!important}
-#view-compras .cd-tabs button{color:var(--text-2)!important}
-#view-compras .cd-tabs button.on{
-  background:transparent!important;
-  color:var(--text-1)!important;
-  border-bottom-color:var(--gold)!important;
-}
-#view-compras .bar{background:var(--surface-3)!important}
-#view-compras .bar i{background:var(--gold)!important}
-#view-compras .btn:not(.gold){
-  background:var(--surface-2)!important;
-  color:var(--text-1)!important;
-  border:1px solid var(--border)!important;
-}
-#view-compras .btn.gold{
-  background:var(--gold)!important;
-  color:#fff!important;
-  border-color:var(--gold)!important;
+html body .tab-content:not(#view-fichahotel) :where(.table-wrapper,[class*="table-wrap"],[class*="table-wrapper"]){
+  max-width:100%!important;
+  overflow-x:auto!important;
+  scrollbar-width:thin;
 }
 
-/* ──────────────────────────────────────────────────────────
-   HOTÉIS / FICHAS TÉCNICAS — mesma linguagem dos módulos
-   (não confundir com #view-fichahotel, que permanece intocado)
-────────────────────────────────────────────────────────── */
-#view-hoteis .ht-card{
-  background:var(--surface-1)!important;
-  border:1px solid var(--border-2)!important;
-  border-radius:var(--ui-radius-lg)!important;
-  box-shadow:var(--ui-shadow-card)!important;
-}
-#view-hoteis .ht-filter-btn.active{
-  background:var(--gold)!important;
-  border-color:var(--gold)!important;
-  color:#fff!important;
-}
-.ht-empty-state{
-  grid-column:1/-1;
-  padding:var(--ui-space-6);
-  border:1px dashed var(--border);
-  border-radius:var(--ui-radius-lg);
-  background:var(--surface-1);
-  color:var(--text-2);
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.ht-empty-state strong{color:var(--text-1);font-size:var(--ui-fs-md)}
-.ht-empty-state span{font-size:var(--ui-fs-xs);line-height:1.55}
+/* ============================================================
+   COMPRAS: elimina a escala visual paralela do módulo
+   ============================================================ */
+#view-compras .cd-head{padding:8px!important;border-radius:9px!important}
+#view-compras .cd-meta{font-size:9px!important}
+#view-compras .kpi,#view-compras .card{border-radius:9px!important;box-shadow:var(--ui-shadow)!important}
+#view-compras .kpi .l,#view-compras .kpi .s,#view-compras .note,#view-compras .bc{font-size:9px!important;color:var(--text-2)!important}
+#view-compras .kpi .v{font-size:16px!important;color:var(--text-1)!important}
+#view-compras .card h3,#view-compras .clk{font-size:10px!important;color:var(--text-1)!important}
+#view-compras .cd-tabs button{font-size:9px!important}
 
-/* ──────────────────────────────────────────────────────────
-   INTERFACE 2.0 / MODERN — tipografia e contraste sem paleta paralela
-────────────────────────────────────────────────────────── */
-body.vg-interface-modern{
-  --text-2:#526174;
-  --text-3:#718096;
-}
-body.vg-interface-modern .vg-notif-trigger,
-body.vg-interface-modern .vg-search-top-trigger,
-body.vg-interface-modern .v30-top-assistant{
-  min-height:34px!important;
-  border:1px solid var(--border)!important;
-  background:var(--surface-1)!important;
-  color:var(--text-1)!important;
-  border-radius:var(--ui-radius-sm)!important;
-  box-shadow:0 6px 16px rgba(15,23,42,.05)!important;
-  font-family:var(--font)!important;
-}
-body.vg-interface-modern .vg-notif-trigger:hover,
-body.vg-interface-modern .vg-search-top-trigger:hover,
-body.vg-interface-modern .v30-top-assistant:hover{
-  background:var(--surface-2)!important;
-  border-color:var(--gold)!important;
-  color:var(--text-1)!important;
-}
-body.vg-interface-modern .vg-search-top-trigger .vg-search-key{
-  color:var(--text-2)!important;
-  background:var(--surface-2)!important;
-  border-color:var(--border)!important;
-}
-body.vg-interface-modern .vg-notif-trigger-label,
-body.vg-interface-modern .vg-search-label{color:var(--text-1)!important}
-body.vg-interface-modern .vg-notif-trigger b{border-color:var(--surface-1)!important}
+/* ============================================================
+   CONTEXT PANEL
+   ============================================================ */
+html body .context-panel{padding:8px!important}
+html body .ctx-title{font-size:8.5px!important;letter-spacing:.08em!important}
+html body .ctx-region-badge{font-size:8.5px!important;padding:5px 6px!important;border-radius:6px!important}
+html body .ctx-kpi{padding:7px!important;border-radius:8px!important;box-shadow:none!important}
+html body .ctx-kpi-label{font-size:8px!important}
+html body .ctx-kpi-val{font-size:15px!important}
+html body #ctxMeses{font-size:8.5px!important;line-height:1.3!important}
 
-body.vg-interface-modern .vg-market-switch{
-  background:var(--surface-1)!important;
-  border-color:var(--border)!important;
-  border-radius:var(--ui-radius-md)!important;
-  box-shadow:0 6px 16px rgba(15,23,42,.04)!important;
-}
-body.vg-interface-modern .vg-market-switch>span{color:var(--text-2)!important}
-body.vg-interface-modern .vg-market-switch button{
-  color:var(--text-2)!important;
-  border-radius:var(--ui-radius-sm)!important;
-  font-family:var(--font)!important;
-}
-body.vg-interface-modern .vg-market-switch button.active{
-  background:var(--gold)!important;
-  color:#fff!important;
-  border-color:var(--gold)!important;
-}
-
-/* ──────────────────────────────────────────────────────────
-   DOIS TEMAS CLAROS — contraste explícito e idêntica hierarquia
-────────────────────────────────────────────────────────── */
-body.theme-erp .vg-notif-trigger,
+/* ============================================================
+   TEMAS CLAROS — contraste sem aumentar a fonte
+   ============================================================ */
+body.vg-interface-modern{--text-2:#4c5a6b;--text-3:#67778a}
 body.theme-erp .vg-search-top-trigger,
+body.theme-erp .vg-notif-trigger,
 body.theme-erp .v30-top-assistant,
-body.theme-vilagale .vg-notif-trigger,
 body.theme-vilagale .vg-search-top-trigger,
-body.theme-vilagale .v30-top-assistant{
+body.theme-vilagale .vg-notif-trigger,
+body.theme-vilagale .v30-top-assistant,
+body.vg-interface-modern .vg-search-top-trigger,
+body.vg-interface-modern .vg-notif-trigger,
+body.vg-interface-modern .v30-top-assistant{
   background:var(--surface-1)!important;
-  border-color:var(--border)!important;
   color:var(--text-1)!important;
-  border-radius:var(--ui-radius-sm)!important;
-  box-shadow:0 5px 14px rgba(15,23,42,.05)!important;
+  border:1px solid var(--border)!important;
 }
-body.theme-erp .vg-notif-trigger-label,
 body.theme-erp .vg-search-label,
-body.theme-erp .v30-top-assistant span,
-body.theme-vilagale .vg-notif-trigger-label,
+body.theme-erp .vg-notif-trigger-label,
 body.theme-vilagale .vg-search-label,
-body.theme-vilagale .v30-top-assistant span{
-  color:var(--text-1)!important;
-  opacity:1!important;
-}
-body.theme-erp .vg-search-top-trigger svg,
-body.theme-vilagale .vg-search-top-trigger svg{
-  color:var(--text-2)!important;
-  opacity:1!important;
-}
-body.theme-erp .vg-search-top-trigger .vg-search-key,
-body.theme-vilagale .vg-search-top-trigger .vg-search-key{
-  color:var(--text-2)!important;
-  background:var(--surface-2)!important;
-  border-color:var(--border)!important;
-  opacity:1!important;
-}
-body.theme-erp #onlineUsersWrap,
-body.theme-vilagale #onlineUsersWrap{
-  background:var(--surface-1)!important;
-  border-color:var(--border)!important;
-}
-body.theme-erp #onlineCount,
-body.theme-erp #onlineUsersWrap span:last-child,
-body.theme-vilagale #onlineCount,
-body.theme-vilagale #onlineUsersWrap span:last-child{
-  color:var(--text-2)!important;
-  opacity:1!important;
-}
-body.theme-erp .vg-notif-trigger:hover,
-body.theme-erp .vg-search-top-trigger:hover,
-body.theme-erp .v30-top-assistant:hover,
-body.theme-vilagale .vg-notif-trigger:hover,
-body.theme-vilagale .vg-search-top-trigger:hover,
-body.theme-vilagale .v30-top-assistant:hover{
-  background:var(--surface-2)!important;
-  color:var(--text-1)!important;
+body.theme-vilagale .vg-notif-trigger-label,
+body.vg-interface-modern .vg-search-label,
+body.vg-interface-modern .vg-notif-trigger-label{color:var(--text-1)!important;opacity:1!important}
+
+/* ============================================================
+   RESPONSIVE — esconder secundário antes de permitir sobreposição
+   ============================================================ */
+@media(max-width:1500px){
+  :root{--sidebar-w:220px}
+  html body .topbar-center{padding-left:3px!important;padding-right:3px!important}
+  html body .vg-search-top-trigger .vg-search-label,
+  html body .vg-notif-trigger-label,
+  html body .v30-top-assistant span,
+  html body .vg-interface-trigger .txt{display:none!important}
+  html body .vg-search-top-trigger,
+  html body .vg-notif-trigger,
+  html body .v30-top-assistant,
+  html body .vg-interface-trigger{min-width:27px!important;justify-content:center!important;padding:3px 5px!important}
+  html body .theme-dot{width:12px!important;height:12px!important}
 }
 
-/* Semântica: cor informa estado, não módulo. */
-:where(.tab-content:not(#view-fichahotel)) .good{--ui-semantic:var(--pos)}
-:where(.tab-content:not(#view-fichahotel)) .bad{--ui-semantic:var(--neg)}
-:where(.tab-content:not(#view-fichahotel)) .pos{--ui-semantic:var(--pos)}
-:where(.tab-content:not(#view-fichahotel)) .neg{--ui-semantic:var(--neg)}
+@media(max-width:1250px){
+  .context-panel{display:none!important}
+  body{grid-template-columns:var(--sidebar-w) minmax(0,1fr)!important;grid-template-areas:"topbar topbar" "sidebar main"!important}
+  html body #onlineUsersWrap{display:none!important}
+  html body .theme-dots{display:none!important}
+}
 
-/* WhatsApp mantém a cor funcional da marca. */
-body button[onclick="waShareResumo()"]{background:#25D366!important;color:#fff!important}
-
-/* Responsividade visual: sem aumentar densidade em portátil. */
-@media (max-width:1180px){
-  :where(.tab-content:not(#view-fichahotel)) .section-title{
-    font-size:var(--ui-fs-md)!important;
+@media(max-width:1050px){
+  body{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"topbar" "main"!important}
+  .sidebar{
+    position:fixed!important;
+    top:var(--ui-topbar-h)!important;
+    height:calc(100vh - var(--ui-topbar-h))!important;
+    width:min(260px,88vw)!important;
+    transform:translateX(-100%);
+    z-index:450!important;
   }
-  :where(.tab-content:not(#view-fichahotel))
-  :where(.kpi-card,.chart-card,.ops-panel,.ri-card,.ri2-card,.occ-chart-card,.occ-intel-card,.ig-chart-card,.ht-card,.pl-panel){
-    border-radius:var(--ui-radius-md)!important;
-  }
+  .sidebar.open{transform:translateX(0)}
+  .hamburger{display:flex!important}
+  html body .logo-block{width:auto!important;flex:0 0 auto!important;border-right:0!important}
+  html body .topbar-center{display:none!important}
+  html body .topbar-right{margin-left:auto!important}
+  html body .vg-auth-pill{max-width:92px!important;overflow:hidden!important}
+  html body .vg-auth-pill b{overflow:hidden!important;text-overflow:ellipsis!important}
+}
+
+@media(max-width:760px){
+  html body .v30-top-assistant{display:none!important}
+  html body .vg-market-switch{display:none!important}
 }
