@@ -8,12 +8,13 @@ const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const sw=fs.readFileSync(path.join(ROOT,'service-worker.js'),'utf8');
 const mobile=fs.readFileSync(path.join(ROOT,'assets/js/ui/mobile-pwa.js'),'utf8');
 const search=fs.readFileSync(path.join(ROOT,'assets/js/ui/global-search.js'),'utf8');
+const lazy=fs.readFileSync(path.join(ROOT,'assets/js/core/08-performance-loader-v35_7.js'),'utf8');
 const jsPath=path.join(ROOT,'assets/js/modules/hotel-performance-v23.js');
 const cssPath=path.join(ROOT,'assets/css/hotel-performance-v23.css');
 cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 assert(fs.existsSync(cssPath),'CSS da Performance V23 deve existir');
-assert(html.includes('nav-hotelperformance')&&html.includes('view-hotelperformance')&&html.includes('hotel-performance-v23.js')&&html.includes('hotel-performance-v23.css'),'V23 deve estar ligada ao menu, vista, JS e CSS');
-assert(sw.includes('vg-operations-shell-v32')&&sw.includes('/assets/js/modules/hotel-performance-v23.js')&&sw.includes('/assets/css/hotel-performance-v23.css'),'PWA deve incluir V23 no shell estático');
+assert(html.includes('nav-hotelperformance')&&html.includes('view-hotelperformance')&&html.includes('hotel-performance-v23.js')&&lazy.includes('hotel-performance-v23.css'),'V23 deve manter motor base no shell e CSS por necessidade');
+assert(sw.includes('vg-operations-shell-v35-7')&&sw.includes('/assets/js/modules/hotel-performance-v23.js')&&!sw.includes('/assets/css/hotel-performance-v23.css'),'PWA deve manter apenas o motor V23 necessário ao Resumo no shell');
 assert(mobile.includes('data-view="hotel360"'),'V30 deve expor a Performance através do Hotel 360º no mobile');
 assert(search.includes("type:'performance'")&&search.includes('hotelPerformance?.openHotel'),'Pesquisa Global deve abrir a V23 por hotel');
 

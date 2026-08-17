@@ -45,21 +45,38 @@
   }
   function installAssistantTop(){
     if(document.getElementById('v30TopAssistant'))return;const header=document.querySelector('header');if(!header)return;
-    const b=document.createElement('button');b.id='v30TopAssistant';b.className='v30-top-assistant';b.type='button';b.innerHTML='✦ <span>Perguntar aos dados</span>';b.onclick=()=>window.VG?.analyticalAssistant?.open?.();
+    const b=document.createElement('button');b.id='v30TopAssistant';b.className='v30-top-assistant';b.type='button';b.innerHTML='✦ <span>Perguntar aos dados</span>';b.onclick=()=>window.setView?.('analyticalassistant');
     const anchor=header.querySelector('.theme-dots');if(anchor)anchor.before(b);else header.appendChild(b);if(typeof window.vgAuthCanAccessModule==='function'&&window.vgAuthCurrent?.()&&!window.vgAuthCanAccessModule('analyticalassistant'))b.style.display='none';
   }
   function installSetViewRouter(){
     if(window.__VG_V30_ORIGINAL_SET_VIEW__||typeof window.setView!=='function')return;
     const original=window.setView.bind(window);window.__VG_V30_ORIGINAL_SET_VIEW__=original;
+    const ensureAndRender=(view,render)=>{
+      const p=window.VG?.lazy?.ensureView?.(view)||Promise.resolve();
+      Promise.resolve(p).then(()=>{
+        try{if(typeof currentView!=='undefined'&&currentView!==view)return;}catch(e){}
+        render?.();
+      }).catch(()=>{});
+    };
     window.setView=function(v){
       if(v==='recdet')v='receitasdet';
       if(v==='hotelperformance'){
-        const h=window.VG?.hotelPerformance?.state?.hotel||window.VG?.hotel360?.state?.hotel||'';if(h&&window.VG?.hotel360)window.VG.hotel360.state.hotel=h;original('hotel360');hideEmpty();setTimeout(()=>window.VG?.hotel360?.render?.(),15);return;
+        const h=window.VG?.hotelPerformance?.state?.hotel||window.VG?.hotel360?.state?.hotel||'';
+        original('hotel360');hideEmpty();
+        ensureAndRender('hotel360',()=>{if(h&&window.VG?.hotel360)window.VG.hotel360.state.hotel=h;window.VG?.hotel360?.render?.();});
+        return;
       }
       if(['revenueint','forecast','scenariocompare'].includes(v)){
-        const tab=window.VG?.revenueHub?.tabForLegacy?.(v)||(v==='forecast'?'forecast':v==='scenariocompare'?'scenarios':'current');if(window.VG?.revenueHub)window.VG.revenueHub.state.tab=tab;original('revenuehub');hideEmpty();setTimeout(()=>window.VG?.revenueHub?.render?.(),15);return;
+        const legacy=v,tabFallback=legacy==='forecast'?'forecast':legacy==='scenariocompare'?'scenarios':'current';
+        original('revenuehub');hideEmpty();
+        ensureAndRender('revenuehub',()=>{const tab=window.VG?.revenueHub?.tabForLegacy?.(legacy)||tabFallback;if(window.VG?.revenueHub)window.VG.revenueHub.state.tab=tab;window.VG?.revenueHub?.render?.();});
+        return;
       }
-      original(v);if(v==='hotel360'){hideEmpty();setTimeout(()=>window.VG?.hotel360?.render?.(),15);}if(v==='revenuehub'){hideEmpty();setTimeout(()=>window.VG?.revenueHub?.render?.(),15);}if(['receitasdet','ab','housekeeping','reputacao'].includes(v)){hideEmpty();setTimeout(()=>window.VG?.domains33?.refresh?.(v),20);}if(v==='resumo')setTimeout(renderProfileHome,20);
+      original(v);
+      if(v==='hotel360'){hideEmpty();ensureAndRender('hotel360',()=>window.VG?.hotel360?.render?.());}
+      if(v==='revenuehub'){hideEmpty();ensureAndRender('revenuehub',()=>window.VG?.revenueHub?.render?.());}
+      if(['receitasdet','ab','housekeeping','reputacao'].includes(v)){hideEmpty();ensureAndRender(v,()=>window.VG?.domains33?.refresh?.(v));}
+      if(v==='resumo')setTimeout(renderProfileHome,20);
     };
   }
   function hideEmpty(){const e=document.getElementById('emptyState');if(e){e.style.display='none';e.classList.add('agenda-hidden');}}
@@ -94,8 +111,8 @@
     const hp=window.VG?.hotelPerformance,sc=window.VG?.operationalScore;if(!hp?.buildModel)return '<div class="v30-home-empty">A preparar hotel…</div>';const m=hp.buildModel(u.hotel);if(!m?.available)return '<div class="v30-home-empty">Sem dados suficientes para a unidade associada.</div>';const s=sc?.calculate?.(m),f=m.forecast||{},notifs=window.VG?.notifications?.items?.().filter(x=>!x.hotel||String(x.hotel).toUpperCase()===String(m.hotel).toUpperCase()).slice(0,3)||[];
     return `<section class="v30-profile-home hotel"><header><div><span>VG Operations 2.0</span><h2>${esc(m.hotel)}</h2><p>${esc(u.name||u.user||'')} · ${esc(m.status?.label||'')}</p></div><button data-v30-hotel="${esc(m.hotel)}">Abrir Hotel 360º →</button></header><div class="v30-home-kpis"><article class="${esc(s?.status||'')}"><span>Score</span><strong>${s?.available?s.score+'/100':'—'}</strong></article><article><span>Situação</span><strong>${esc(m.status?.label||'—')}</strong></article><article><span>Ações abertas</span><strong>${m.actionInfo?.active?.length||0}</strong></article><article class="critical"><span>Vencidas</span><strong>${m.actionInfo?.overdue?.length||0}</strong></article><article><span>Forecast OCC</span><strong>${n(f.forecast)==null?'—':f.forecast.toLocaleString('pt-PT',{maximumFractionDigits:1})+'%'}</strong></article><article><span>Gap meta</span><strong>${n(f.gap)==null?'—':(f.gap>=0?'+':'')+f.gap.toLocaleString('pt-PT',{maximumFractionDigits:1})+' p.p.'}</strong></article></div><div class="v30-home-priority"><strong>Assuntos que precisam de atenção</strong>${notifs.length?notifs.map(x=>`<button onclick="VG.notifications.open()"><span><b>${esc(x.title)}</b><small>${esc(x.detail||'')}</small></span><em>${x.level==='urgent'?'URGENTE':'VER'}</em></button>`).join(''):`<div class="v30-home-ok">✓ Sem notificações prioritárias neste momento.</div>`}</div></section>`;
   }
-  function integratedLauncher(){return `<section class="v33-integrated-launcher"><header><div><span>V35.6 · Navegação & Governanta</span><strong>Novos módulos já disponíveis</strong><small>Reputação semanal/semestral, Receita Detalhada, Compras &amp; A&amp;B e Housekeeping têxtil.</small></div><em>ATIVO</em></header><div class="v33-launch-grid"><button data-v33-open="reputacao"><b>★</b><span>Reputação &amp; Guest Experience<small>Executiva · semanal · semestral · hotel</small></span></button><button data-v33-open="receitasdet"><b>↗</b><span>Receita Detalhada<small>PdV · família · grupo · artigo</small></span></button><button data-v33-open="ab"><b>◫</b><span>Compras &amp; A&amp;B<small>Custos · stock · fichas · inteligência</small></span></button><button data-v33-open="housekeeping"><b>▦</b><span>Housekeeping &amp; Têxtil<small>Inventário · quebras · campanhas · compras</small></span></button></div></section>`;}
-  function renderProfileHome(){const root=document.getElementById('v30ProfileHomeRoot');if(!root)return;const u=user();if(!u){root.innerHTML='';return;}const multi=Array.isArray(u.hotels)&&u.hotels.filter(h=>h&&h!=='*').length>1;root.innerHTML=((direction()||multi)?buildDirectionHome():buildHotelHome(u))+integratedLauncher();root.querySelectorAll('[data-v30-hotel]').forEach(b=>b.addEventListener('click',()=>window.VG?.hotel360?.openFor?.(b.dataset.v30Hotel)));root.querySelectorAll('[data-v33-open]').forEach(b=>b.addEventListener('click',()=>window.setView?.(b.dataset.v33Open)));}
+  function integratedLauncher(){return `<section class="v33-integrated-launcher"><header><div><span>V35.7 · Performance</span><strong>Novos módulos já disponíveis</strong><small>Reputação semanal/semestral, Receita Detalhada, Compras &amp; A&amp;B e Housekeeping têxtil.</small></div><em>ATIVO</em></header><div class="v33-launch-grid"><button data-v33-open="reputacao"><b>★</b><span>Reputação &amp; Guest Experience<small>Executiva · semanal · semestral · hotel</small></span></button><button data-v33-open="receitasdet"><b>↗</b><span>Receita Detalhada<small>PdV · família · grupo · artigo</small></span></button><button data-v33-open="ab"><b>◫</b><span>Compras &amp; A&amp;B<small>Custos · stock · fichas · inteligência</small></span></button><button data-v33-open="housekeeping"><b>▦</b><span>Housekeeping &amp; Têxtil<small>Inventário · quebras · campanhas · compras</small></span></button></div></section>`;}
+  function renderProfileHome(){const root=document.getElementById('v30ProfileHomeRoot');if(!root)return;const u=user();if(!u){root.innerHTML='';return;}const multi=Array.isArray(u.hotels)&&u.hotels.filter(h=>h&&h!=='*').length>1;root.innerHTML=((direction()||multi)?buildDirectionHome():buildHotelHome(u))+integratedLauncher();root.querySelectorAll('[data-v30-hotel]').forEach(b=>b.addEventListener('click',()=>{const h=b.dataset.v30Hotel;const p=window.VG?.lazy?.ensureView?.('hotel360')||Promise.resolve();p.then(()=>window.VG?.hotel360?.openFor?.(h));}));root.querySelectorAll('[data-v33-open]').forEach(b=>b.addEventListener('click',()=>window.setView?.(b.dataset.v33Open)));}
   function updateMobile(){
     const more=document.getElementById('vgMobileMore');if(!more)return;more.querySelectorAll('[data-view="hotelperformance"]').forEach(b=>{b.dataset.view='hotel360';b.querySelector('span')?.childNodes?.forEach?.(()=>{});const s=b.querySelector('span');if(s)s.innerHTML='Hotel 360º<small>Visão integrada da unidade</small>';});
     more.querySelectorAll('[data-view="forecast"],[data-view="scenariocompare"],[data-view="revenueint"]').forEach((b,i)=>{if(i===0){b.dataset.view='revenuehub';const s=b.querySelector('span');if(s)s.innerHTML='Revenue & Forecast<small>Situação, forecast e cenários</small>';}else b.style.display='none';});

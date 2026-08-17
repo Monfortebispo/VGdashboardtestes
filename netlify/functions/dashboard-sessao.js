@@ -462,7 +462,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.6"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.7"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -843,7 +843,7 @@ exports.handler = async (event) => {
     // Daqui para baixo tudo exige sessão válida.
     const authUser = await authenticatedUser(store, event);
     if (!authUser) return unauthorized();
-    // V35.6: a permissão do menu continua validada no servidor para recursos operacionais.
+    // V35.7: a permissão do menu continua validada no servidor para recursos operacionais.
     const requiredModule=resourceModule(resource);
     if(requiredModule&&!userCanModule(authUser,requiredModule))return forbidden("O seu perfil não tem acesso a este módulo.");
     // Blobs internos nunca são endereçáveis pela API genérica, mesmo por utilizadores autenticados.
