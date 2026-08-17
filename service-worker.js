@@ -1,4 +1,4 @@
-// VG Operations v35.0 — service worker
+// VG Operations v35.0 — service worker · hotfix histórico Housekeeping 2026-08-17
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
 const CACHE_NAME = 'vg-operations-shell-v35-0';
 // Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-5.
