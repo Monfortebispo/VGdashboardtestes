@@ -21,8 +21,13 @@ const responsive=read('assets/css/responsive-desktop-v35_6.css');
 
 assert.strictEqual(pkg.version,'35.6.0','package deve identificar V35.6');
 assert(html.includes('content="35.6"')&&html.includes('V35.6 · Navegação & Governanta'),'HTML deve identificar V35.6');
-assert(guard.includes("PLATFORM_BUILD='35.6'"),'Version Guard deve identificar V35.6');
-assert(sw.includes("vg-operations-shell-v35-6"),'Service Worker deve usar cache V35.6');
+// PLATFORM_BUILD é uma revisão técnica do shell/cache e pode avançar sem mudar a
+// versão funcional do produto. V35.7 foi introduzida para forçar atualização do
+// Service Worker após a reorganização visual do topo.
+const platformBuild=guard.match(/PLATFORM_BUILD='(\d+)\.(\d+)'/);
+assert(platformBuild,'Version Guard deve declarar PLATFORM_BUILD');
+assert(Number(platformBuild[1])>35||(Number(platformBuild[1])===35&&Number(platformBuild[2])>=6),'Version Guard deve manter revisão técnica V35.6 ou superior');
+assert(sw.includes("vg-operations-shell-v35-6"),'Service Worker deve usar cache base V35.6');
 assert(html.includes('assets/css/responsive-desktop-v35_6.css'),'responsividade 125%/150% tem de estar realmente ligada ao HTML');
 assert(sw.includes('/assets/css/responsive-desktop-v35_6.css'),'responsividade deve integrar o shell PWA');
 assert(responsive.includes('@media (max-width:1650px)')&&responsive.includes('@media (max-width:1180px)'),'breakpoints de desktop escalado devem manter-se');
