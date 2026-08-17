@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "35.4.0",
+  "version": "35.6.0",
   "private": true,
-  "description": "VG Operations v35.4: perfis Governanta e Chefe de Receção, multi-hotel e controlo granular de menus pela Direção de Operações",
+  "description": "VG Operations v35.6: correções Hotel 360, Pesquisa Global e acesso direto da Governanta, mantendo responsividade 125%/150%",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"
