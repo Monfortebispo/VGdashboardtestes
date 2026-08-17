@@ -50,8 +50,10 @@ assert(staticAssets.includes('/assets/js/core/08-performance-loader-v35_7.js'),'
 for(const rel of ['hotel-360-v30.js','revenue-hub-v30.js','operations-domains-v33.js','city-ledger-v32.js','document-management-v26.js'])
   assert(!staticAssets.some(x=>x.endsWith('/'+rel)),`${rel} deve ser cacheado apenas quando usado`);
 
-for(const token of ['idbReadSessionSnapshot','idbCacheSnapshotSilent','idbAutoCacheScope','auto-v357::','localSavedAt','background:true',"sharedGet('meta')"])
-  assert(persistence.includes(token),`cache local-first/meta-check em falta: ${token}`);
+for(const token of ['idbReadSessionSnapshot','idbCacheSnapshotSilent','idbAutoCacheScope','auto-v357::',"sharedGet('meta')"])
+  assert(persistence.includes(token),`infraestrutura de cache/meta em falta: ${token}`);
+assert(persistence.includes("const gotFromServer = await fetchSharedData(false,{background:false,preserveView:true});"),'arranque V35.7 estabilizado deve validar o servidor antes de aceitar cache local');
+assert(!persistence.slice(persistence.indexOf('async function idbAutoRestore() {'),persistence.indexOf('// ==========================================================\n// DADOS PARTILHADOS')).includes('localSavedAt:snap.savedAt'),'arranque não deve aceitar cache parcial apenas por igualdade de savedAt');
 assert(persistence.includes('IG_SNAPSHOTS:')&&persistence.includes('RD_STORE:')&&persistence.includes('HOTEIS_XLSX:'),'cache local deve conservar datasets secundários');
 assert(!/DOMContentLoaded[\s\S]{0,500}idbAutoRestore\(\)/.test(bootstrap),'bootstrap não deve disparar um segundo auto-restauro');
 assert(!html.includes('restore-after-auth.js'),'restauro duplicado pós-auth não deve voltar ao HTML');

@@ -1,0 +1,14 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const ROOT=path.join(__dirname,'..');
+const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
+const p=read('assets/js/core/03-persistence-sharing.js');
+const sw=read('service-worker.js');
+const fn=p.slice(p.indexOf('async function idbAutoRestore() {'),p.indexOf('// ==========================================================\n// DADOS PARTILHADOS'));
+assert(fn.includes("const gotFromServer = await fetchSharedData(false,{background:false,preserveView:true});"),'arranque deve validar/carregar servidor antes da cache local');
+assert(fn.indexOf('gotFromServer') < fn.indexOf('idbReadSessionSnapshot()'),'servidor deve ser tentado antes da cache isolada');
+assert(!fn.includes('localSavedAt:snap.savedAt'),'idbAutoRestore não pode saltar dataset remoto por savedAt de uma cache parcial');
+assert(fn.includes("await idbGet(db,'session')"),'deve manter fallback para a sessão local histórica V35.6');
+assert(p.includes("typeof piuSaveToDB==='function'"),'restauro deve tolerar UI PIU ainda não inicializada');
+assert(sw.includes("const HOTFIX_REV = 'stability-2';"),'service worker deve mudar bytes e forçar atualização do shell');
+assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v35-7';"),'cache deve manter compatibilidade com testes V35.7');
+console.log('✓ V35.7 HF2: servidor primeiro, caches apenas fallback e SW forçado a atualizar');

@@ -1,6 +1,7 @@
-// VG Operations v35.7 Performance — service worker
+// VG Operations v35.7 Performance — service worker · stability hotfix 2
 // Cacheia apenas a aplicação estática. Dados/API Netlify são sempre network-only.
 const CACHE_NAME = 'vg-operations-shell-v35-7';
+const HOTFIX_REV = 'stability-2';
 // Compatibilidade de regressão: versão anterior publicada como vg-operations-shell-v32-5.
 const STATIC_ASSETS = [
   "/assets/css/actions-management.css",

@@ -109,9 +109,9 @@ function restoreFromSnapshot(snap) {
   // Restore PIU_SNAPSHOTS (referência 2025)
   if (snap.PIU_SNAPSHOTS) {
     PIU_SNAPSHOTS = snap.PIU_SNAPSHOTS;
-    piuSaveToDB();
-    piuRefreshChips();
-    piuPopulateHotelSel();
+    try { if (typeof piuSaveToDB==='function') piuSaveToDB(); } catch(e) { console.warn('piuSaveToDB:',e); }
+    try { if (typeof piuRefreshChips==='function') piuRefreshChips(); } catch(e) { console.warn('piuRefreshChips:',e); }
+    try { if (typeof piuPopulateHotelSel==='function') piuPopulateHotelSel(); } catch(e) { console.warn('piuPopulateHotelSel:',e); }
   }
 
   // Restore NOTAS_STORE
@@ -331,7 +331,20 @@ async function idbAutoRestore() {
   const authKey = String(token).slice(-16);
   if (__vgIdbRestorePromise && __vgIdbRestoreAuthKey===authKey) return __vgIdbRestorePromise;
   __vgIdbRestoreAuthKey=authKey;
+
   __vgIdbRestorePromise=(async()=>{
+    // HOTFIX 2 — estabilidade primeiro.
+    // A V35.7 original tentava usar cache local antes do servidor e comparava apenas savedAt.
+    // Uma cache parcial (por exemplo reputação/ocupação sem P&L) podia por isso ser aceite como
+    // completa e impedir o download dos meses publicados. O arranque volta a validar o servidor
+    // primeiro; o cache local fica apenas como fallback quando a rede/servidor não está disponível.
+    const gotFromServer = await fetchSharedData(false,{background:false,preserveView:true});
+    if (gotFromServer) {
+      lastSavedFingerprint = snapshotFingerprint();
+      return true;
+    }
+
+    // Sem servidor disponível/sem dados publicados: tenta a cache isolada do utilizador.
     const snap=await idbReadSessionSnapshot();
     if(idbSnapshotHasData(snap)){
       try{
@@ -339,18 +352,32 @@ async function idbAutoRestore() {
         lastSharedMetaSavedAt=snap.savedAt||null;
         lastSavedFingerprint=snapshotFingerprint();
         const meses=Object.keys(STORE).length,hoteis=Object.keys(REP_STORE).length;
-        idbSetStatus(`✓ Cache local · ${meses} meses P&L · ${hoteis} hotéis rep.`);
-        setSharedSyncStatus('✓ Dados locais prontos · a verificar atualização no servidor…',false);
+        idbSetStatus(`✓ Cache local de contingência · ${meses} meses P&L · ${hoteis} hotéis rep.`);
+        setSharedSyncStatus('⚠ Servidor indisponível · a usar a última cache local válida.',true);
         try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
-        // Stale-while-revalidate: a interface fica utilizável já; a rede só transfere o dataset se mudou.
-        __vgBackgroundSharedRefresh=fetchSharedData(false,{localSavedAt:snap.savedAt||null,background:true,preserveView:true});
-        __vgBackgroundSharedRefresh.catch(e=>console.warn('[V35.7] atualização em segundo plano',e));
         return true;
-      }catch(e){console.warn('[V35.7] restauro local falhou; a usar servidor',e);}
+      }catch(e){console.warn('[V35.7 HF2] restauro da cache isolada falhou',e);}
     }
-    const ok=await fetchSharedData(false,{background:false,preserveView:true});
+
+    // Compatibilidade: tenta ainda a sessão local histórica usada até V35.6.
+    try{
+      const db=await idbOpen();
+      const legacy=await idbGet(db,'session');
+      db.close();
+      if(idbSnapshotHasData(legacy)){
+        restoreFromSnapshot(legacy);
+        lastSavedFingerprint=snapshotFingerprint();
+        const meses=Object.keys(STORE).length,hoteis=Object.keys(REP_STORE).length;
+        idbSetStatus(`✓ Sessão local de contingência · ${meses} meses P&L · ${hoteis} hotéis rep.`);
+        setSharedSyncStatus('⚠ Servidor indisponível · recuperada sessão guardada neste browser.',true);
+        try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
+        return true;
+      }
+    }catch(e){console.warn('[V35.7 HF2] sessão local histórica indisponível',e);}
+
     lastSavedFingerprint=snapshotFingerprint();
-    return ok;
+    try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
+    return false;
   })().finally(()=>{ /* a Promise permanece reutilizável durante esta sessão/auth */ });
   return __vgIdbRestorePromise;
 }
