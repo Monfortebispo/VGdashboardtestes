@@ -98,9 +98,47 @@ function itemMarket(item) { return marketId(item?.market || "iberia"); }
 const BR_HOTELS_SERVER = new Set(["FORTALEZA","SALVADOR","CUMBUCO","RIO DE JANEIRO","TOUROS","MARES","PAULISTA","CABO","ECO RESORT DE ANGRA","ALAGOAS","COLLECTION SUNSET CUMBUCO","COLLECTION OURO PRETO","COLLECTION AMAZONIA"]);
 function normHotelMarket(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim(); }
 function hotelMarketServer(h){ const k=normHotelMarket(h); if(BR_HOTELS_SERVER.has(k))return "brasil"; if(k.includes("AMAZONIA")||k.includes("OURO PRETO")||k.includes("SUNSET CUMBUCO")||k.includes("ECO RESORT DE ANGRA"))return "brasil"; return "iberia"; }
-function userMarketServer(user){ return user&&user.hotel&&user.hotel!=="*"?hotelMarketServer(user.hotel):"iberia"; }
+const VALID_ROLES = new Set(["direcao","diretor","assistente","governanta","chefe_recepcao","compras","admin"]);
+const DIRECTION_ONLY_MODULES = new Set(["governance","backup","upload","datacenter"]);
+const DEFAULT_MODULES_BY_ROLE = {
+  diretor:["resumo","hotel360","hoteis","fichahotel","agenda","actions","approvals","cityledger","receitas","receitasdet","custos","pl","unitEconomics","revenuehub","compras","benchmark","anomalies","reputacao","instagram","documents","automaticreports","analyticalassistant","ab","housekeeping","ocupacao","costanalysis","cua","compare","ranking","sazonalidade","simulador","orcamento","alertas"],
+  assistente:["resumo","hotel360","hoteis","fichahotel","agenda","actions","approvals","cityledger","receitas","receitasdet","custos","pl","revenuehub","compras","benchmark","reputacao","instagram","documents","automaticreports","housekeeping","ocupacao","alertas"],
+  governanta:["housekeeping"],
+  chefe_recepcao:["resumo","hotel360","hoteis","fichahotel","agenda","actions","approvals","cityledger","reputacao","documents","ocupacao"],
+  compras:["resumo","compras","ab","housekeeping"]
+};
+function normalizeRole(role){ const r=String(role||"diretor").toLowerCase(); if(r==="admin")return "direcao"; if(r==="director")return "diretor"; return VALID_ROLES.has(r)?r:"diretor"; }
+function isDirection(user) { return !!user && (normalizeRole(user.role) === "direcao"); }
+function userHotels(user){
+  if(!user)return [];
+  if(isDirection(user))return ["*"];
+  const raw=Array.isArray(user.hotels)?user.hotels:(user.hotel&&user.hotel!=="*"?[user.hotel]:[]);
+  return [...new Set(raw.map(x=>String(x||"").trim()).filter(Boolean))];
+}
+function userCanHotel(user,hotel){ if(isDirection(user))return true; const h=hotelProfileNorm(hotel); return !!h&&userHotels(user).some(x=>hotelProfileNorm(x)===h); }
+function userModules(user){
+  if(!user)return []; if(isDirection(user))return ["*"];
+  const r=normalizeRole(user.role),raw=Array.isArray(user.modules)?user.modules:DEFAULT_MODULES_BY_ROLE[r]||[];
+  return [...new Set(raw.map(x=>String(x||"").trim()).filter(x=>x&&!DIRECTION_ONLY_MODULES.has(x)))];
+}
+function userCanModule(user,module){ if(isDirection(user))return true; return userModules(user).includes(String(module||"")); }
+function resourceModule(resource){
+  const r=String(resource||"");
+  if(r==="hotelsheet")return "fichahotel";
+  if(r.startsWith("ops-cityledger"))return "cityledger";
+  if(r.startsWith("ops-document"))return "documents";
+  if(r.startsWith("ops-approval"))return "approvals";
+  if(r.startsWith("ops-agenda"))return "agenda";
+  if(r.startsWith("ops-action"))return "actions";
+  if(r.startsWith("ops-scenario"))return "revenuehub";
+  if(r.startsWith("ops-hotel-profile"))return "hoteis";
+  if(r.startsWith("ops-reputation"))return "reputacao";
+  if(r.startsWith("ops-ab"))return "ab";
+  if(r.startsWith("ops-housekeeping"))return "housekeeping";
+  return "";
+}
+function userMarketServer(user){ const hs=userHotels(user).filter(x=>x!=="*"); return hs.length===1?hotelMarketServer(hs[0]):"iberia"; }
 function isGlobalResource(resource){ return ["auth-change-password","users","assignees","vg_presence","audit","audit-events","recovery-list","recovery-create","recovery-restore","recovery-delete"].includes(resource); }
-function isDirection(user) { return !!user && (user.role === "direcao" || user.role === "admin"); }
 function norm(s) { return String(s || "").trim().toUpperCase(); }
 function safeUserName(s) { return String(s || "").trim().toLowerCase().replace(/[^a-z0-9_.-]/g, ""); }
 
@@ -128,12 +166,13 @@ async function listCityLedgerSnapshots(store,market,user){
   const prefix=marketStoreKey(market,CITYLEDGER_SNAPSHOT_PREFIX),listing=await store.list({prefix}),blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
   const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(Boolean).sort((a,b)=>String(b.snapshotDate||"").localeCompare(String(a.snapshotDate||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
   if(isDirection(user))return rows;
-  return rows.map(r=>{const h=user.hotel,hs=(r.hotels||[]).filter(x=>norm(x)===norm(h));if(!hs.length)return null;const bh=(r.summary?.byHotel||[]).filter(x=>norm(x.hotel)===norm(h));const summary=Object.assign({},r.summary||{}, {byHotel:bh,byBucket:{},byCurrency:{},debt:bh.reduce((s,x)=>s+Number(x.debt||0),0),balance:bh.reduce((s,x)=>s+Number(x.balance||0),0),credits:bh.reduce((s,x)=>s+Number(x.credits||0),0),documents:bh.reduce((s,x)=>s+Number(x.documents||0),0),clients:bh.reduce((s,x)=>s+Number(x.clients||0),0)});return Object.assign({},r,{hotels:hs,partsByHotel:{[h]:Number(r.partsByHotel?.[h]||0)},summary});}).filter(Boolean);
+  const allowed=userHotels(user);
+  return rows.map(r=>{const hs=(r.hotels||[]).filter(x=>allowed.some(h=>norm(x)===norm(h)));if(!hs.length)return null;const bh=(r.summary?.byHotel||[]).filter(x=>allowed.some(h=>norm(x.hotel)===norm(h)));const parts={};for(const h of hs)parts[h]=Number(r.partsByHotel?.[h]||0);const summary=Object.assign({},r.summary||{}, {byHotel:bh,byBucket:{},byCurrency:{},debt:bh.reduce((s,x)=>s+Number(x.debt||0),0),balance:bh.reduce((s,x)=>s+Number(x.balance||0),0),credits:bh.reduce((s,x)=>s+Number(x.credits||0),0),documents:bh.reduce((s,x)=>s+Number(x.documents||0),0),clients:bh.reduce((s,x)=>s+Number(x.clients||0),0)});return Object.assign({},r,{hotels:hs,partsByHotel:parts,summary});}).filter(Boolean);
 }
 async function listCityLedgerDiligences(store,market,user){
   const prefix=marketStoreKey(market,CITYLEDGER_DILIGENCE_PREFIX),listing=await store.list({prefix}),blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
   const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(x=>x&&x.id);
-  return rows.filter(x=>isDirection(user)||norm(x.hotel)===norm(user.hotel)).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).slice(0,3000);
+  return rows.filter(x=>isDirection(user)||userCanHotel(user,x.hotel)).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||""))).slice(0,3000);
 }
 function documentExt(name) { const p=String(name||"").toLowerCase().split("."); return p.length>1?p.pop():""; }
 function documentMimeForName(name) {
@@ -141,16 +180,13 @@ function documentMimeForName(name) {
   return ({pdf:"application/pdf",doc:"application/msword",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",xls:"application/vnd.ms-excel",xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",csv:"text/csv; charset=utf-8",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",txt:"text/plain; charset=utf-8"})[ext]||"application/octet-stream";
 }
 function safeDocumentFileName(name) { return cleanText(String(name||"").replace(/[\/\\<>:\"|?*\x00-\x1F]/g,"_"), 240); }
-function canManageHotel(user, hotel) {
-  if (isDirection(user)) return true;
-  return !!user && norm(hotel) === norm(user.hotel);
-}
+function canManageHotel(user, hotel) { return !!user && userCanHotel(user,hotel); }
 function canManageAction(user, action) {
   if (!user || !action) return false;
   return canManageHotel(user, action.hotel) || safeUserName(action.ownerUser) === safeUserName(user.user);
 }
 function minimalAssignee(rec) {
-  return { user: rec.user, name: rec.name, role: rec.role, hotel: rec.hotel || "*", active: rec.active !== false };
+  return { user: rec.user, name: rec.name, role: rec.role, hotel: rec.hotel || "*", hotels:userHotels(rec), modules:userModules(rec), active: rec.active !== false };
 }
 async function listOperationalActions(store, market="iberia") {
   const listing = await store.list({ prefix: ACTION_PREFIX });
@@ -171,7 +207,7 @@ async function listOperationalAgenda(store, market="iberia") {
 function canSeeAgendaEvent(user, item) {
   if (!user || !item) return false;
   if (isDirection(user)) return true;
-  return norm(item.hotel) === norm(user.hotel) || safeUserName(item.ownerUser) === safeUserName(user.user);
+  return userCanHotel(user,item.hotel) || safeUserName(item.ownerUser) === safeUserName(user.user);
 }
 function canManageAgendaEvent(user, item) { return canSeeAgendaEvent(user, item); }
 async function listOperationalDocuments(store, market="iberia") {
@@ -182,7 +218,7 @@ async function listOperationalDocuments(store, market="iberia") {
   }));
   return rows.filter(x=>x&&x.id&&itemMarket(x)===marketId(market)).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
 }
-function canSeeDocument(user,item) { if(!user||!item)return false; return isDirection(user)||norm(item.hotel)===norm(user.hotel); }
+function canSeeDocument(user,item) { if(!user||!item)return false; return isDirection(user)||userCanHotel(user,item.hotel); }
 function canManageDocument(user,item) { return canSeeDocument(user,item); }
 async function documentLinkLabel(store, linkType, linkId, hotel, market="iberia") {
   if (linkType === "hotel") return cleanText(hotel,120);
@@ -227,7 +263,7 @@ async function listOperationalApprovals(store, market="iberia") {
 function canSeeApproval(user,item) {
   if (!user || !item) return false;
   if (isDirection(user)) return true;
-  return norm(item.hotel) === norm(user.hotel) || safeUserName(item.requesterUser) === safeUserName(user.user) || safeUserName(item.approverUser) === safeUserName(user.user);
+  return userCanHotel(user,item.hotel) || safeUserName(item.requesterUser) === safeUserName(user.user) || safeUserName(item.approverUser) === safeUserName(user.user);
 }
 function canEditApproval(user,item) {
   if (!user || !item || item.status !== "pending") return false;
@@ -277,8 +313,8 @@ async function listOperationalScenarios(store, market="iberia") {
   }));
   return rows.filter(x=>x&&x.id&&itemMarket(x)===marketId(market)).sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
 }
-function canSeeScenario(user,item) { if(!user||!item)return false; return isDirection(user)||norm(item.hotel)===norm(user.hotel); }
-function canManageScenario(user,itemOrHotel) { const hotel=typeof itemOrHotel==="string"?itemOrHotel:itemOrHotel?.hotel; return !!user&&!!hotel&&(isDirection(user)||norm(hotel)===norm(user.hotel)); }
+function canSeeScenario(user,item) { if(!user||!item)return false; return isDirection(user)||userCanHotel(user,item.hotel); }
+function canManageScenario(user,itemOrHotel) { const hotel=typeof itemOrHotel==="string"?itemOrHotel:itemOrHotel?.hotel; return !!user&&!!hotel&&userCanHotel(user,hotel); }
 function scenarioAdjustments(input) {
   const src=input&&typeof input==="object"&&!Array.isArray(input)?input:{};
   const limits={occDelta:[-20,20],adrPct:[-30,30],otherRevenuePct:[-30,30],personnelPct:[-20,20],otherCostPct:[-20,20]};
@@ -426,7 +462,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.3"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.4"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -595,8 +631,10 @@ function sanitizeUser(rec) {
   return {
     user: rec.user,
     name: rec.name,
-    role: rec.role,
-    hotel: rec.hotel,
+    role: normalizeRole(rec.role),
+    hotel: isDirection(rec)?"*":(userHotels(rec)[0]||""),
+    hotels: userHotels(rec),
+    modules: userModules(rec),
     active: rec.active !== false,
     mustChangePassword: rec.mustChangePassword === true
   };
@@ -624,8 +662,14 @@ async function loadUsers(store, force = false) {
     const rec = raw || {};
     rec.user = safeUserName(rec.user || key);
     rec.name = String(rec.name || rec.user);
-    rec.role = ["direcao", "admin", "diretor", "assistente"].includes(rec.role) ? rec.role : "diretor";
-    rec.hotel = (rec.role === "direcao" || rec.role === "admin") ? "*" : String(rec.hotel || "*");
+    const prevRole=rec.role,prevHotel=rec.hotel,prevHotels=JSON.stringify(rec.hotels||null),prevModules=JSON.stringify(rec.modules||null);
+    rec.role = normalizeRole(rec.role);
+    if(isDirection(rec)){rec.hotel="*";rec.hotels=["*"];rec.modules=["*"]; }
+    else {
+      const hs=userHotels(rec); rec.hotels=hs.length?hs:(rec.hotel&&rec.hotel!=="*"?[String(rec.hotel)]:[]); rec.hotel=rec.hotels[0]||"";
+      rec.modules=userModules(rec);
+    }
+    if(prevRole!==rec.role||prevHotel!==rec.hotel||prevHotels!==JSON.stringify(rec.hotels)||prevModules!==JSON.stringify(rec.modules))changed=true;
     rec.active = rec.active !== false;
     rec.authVersion = Number.isInteger(rec.authVersion) && rec.authVersion > 0 ? rec.authVersion : 1;
 
@@ -658,7 +702,7 @@ async function loadUsers(store, force = false) {
     if (merged.pmonforte.active === false || merged.pmonforte.role !== "direcao" || merged.pmonforte.hotel !== "*") changed = true;
     merged.pmonforte.active = true;
     merged.pmonforte.role = "direcao";
-    merged.pmonforte.hotel = "*";
+    merged.pmonforte.hotel = "*"; merged.pmonforte.hotels=["*"]; merged.pmonforte.modules=["*"];
   }
 
   if (changed || Object.keys(stored).length !== Object.keys(merged).length) {
@@ -757,7 +801,7 @@ async function clearLoginFailures(store, rate) {
 function canWriteResource(user, resource, key) {
   if (isDirection(user)) return true;
   if (resource === "vg_presence" || resource === "audit") return true;
-  if (resource === "hotelsheet") return norm(key) === norm(user.hotel);
+  if (resource === "hotelsheet") return userCanHotel(user,key);
   return false;
 }
 
@@ -799,6 +843,9 @@ exports.handler = async (event) => {
     // Daqui para baixo tudo exige sessão válida.
     const authUser = await authenticatedUser(store, event);
     if (!authUser) return unauthorized();
+    // V35.4: a permissão do menu é também validada no servidor para recursos operacionais.
+    const requiredModule=resourceModule(resource);
+    if(requiredModule&&!userCanModule(authUser,requiredModule))return forbidden("O seu perfil não tem acesso a este módulo.");
     // Blobs internos nunca são endereçáveis pela API genérica, mesmo por utilizadores autenticados.
     if (resource.startsWith("_")) return forbidden();
     // V31: utilizadores de hotel não podem mudar o parâmetro market para consultar outro universo.
@@ -907,12 +954,13 @@ exports.handler = async (event) => {
     // -------------------- GESTÃO DE AÇÕES OPERACIONAIS (v8) --------------------
     if (resource === "assignees" && event.httpMethod === "GET") {
       const users = await loadUsers(store, true);
-      const rows = Object.values(users).filter(u => u && u.active !== false).map(minimalAssignee)
-        .sort((a,b) => String(a.name || "").localeCompare(String(b.name || ""), "pt"));
+      const all = Object.values(users).filter(u => u && u.active !== false);
+      const visible=isDirection(authUser)?all:all.filter(u=>u.user===authUser.user||userHotels(u).some(h=>userCanHotel(authUser,h)));
+      const rows = visible.map(minimalAssignee).sort((a,b) => String(a.name || "").localeCompare(String(b.name || ""), "pt"));
       return ok({ data: rows });
     }
     if (resource === "ops-actions" && event.httpMethod === "GET") {
-      const rows = await listOperationalActions(store, market);
+      const rows = (await listOperationalActions(store, market)).filter(x=>canManageAction(authUser,x));
       return ok({ data: rows, total: rows.length, updatedAt: new Date().toISOString() });
     }
     if (resource === "ops-action-save" && event.httpMethod === "POST") {
@@ -926,6 +974,7 @@ exports.handler = async (event) => {
       if (!hotel) return badRequest("Hotel obrigatório.");
       if (existing) {
         if (!canManageAction(authUser, existing)) return forbidden("Não pode alterar esta ação.");
+        if(!isDirection(authUser)&&norm(existing.hotel)!==norm(hotel)&&(!userCanHotel(authUser,existing.hotel)||!userCanHotel(authUser,hotel)))return forbidden("Não pode transferir a ação para fora dos hotéis autorizados.");
         if (payload.expectedUpdatedAt && existing.updatedAt && String(payload.expectedUpdatedAt) !== String(existing.updatedAt)) {
           return conflict("Esta ação foi alterada por outro utilizador. Reabra-a para ver a versão mais recente.", { data: existing });
         }
@@ -939,7 +988,7 @@ exports.handler = async (event) => {
       if (ownerUser) {
         const owner = users[ownerUser];
         if (!owner || owner.active === false) return badRequest("Responsável inválido ou inativo.");
-        if (!isDirection(authUser) && ownerUser !== authUser.user && norm(owner.hotel) !== norm(hotel)) {
+        if (!isDirection(authUser) && ownerUser !== authUser.user && !userCanHotel(owner,hotel)) {
           return forbidden("Um Diretor só pode atribuir a ação a si próprio ou a alguém do mesmo hotel.");
         }
         ownerName = owner.name || ownerUser;
@@ -1019,7 +1068,7 @@ exports.handler = async (event) => {
       if (!hotel) return badRequest("Hotel obrigatório.");
       if (existing) {
         if (!canManageAgendaEvent(authUser, existing)) return forbidden("Não pode alterar este evento.");
-        if (!isDirection(authUser) && norm(hotel) !== norm(existing.hotel)) return forbidden("Um Diretor não pode transferir um evento para outro hotel.");
+        if (!isDirection(authUser) && norm(existing.hotel)!==norm(hotel) && !userCanHotel(authUser,hotel)) return forbidden("Não pode transferir um evento para fora dos hotéis autorizados.");
         if (payload.expectedUpdatedAt && existing.updatedAt && String(payload.expectedUpdatedAt) !== String(existing.updatedAt)) {
           return conflict("Este evento foi alterado por outro utilizador. Reabra-o para ver a versão mais recente.", { data: existing });
         }
@@ -1042,7 +1091,7 @@ exports.handler = async (event) => {
       if (ownerUser) {
         const owner = users[ownerUser];
         if (!owner || owner.active === false) return badRequest("Responsável inválido ou inativo.");
-        if (!isDirection(authUser) && ownerUser !== authUser.user && norm(owner.hotel) !== norm(hotel)) return forbidden("Um Diretor só pode atribuir o evento a si próprio ou a alguém do mesmo hotel.");
+        if (!isDirection(authUser) && ownerUser !== authUser.user && !userCanHotel(owner,hotel)) return forbidden("Um Diretor só pode atribuir o evento a si próprio ou a alguém do mesmo hotel.");
         ownerName = owner.name || ownerUser;
       }
       const now = nextIsoTimestamp(existing?.updatedAt);
@@ -1091,14 +1140,14 @@ exports.handler = async (event) => {
     if (resource === "ops-hotel-profiles" && event.httpMethod === "GET") {
       const listing=await store.list({prefix:HOTEL_PROFILE_PREFIX+market+"/"});
       const blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
-      const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(x=>x&&x.key&&itemMarket(x)===market);
+      const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(x=>x&&x.key&&itemMarket(x)===market).filter(x=>isDirection(authUser)||userCanHotel(authUser,x.hotel)||userCanHotel(authUser,x.key));
       return ok({data:rows,total:rows.length,updatedAt:new Date().toISOString()});
     }
     if (resource === "ops-hotel-profile-save" && event.httpMethod === "POST") {
       if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("A ficha do hotel excede o tamanho permitido.");
       const payload=parseBody(event); if(!payload||typeof payload!=="object")return badRequest("Ficha inválida.");
       const profileKey=cleanText(payload.key,180); const hotel=cleanText(payload.hotel,180); if(!profileKey||!hotel)return badRequest("Hotel obrigatório.");
-      if(!isDirection(authUser) && hotelProfileNorm(hotel)!==hotelProfileNorm(authUser.hotel) && hotelProfileNorm(profileKey)!==hotelProfileNorm(authUser.hotel))return forbidden("Não pode editar a ficha deste hotel.");
+      if(!isDirection(authUser) && !userCanHotel(authUser,hotel) && !userCanHotel(authUser,profileKey))return forbidden("Não pode editar a ficha deste hotel.");
       if(!payload.data||typeof payload.data!=="object"||Array.isArray(payload.data))return badRequest("Dados da ficha inválidos.");
       const bkey=hotelProfileBlobKey(market,profileKey); const existing=await store.get(bkey,{type:"json"});
       if(payload.expectedUpdatedAt&&existing?.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt))return conflict("Esta ficha foi alterada por outro utilizador. Reabra-a para trabalhar sobre a versão mais recente.",{data:existing});
@@ -1142,7 +1191,7 @@ exports.handler = async (event) => {
       const hotel=cleanText(payload.hotel!==undefined?payload.hotel:existing?.hotel,120); if(!hotel)return badRequest("Hotel obrigatório.");
       if(existing){
         if(!canManageDocument(authUser,existing))return forbidden("Não pode alterar este documento.");
-        if(!isDirection(authUser)&&norm(hotel)!==norm(existing.hotel))return forbidden("Um Diretor não pode transferir documentos para outro hotel.");
+        if(!isDirection(authUser)&&(!userCanHotel(authUser,hotel)||!userCanHotel(authUser,existing.hotel)))return forbidden("Não pode transferir documentos para fora dos hotéis autorizados.");
         if(payload.expectedUpdatedAt&&existing.updatedAt&&String(payload.expectedUpdatedAt)!==String(existing.updatedAt))return conflict("Este documento foi alterado por outro utilizador. Reabra-o para ver a versão mais recente.",{data:existing});
       } else if(!canManageHotel(authUser,hotel)) return forbidden("Só pode adicionar documentos ao hotel associado à sua conta.");
       const title=cleanText(payload.title!==undefined?payload.title:existing?.title,240); if(!title)return badRequest("Título obrigatório.");
@@ -1205,7 +1254,7 @@ exports.handler = async (event) => {
       const hotel=cleanText(payload.hotel||existing?.hotel,120);
       if(!hotel) return badRequest("Hotel obrigatório.");
       if(!existing&&!canManageHotel(authUser,hotel)) return forbidden("Só pode criar pedidos para o hotel associado à sua conta.");
-      if(existing&&norm(existing.hotel)!==norm(hotel)&&!isDirection(authUser)) return forbidden("Não pode transferir o pedido para outro hotel.");
+      if(existing&&norm(existing.hotel)!==norm(hotel)&&!isDirection(authUser)&&(!userCanHotel(authUser,existing.hotel)||!userCanHotel(authUser,hotel))) return forbidden("Não pode transferir o pedido para fora dos hotéis autorizados.");
       const type=cleanText(payload.type!==undefined?payload.type:existing?.type||"operational",30);
       const priority=cleanText(payload.priority!==undefined?payload.priority:existing?.priority||"normal",20);
       const title=cleanText(payload.title!==undefined?payload.title:existing?.title,240);
@@ -1441,12 +1490,20 @@ exports.handler = async (event) => {
       if (!payload) return badRequest("JSON inválido.");
       const username = safeUserName(payload.user);
       const name = String(payload.name || "").trim();
-      let role = String(payload.role || "diretor");
-      let hotel = String(payload.hotel || "*");
+      let role = normalizeRole(payload.role || "diretor");
+      let hotels = Array.isArray(payload.hotels)?payload.hotels.map(x=>String(x||"").trim()).filter(Boolean):[];
+      if(!hotels.length&&payload.hotel&&payload.hotel!=="*")hotels=[String(payload.hotel)];
+      let modules = Array.isArray(payload.modules)?payload.modules.map(x=>String(x||"").trim()).filter(Boolean):[];
       const newPassword = String(payload.password || "");
       if (!username || !name) return badRequest("Utilizador e nome são obrigatórios.");
-      if (!["direcao", "diretor", "assistente"].includes(role)) return badRequest("Perfil inválido.");
-      if (role === "direcao") hotel = "*";
+      if (!["direcao", "diretor", "assistente", "governanta", "chefe_recepcao", "compras"].includes(role)) return badRequest("Perfil inválido.");
+      if(role==="direcao"){hotels=["*"];modules=["*"];}
+      else {
+        hotels=[...new Set(hotels.filter(x=>x!=="*"))]; if(!hotels.length)return badRequest("Selecione pelo menos um hotel para este perfil.");
+        const defaults=DEFAULT_MODULES_BY_ROLE[role]||[]; modules=[...new Set((modules.length?modules:defaults).filter(x=>x&&!DIRECTION_ONLY_MODULES.has(x)))];
+        if(!modules.length)return badRequest("Selecione pelo menos um módulo para este perfil.");
+      }
+      const hotel = role==="direcao"?"*":hotels[0];
 
       const users = await loadUsers(store, true);
       const existing = users[username];
@@ -1460,12 +1517,14 @@ exports.handler = async (event) => {
       const rec = existing ? Object.assign({}, existing) : { user: username, active: true, authVersion: 1 };
       const nextActive = payload.active === undefined ? (existing ? existing.active !== false : true) : payload.active !== false;
       const securityChanged = !!existing && (
-        existing.role !== role || String(existing.hotel || "*") !== hotel || existing.active !== nextActive || !!newPassword
+        normalizeRole(existing.role) !== role || JSON.stringify(userHotels(existing)) !== JSON.stringify(hotels) || JSON.stringify(userModules(existing)) !== JSON.stringify(modules) || existing.active !== nextActive || !!newPassword
       );
       rec.user = username;
       rec.name = name;
       rec.role = role;
       rec.hotel = hotel;
+      rec.hotels = hotels;
+      rec.modules = modules;
       rec.active = nextActive;
       if (newPassword) {
         Object.assign(rec, newPasswordFields(newPassword));
@@ -1474,12 +1533,12 @@ exports.handler = async (event) => {
       }
       if (securityChanged) rec.authVersion = Number(rec.authVersion || 1) + 1;
 
-      if (username === "pmonforte") { rec.active = true; rec.role = "direcao"; rec.hotel = "*"; }
+      if (username === "pmonforte") { rec.active = true; rec.role = "direcao"; rec.hotel = "*"; rec.hotels=["*"]; rec.modules=["*"]; }
       users[username] = rec;
       await saveUsers(store, users);
       await safeGovernanceAudit(store, authUser, {
         category:"Utilizadores", action: existing ? "Utilizador atualizado" : "Utilizador criado", resource:"users", key:username, hotel:rec.hotel === "*" ? "" : rec.hotel,
-        detail:`${rec.name} · ${rec.role}${newPassword ? " · credencial temporária definida" : ""}`, severity: securityChanged || !existing ? "warning" : "info",
+        detail:`${rec.name} · ${rec.role} · ${isDirection(rec)?"todos os hotéis / todos os módulos":`${rec.hotels.length} hotel(éis) · ${rec.modules.length} módulo(s)`}${newPassword ? " · credencial temporária definida" : ""}`, severity: securityChanged || !existing ? "warning" : "info",
         before: existing ? sanitizeUser(existing) : null, after:sanitizeUser(rec), meta:{ passwordReset:!!newPassword }
       });
       return ok({ ok: true, user: sanitizeUser(rec) });

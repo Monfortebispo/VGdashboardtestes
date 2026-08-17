@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- VG Operations 2.0 · v35.3 · 2026-08-17 -->
+<!-- VG Operations 2.0 · v35.4 · 2026-08-17 -->
 
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Vila Galé — Dashboard Operações · V35.3</title>
-<meta name="vg-build" content="35.3"/>
+<title>Vila Galé — Dashboard Operações · V35.4</title>
+<meta name="vg-build" content="35.4"/>
 <meta name="theme-color" content="#071a2b"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -84,13 +84,23 @@
   <option value="direcao">Direção de Operações</option>
   <option value="diretor">Diretor</option>
   <option value="assistente">Assistente de Direção</option>
+  <option value="governanta">Governanta</option>
+  <option value="chefe_recepcao">Chefe de Receção</option>
+  <option value="compras">Compras</option>
 </select>
-<select id="vgNewHotel"></select>
+<select id="vgNewHotel" style="display:none"></select>
 <button class="vg-login-btn" id="vgSaveUserBtn" style="height:38px;margin:0;white-space:nowrap" type="button">Guardar</button>
+</div>
+<div id="vgUserAccessEditor" style="margin:10px 0 12px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
+  <div style="display:grid;grid-template-columns:minmax(240px,.85fr) minmax(360px,1.6fr);gap:16px">
+    <div><div style="font-size:10px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">Hotéis autorizados</div><div id="vgHotelAccessWrap" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:210px;overflow:auto;padding-right:4px"></div></div>
+    <div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px"><span style="font-size:10px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.08em">Menus / módulos visíveis</span><button class="vg-auth-smallbtn" id="vgApplyRoleDefaults" type="button">Aplicar perfil recomendado</button></div><div id="vgModuleAccessWrap" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-height:210px;overflow:auto;padding-right:4px"></div></div>
+  </div>
+  <div id="vgDirectionAccessNote" style="display:none;font-size:11px;color:var(--text-2);padding:8px 10px;border-radius:7px;background:var(--surface-1)">A Direção de Operações tem acesso automático a todos os hotéis e a todos os módulos.</div>
 </div>
 <p id="vgFormMsg" style="font-size:11px;color:var(--gold);margin:4px 0 10px;min-height:16px"></p>
 <div class="vg-auth-table-wrap"><table class="vg-auth-table">
-<thead><tr><th>Utilizador</th><th>Nome</th><th>Perfil</th><th>Hotel / Âmbito</th><th>Estado</th><th>Ações</th></tr></thead>
+<thead><tr><th>Utilizador</th><th>Nome</th><th>Perfil</th><th>Hotéis / Âmbito</th><th>Módulos</th><th>Estado</th><th>Ações</th></tr></thead>
 <tbody id="vgUsersTable"></tbody></table></div>
 <h4 style="color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">Auditoria recente</h4>
 <div class="vg-auth-table-wrap"><table class="vg-auth-table"><thead><tr><th>Data</th><th>Utilizador</th><th>Hotel</th><th>Ação</th><th>Detalhe</th></tr></thead><tbody id="vgAuditTable"></tbody></table></div>
@@ -180,7 +190,7 @@
 </div>
 </div>
 <div class="topbar-right">
-<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V35.3 · Robusto</div>
+<div class="vg-build-badge" id="vgBuildBadge" title="Versão instalada">V35.4 · Acessos por Perfil</div>
 <div id="onlineUsersWrap" style="display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 10px;cursor:pointer" title="Utilizadores online agora" onclick="onlineShowDetail()">
   <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 6px #4ade80"></span>
   <span id="onlineCount" style="font-size:11px;font-weight:700;color:#e2e8f0">—</span>

@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "35.3.0",
+  "version": "35.4.0",
   "private": true,
-  "description": "VG Operations v35.3: robustez, edição de hotéis corrigida, concorrência, permissões server-side A&B/HK, histórico HK validado, documentos robustos e lazy loading",
+  "description": "VG Operations v35.4: perfis Governanta e Chefe de Receção, multi-hotel e controlo granular de menus pela Direção de Operações",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

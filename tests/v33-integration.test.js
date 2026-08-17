@@ -12,7 +12,7 @@ assert(search.includes("title:'Receita Detalhada'")&&search.includes("title:'Com
 for(const token of ['Visão Executiva','Semanal','Semestral','Hotel','Executivo','Unidades','Departamentos','Semântica','Concorrência','Respostas','Menções','Comparar'])assert(js.includes(token),`reputação integrada deve incluir ${token}`);
 for(const role of ['Indexes Evolution','My Establishments','Reviews / Competition','Reviews Management Responses','Semantic / Results','Reviews / Results'])assert(js.includes(role),`reconhecimento semestral deve cobrir ${role}`);
 assert(js.includes("window.VG.shared.get(resource,'state')")&&js.includes("ops-reputation-semester")&&js.includes("ops-ab")&&js.includes("ops-housekeeping"),'novos domínios devem restaurar estado partilhado');
-assert(server.includes('ops-reputation-semester-')&&server.includes('ops-ab-')&&server.includes('ops-housekeeping-')&&server.includes('buildVersion:"35.3"'),'backup/auditoria deve conhecer recursos V33');
+assert(server.includes('ops-reputation-semester-')&&server.includes('ops-ab-')&&server.includes('ops-housekeeping-')&&server.includes('buildVersion:"35.4"'),'backup/auditoria deve conhecer recursos V33');
 
 // Housekeeping V35: módulo nativo reconstruído, sem iframe/segundo login.
 const hkExact=read('assets/js/modules/housekeeping-native-v35.js');
@@ -43,8 +43,8 @@ assert(pdf.includes('Rank VG')&&pdf.includes('pdf-logo')&&pdf.includes('alt="Vil
 assert(ig.includes('Sem dados')&&ig.includes('growthValid'),'Instagram deve distinguir ausência de dados de queda real para zero');
 
 // PWA e Ficha Hotel protegida.
-assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v35-3'")&&sw.includes('/assets/js/modules/operations-domains-v33.js')&&!sw.includes('/assets/js/modules/compras-ab-native-v35.js')&&!sw.includes('/assets/js/modules/housekeeping-native-v35.js'),'PWA V35 deve cachear os módulos nativos');
+assert(sw.includes("const CACHE_NAME = 'vg-operations-shell-v35-4'")&&sw.includes('/assets/js/modules/operations-domains-v33.js')&&!sw.includes('/assets/js/modules/compras-ab-native-v35.js')&&!sw.includes('/assets/js/modules/housekeeping-native-v35.js'),'PWA V35 deve cachear os módulos nativos');
 const ficha=read('assets/js/modules/ficha-hotel.js');assert.strictEqual(crypto.createHash('sha256').update(ficha).digest('hex'),'2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7','Ficha do Hotel deve permanecer byte-a-byte inalterada');
 assert(css.includes('.od-subtabs')&&css.includes('.od-toolbar'),'UI semestral deve ter navegação/filtros próprios');
-assert(html.includes('V35.3 · Robusto')&&nav.includes('Novos módulos já disponíveis'),'V35.3 deve ser imediatamente identificável após deploy');
-console.log('✓ V35.3: integração nativa e retrocompatibilidade V33 auditadas');
+assert(html.includes('V35.4 · Acessos por Perfil')&&nav.includes('Novos módulos já disponíveis'),'V35.4 deve ser imediatamente identificável após deploy');
+console.log('✓ V35.4: integração nativa e retrocompatibilidade V33 auditadas');

@@ -11,6 +11,8 @@ function b64urlDecode(input){let s=String(input||'').replace(/-/g,'+').replace(/
 function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/^(HOTEL\s+)?VILA\s+GALE\s+/,'').replace(/^VG(C)?\s+/,'').replace(/^COLLECTION\s+/,'').replace(/\s+/g,' ').trim();}
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
 function isDirection(u){return !!u&&['direcao','admin'].includes(String(u.role||'').toLowerCase());}
+function userHotels(u){if(isDirection(u))return ['*'];const a=Array.isArray(u?.hotels)?u.hotels:(u?.hotel&&u.hotel!=='*'?[u.hotel]:[]);return [...new Set(a.map(x=>String(x||'').trim()).filter(Boolean))];}
+function canModule(u,m){if(isDirection(u))return true;if(Array.isArray(u?.modules)&&u.modules.length)return u.modules.includes(m);return m==='housekeeping'&&['diretor','assistente','governanta','compras'].includes(String(u?.role||'').toLowerCase());}
 function isPurchases(u){return String(u?.role||'').toLowerCase()==='compras';}
 async function authenticatedUser(req){
   try{
@@ -20,25 +22,25 @@ async function authenticatedUser(req){
     const expected=crypto.createHmac('sha256',Buffer.from(secretRec.value,'base64')).update(parts[0]).digest(),actual=b64urlDecode(parts[1]);if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return null;
     const payload=JSON.parse(b64urlDecode(parts[0]).toString('utf8'));if(!payload?.sub||!payload?.exp||payload.exp<=Math.floor(Date.now()/1000))return null;
     const users=(await authStore.get('users',{type:'json'}))||{},u=users[payload.sub];if(!u||u.active===false||Number(u.authVersion||1)!==Number(payload.av||1))return null;
-    return {user:payload.sub,role:u.role,hotel:u.hotel,name:u.name};
+    return {user:payload.sub,role:u.role,hotel:u.hotel,hotels:Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[]),modules:Array.isArray(u.modules)?u.modules:[],name:u.name};
   }catch(e){return null;}
 }
-function hotelIdsFor(data,hotel){
-  const wanted=norm(hotel);if(!wanted||wanted==='*')return [];
-  return (Array.isArray(data?.hoteis)?data.hoteis:[]).filter(h=>norm(h?.nome)===wanted||norm(h?.nome).replace(/^COLLECTION\s+/,'')===wanted.replace(/^COLLECTION\s+/,'')).map(h=>String(h.id));
+function hotelIdsFor(data,hotels){
+  const wanted=(Array.isArray(hotels)?hotels:[hotels]).map(norm).filter(x=>x&&x!=='*');if(!wanted.length)return [];
+  return (Array.isArray(data?.hoteis)?data.hoteis:[]).filter(h=>wanted.some(w=>norm(h?.nome)===w||norm(h?.nome).replace(/^COLLECTION\s+/,'')===w.replace(/^COLLECTION\s+/,''))).map(h=>String(h.id));
 }
 function scopeDb(data,user){
   if(!data||isDirection(user)||isPurchases(user))return data;
-  const ids=new Set(hotelIdsFor(data,user.hotel)),out=clone(data);
+  const ids=new Set(hotelIdsFor(data,userHotels(user))),out=clone(data);
   out.hoteis=(out.hoteis||[]).filter(h=>ids.has(String(h.id)));
   const inv={};for(const [cid,store] of Object.entries(out.invent||{})){inv[cid]={};for(const [hid,val] of Object.entries(store||{}))if(ids.has(String(hid)))inv[cid][hid]=val;}out.invent=inv;
   // Utilizadores e auditoria global não são expostos a perfis de hotel.
   out.users=[];out.log=[];
-  out.meta=Object.assign({},out.meta||{},{serverScope:{hotel:user.hotel,at:new Date().toISOString()}});
+  out.meta=Object.assign({},out.meta||{},{serverScope:{hotels:userHotels(user),at:new Date().toISOString()}});
   return out;
 }
 function mergeOwnHotel(authoritative,submitted,user){
-  const base=clone(authoritative||{}),src=submitted||{},ids=new Set(hotelIdsFor(base,user.hotel));
+  const base=clone(authoritative||{}),src=submitted||{},ids=new Set(hotelIdsFor(base,userHotels(user)));
   if(!ids.size)throw new Error('Hotel da sessão não existe no inventário.');
   base.invent=base.invent&&typeof base.invent==='object'?base.invent:{};
   for(const camp of (base.campanhas||[])){
@@ -60,6 +62,7 @@ export default async (req) => {
   const store=getStore({name:STORE_NAME,consistency:'strong'}),cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Content-Type':'application/json','Cache-Control':'no-store'};
   if(req.method==='OPTIONS')return new Response('',{status:204,headers:cors});
   const user=await authenticatedUser(req);if(!user)return json({error:'Sessão inválida ou expirada.'},401,cors);
+  if(!canModule(user,'housekeeping')&&!isPurchases(user))return json({error:'O seu perfil não tem acesso a Housekeeping & Têxtil.'},403,cors);
   try{
     if(req.method==='GET'){
       const key=new URL(req.url).searchParams.get('key')||'default',data=await store.get(key,{type:'json'});
