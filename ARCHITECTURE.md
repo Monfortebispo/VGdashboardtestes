@@ -1,27 +1,3 @@
-# Arquitetura — V35.7 · Performance modular
-
-## Shell inicial e módulos lazy
-
-`assets/js/core/08-performance-loader-v35_7.js` é o manifesto de carregamento por funcionalidade. O `index.html` deixa de ser responsável por carregar todos os módulos; `setView()` solicita o recurso necessário antes do primeiro render e reutiliza-o nas navegações seguintes. A ordem de dependências é explícita no manifesto.
-
-O núcleo mantém apenas aquilo que o Resumo, autenticação, permissões e fontes base necessitam imediatamente. Hotel Performance e Operational Score permanecem no shell porque alimentam a Home executiva; os módulos de detalhe ficam lazy.
-
-## Dados: local-first + validação de metadados
-
-Após autenticação, `idbAutoRestore()` tenta primeiro um snapshot IndexedDB scoped por `mercado + utilizador + perfil + hotéis`. A interface pode ficar utilizável sem esperar pelo dataset remoto. Em background é pedido `meta`; quando `meta.savedAt` coincide com o snapshot local, o download de índice/chunks é dispensado. Quando mudou, é feito o fetch completo e o novo snapshot substitui silenciosamente o cache automático.
-
-O cache automático não usa a chave manual `session` para atravessar utilizadores, evitando reutilização de dados entre perfis no mesmo computador. A gravação explícita no browser continua compatível e também atualiza o cache scoped do utilizador atual.
-
-## PWA
-
-O Service Worker pré-cacheia apenas os recursos referenciados diretamente pelo shell (60 recursos nesta build). Recursos lazy usam a mesma política network-first e passam a ter fallback de cache depois da primeira abertura. Endpoints Netlify continuam excluídos de cache.
-
-## Render após lazy-load
-
-`refreshAll()` contém pontos de render explícitos para City Ledger, Unit Economics, Hotel 360º e Revenue Hub. A camada V30 também aguarda `ensureView()` antes de renderizar rotas consolidadas, evitando o problema de abrir uma vista antes de o respetivo módulo existir.
-
----
-
 # Arquitetura — V35.6 · Navegação e experiência Governanta
 
 A Pesquisa Global é a única dona do atalho `Ctrl/Cmd + K`. A command palette histórica permanece apenas como código de compatibilidade, sem atalho concorrente.

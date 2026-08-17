@@ -1,11 +1,6 @@
 // ==========================================================
 // PERSISTÊNCIA — IndexedDB + Export/Import JSON
 // ==========================================================
-// V35.7 hotfix: o estado semanal de Reputação faz parte da sessão partilhada e
-// tem de existir no arranque, mesmo quando a UI de Reputação é carregada por necessidade.
-var REP_STORE = window.REP_STORE || (window.REP_STORE = {});
-var rtSelected = window.rtSelected instanceof Set ? window.rtSelected : (window.rtSelected = new Set());
-
 const IDB_NAME    = 'VG_Dashboard_PL';
 const IDB_VERSION = 1;
 const IDB_STORE   = 'session';
@@ -68,13 +63,9 @@ function buildSessionSnapshot() {
     STORE_ACUM: JSON.parse(JSON.stringify(STORE_ACUM)),
     REP_STORE: JSON.parse(JSON.stringify(REP_STORE)),
     OCC_SNAPSHOTS: JSON.parse(JSON.stringify(OCC_SNAPSHOTS || [])),
-    IG_SNAPSHOTS: JSON.parse(JSON.stringify(typeof IG_SNAPSHOTS!=='undefined' ? IG_SNAPSHOTS : [])),
-    RD_STORE: JSON.parse(JSON.stringify(typeof RD_STORE!=='undefined' ? RD_STORE : [])),
-    HOTEIS_XLSX: JSON.parse(JSON.stringify(typeof HOTEIS_XLSX!=='undefined' ? HOTEIS_XLSX : {})),
     PIU_SNAPSHOTS: JSON.parse(JSON.stringify(PIU_SNAPSHOTS || [])),
     NOTAS_STORE: JSON.parse(JSON.stringify(NOTAS_STORE || {})),
     CD_STORE: (typeof cdGetData==='function' ? cdGetData() : null),
-    cacheScope: idbAutoCacheScope(),
     rtSelected: [...rtSelected],
     selectedMeses: [...selectedMeses],
   };
@@ -100,18 +91,15 @@ function restoreFromSnapshot(snap) {
   if (typeof rtNormalizeStore === 'function') rtNormalizeStore();
   if (typeof cdSetData==='function') cdSetData(snap.CD_STORE || null);
 
-  // Restore OCC / Instagram / Receita detalhada / ficheiros por hotel.
+  // Restore OCC_SNAPSHOTS
   if (snap.OCC_SNAPSHOTS) { OCC_SNAPSHOTS = snap.OCC_SNAPSHOTS; if (typeof occSortSnapshots === 'function') occSortSnapshots(); }
-  if (snap.IG_SNAPSHOTS && typeof IG_SNAPSHOTS !== 'undefined') IG_SNAPSHOTS = snap.IG_SNAPSHOTS;
-  if (snap.RD_STORE && typeof RD_STORE !== 'undefined') RD_STORE = snap.RD_STORE;
-  if (snap.HOTEIS_XLSX && typeof HOTEIS_XLSX !== 'undefined') HOTEIS_XLSX = snap.HOTEIS_XLSX;
 
   // Restore PIU_SNAPSHOTS (referência 2025)
   if (snap.PIU_SNAPSHOTS) {
     PIU_SNAPSHOTS = snap.PIU_SNAPSHOTS;
-    try { if (typeof piuSaveToDB==='function') piuSaveToDB(); } catch(e) { console.warn('piuSaveToDB:',e); }
-    try { if (typeof piuRefreshChips==='function') piuRefreshChips(); } catch(e) { console.warn('piuRefreshChips:',e); }
-    try { if (typeof piuPopulateHotelSel==='function') piuPopulateHotelSel(); } catch(e) { console.warn('piuPopulateHotelSel:',e); }
+    piuSaveToDB();
+    piuRefreshChips();
+    piuPopulateHotelSel();
   }
 
   // Restore NOTAS_STORE
@@ -140,7 +128,6 @@ async function idbSaveAll() {
     const db = await idbOpen();
     const snap = buildSessionSnapshot();
     await idbPut(db, 'session', snap);
-    await idbPut(db, idbAutoCacheKey(), snap);
     db.close();
     const meses = Object.keys(snap.STORE).length;
     const hoteis = Object.keys(snap.REP_STORE).length;
@@ -263,9 +250,8 @@ function importSession(event) {
 
   const reader = new FileReader();
   if (String(file.name || '').toLowerCase().endsWith('.zip')) {
-    reader.onload = async e => {
+    reader.onload = e => {
       try {
-        if (!window.fflate || typeof window.fflate.unzipSync !== 'function') await window.VG?.lazy?.ensureFeature?.('fflate');
         if (!window.fflate || typeof window.fflate.unzipSync !== 'function') throw new Error('Leitor ZIP não carregado.');
         const files = window.fflate.unzipSync(new Uint8Array(e.target.result));
         const jsonName = Object.keys(files).find(k => /\.json$/i.test(k));
@@ -284,102 +270,37 @@ function importSession(event) {
   try { event.target.value = ''; } catch(e) {}
 }
 
-// Auto-restauro silencioso ao arrancar — V35.7
-// Estratégia: cache local primeiro (instantâneo) e validação remota apenas por metadados.
-// Se a versão publicada for a mesma, evita descarregar novamente todos os meses/hotéis/chunks.
-let __vgIdbRestorePromise = null;
-let __vgIdbRestoreAuthKey = '';
-let __vgBackgroundSharedRefresh = null;
-
-function idbSnapshotHasData(snap) {
-  if (!snap) return false;
-  return Object.keys(snap.STORE || {}).length > 0 || Object.keys(snap.REP_STORE || {}).length > 0 ||
-    (snap.OCC_SNAPSHOTS || []).length > 0 || Object.keys(snap.NOTAS_STORE || {}).length > 0 ||
-    !!snap.CD_STORE || (snap.IG_SNAPSHOTS || []).length > 0 || (snap.RD_STORE || []).length > 0;
-}
-function idbAutoCacheScope(){
-  try{
-    const u=(typeof window.vgAuthCurrent==='function' ? window.vgAuthCurrent() : null)||{};
-    const market=window.VG?.market?.id?.()||'iberia';
-    const hotels=Array.isArray(u.hotels)?u.hotels:(u.hotel?[u.hotel]:[]);
-    return [market,String(u.user||''),String(u.role||''),hotels.map(String).sort().join('|')].join('::');
-  }catch(e){return 'iberia::anonymous';}
-}
-function idbAutoCacheKey(){return 'auto-v357::'+idbAutoCacheScope();}
-async function idbReadSessionSnapshot() {
-  try {
-    const db=await idbOpen();
-    const snap=await idbGet(db,idbAutoCacheKey());
-    db.close();
-    return snap&&snap.cacheScope===idbAutoCacheScope()?snap:null;
-  }
-  catch(e){ console.warn('[V35.7] cache local indisponível',e); return null; }
-}
-async function idbCacheSnapshotSilent(snap) {
-  if(!snap)return false;
-  try {
-    snap.cacheScope=idbAutoCacheScope();
-    const db=await idbOpen(); await idbPut(db,idbAutoCacheKey(),snap); db.close(); return true;
-  }
-  catch(e){ console.warn('[V35.7] não foi possível atualizar cache local',e); return false; }
-}
-
+// Auto-restauro silencioso ao arrancar
 async function idbAutoRestore() {
-  const token = (typeof window.vgAuthToken==='function' ? window.vgAuthToken() : '');
-  // Nunca carregar dados empresariais antes da autenticação. O auth-client volta a chamar após login.
-  if (!token) return false;
-  const authKey = String(token).slice(-16);
-  if (__vgIdbRestorePromise && __vgIdbRestoreAuthKey===authKey) return __vgIdbRestorePromise;
-  __vgIdbRestoreAuthKey=authKey;
+  // 1) Tenta primeiro os dados partilhados no servidor — para que todos vejam o mesmo.
+  const gotFromServer = await fetchSharedData(false);
+  if (gotFromServer) { lastSavedFingerprint = snapshotFingerprint(); return; }
 
-  __vgIdbRestorePromise=(async()=>{
-    // HOTFIX 2 — estabilidade primeiro.
-    // A V35.7 original tentava usar cache local antes do servidor e comparava apenas savedAt.
-    // Uma cache parcial (por exemplo reputação/ocupação sem P&L) podia por isso ser aceite como
-    // completa e impedir o download dos meses publicados. O arranque volta a validar o servidor
-    // primeiro; o cache local fica apenas como fallback quando a rede/servidor não está disponível.
-    const gotFromServer = await fetchSharedData(false,{background:false,preserveView:true});
-    if (gotFromServer) {
-      lastSavedFingerprint = snapshotFingerprint();
-      return true;
-    }
+  // 2) Sem servidor disponível/sem dados lá — usa a sessão guardada neste browser.
+  try {
+    const db = await idbOpen();
+    const snap = await idbGet(db, 'session');
+    db.close();
+    if (!snap) { lastSavedFingerprint = snapshotFingerprint(); return; }
 
-    // Sem servidor disponível/sem dados publicados: tenta a cache isolada do utilizador.
-    const snap=await idbReadSessionSnapshot();
-    if(idbSnapshotHasData(snap)){
-      try{
-        restoreFromSnapshot(snap);
-        lastSharedMetaSavedAt=snap.savedAt||null;
-        lastSavedFingerprint=snapshotFingerprint();
-        const meses=Object.keys(STORE).length,hoteis=Object.keys(REP_STORE).length;
-        idbSetStatus(`✓ Cache local de contingência · ${meses} meses P&L · ${hoteis} hotéis rep.`);
-        setSharedSyncStatus('⚠ Servidor indisponível · a usar a última cache local válida.',true);
-        try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
-        return true;
-      }catch(e){console.warn('[V35.7 HF2] restauro da cache isolada falhou',e);}
-    }
+    // Restaurar sempre que exista sessão válida guardada, mesmo que só contenha meses base.
+    const hasStore = Object.keys(snap.STORE || {}).length > 0;
+    const hasRep   = Object.keys(snap.REP_STORE || {}).length > 0;
+    const hasOcc   = (snap.OCC_SNAPSHOTS || []).length > 0;
+    const hasNotas = Object.keys(snap.NOTAS_STORE || {}).length > 0;
+    if (!hasStore && !hasRep && !hasOcc && !hasNotas) { lastSavedFingerprint = snapshotFingerprint(); return; }
 
-    // Compatibilidade: tenta ainda a sessão local histórica usada até V35.6.
-    try{
-      const db=await idbOpen();
-      const legacy=await idbGet(db,'session');
-      db.close();
-      if(idbSnapshotHasData(legacy)){
-        restoreFromSnapshot(legacy);
-        lastSavedFingerprint=snapshotFingerprint();
-        const meses=Object.keys(STORE).length,hoteis=Object.keys(REP_STORE).length;
-        idbSetStatus(`✓ Sessão local de contingência · ${meses} meses P&L · ${hoteis} hotéis rep.`);
-        setSharedSyncStatus('⚠ Servidor indisponível · recuperada sessão guardada neste browser.',true);
-        try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
-        return true;
-      }
-    }catch(e){console.warn('[V35.7 HF2] sessão local histórica indisponível',e);}
-
-    lastSavedFingerprint=snapshotFingerprint();
-    try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
-    return false;
-  })().finally(()=>{ /* a Promise permanece reutilizável durante esta sessão/auth */ });
-  return __vgIdbRestorePromise;
+    restoreFromSnapshot(snap);
+    const meses  = Object.keys(STORE).length;
+    const hoteis = Object.keys(REP_STORE).length;
+    const dt = snap.savedAt ? new Date(snap.savedAt).toLocaleString('pt-PT') : '—';
+    idbSetStatus(`✓ Auto-restauro · ${meses} meses P&L · ${hoteis} hotéis rep. · guardado ${dt}`);
+    showToast(`✓ Sessão restaurada — ${meses} meses P&L, ${hoteis} hotéis reputação`);
+  } catch(e) {
+    console.warn('[idbAutoRestore] erro:', e);
+    // Silently fail — first run or private browsing
+  }
+  lastSavedFingerprint = snapshotFingerprint();
 }
 
 // ==========================================================
@@ -1008,25 +929,11 @@ async function publishSharedData(manual) {
 
 // Vai buscar a sessão partilhada ao servidor (índice + cada pedaço).
 // Devolve true se restaurou alguma coisa.
-async function fetchSharedData(manual, opts={}) {
-  const background=!!opts.background,preserveView=!!opts.preserveView,previousView=(typeof currentView!=='undefined'?currentView:'resumo');
-  if(!background){try { if (typeof vgShowLoading === 'function') vgShowLoading('A obter dados…', 'A ligar ao servidor partilhado…'); } catch(_){}}
-  setSharedSyncStatus(background?'A verificar se existem dados mais recentes…':'A ligar ao servidor partilhado...', false);
+async function fetchSharedData(manual) {
+  try { if (typeof vgShowLoading === 'function') vgShowLoading('A obter dados…', 'A ligar ao servidor partilhado…'); } catch(_){}
+  setSharedSyncStatus('A ligar ao servidor partilhado...', false);
   try {
-    const settingsPromise=sharedLoadOperationalSettings(!!manual).catch(e=>console.warn('Definições operacionais não atualizadas',e));
-    // Primeiro pedido: apenas metadados. Se o cache local tiver o mesmo savedAt, evitamos dezenas/centenas de pedidos.
-    const metaRes = await sharedGet('meta');
-    const meta = metaRes.data;
-    const metaSavedAt = meta && meta.savedAt ? meta.savedAt : null;
-    if(!manual && opts.localSavedAt && metaSavedAt && String(opts.localSavedAt)===String(metaSavedAt)){
-      await settingsPromise;
-      lastSharedMetaSavedAt=metaSavedAt;
-      const dt=new Date(metaSavedAt).toLocaleString('pt-PT');
-      setSharedSyncStatus(`✓ Cache local atualizado · publicado em ${dt}.`,false);
-      try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
-      return true;
-    }
-    await settingsPromise;
+    await sharedLoadOperationalSettings(!!manual);
     const idxRes = await sharedGet('index');
     const idx = idxRes.data || {};
     const meses   = idx.meses   || [];
@@ -1038,6 +945,9 @@ async function fetchSharedData(manual, opts={}) {
     const piuKeys = idx.piuKeys || [];
     const hxKeys  = idx.hxKeys  || [];
 
+    const metaRes = await sharedGet('meta');
+    const meta = metaRes.data;
+
     const nadaPublicado = !meses.length && !hoteis.length && !occIds.length && !igIds.length &&
                            !rdIds.length && !piuKeys.length && !hxKeys.length && !idx.hasCd && !meta;
     if (nadaPublicado) {
@@ -1047,6 +957,7 @@ async function fetchSharedData(manual, opts={}) {
       return false;
     }
 
+    const metaSavedAt = meta && meta.savedAt ? meta.savedAt : null;
     if (manual && metaSavedAt && metaSavedAt === lastSharedMetaSavedAt) {
       showToast('Já estás com os dados partilhados mais recentes.');
       try { if (typeof vgFinishStartup === 'function') vgFinishStartup(); } catch(_){}
@@ -1126,9 +1037,6 @@ async function fetchSharedData(manual, opts={}) {
 
     try {
       restoreFromSnapshot(snap);
-      if(preserveView && previousView && previousView!=='resumo' && typeof setView==='function'){
-        try{setView(previousView);}catch(_){}
-      }
     } catch(uiErr) {
       // Os dados já chegaram e ficaram em memória (STORE/REP_STORE/...); um erro aqui é só
       // ao atualizar algum ecrã específico (ex.: um separador nunca aberto nesta sessão).
@@ -1136,8 +1044,6 @@ async function fetchSharedData(manual, opts={}) {
       try { setView('resumo'); } catch(e2) { /* ignora */ }
     }
     lastSharedMetaSavedAt = metaSavedAt;
-    await idbCacheSnapshotSilent(snap);
-    lastSavedFingerprint=snapshotFingerprint();
     try { if (typeof window.vgTargetsRulesLoad === 'function') await window.vgTargetsRulesLoad(true); } catch(e) { console.warn('Metas & Regras não foram atualizadas na sincronização', e); }
     try { if (typeof renderAll === 'function') renderAll(); } catch(e) { console.warn('Re-render após Metas & Regras falhou', e); }
     const mesesN = Object.keys(STORE).length;
