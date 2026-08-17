@@ -51,5 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   // v18: módulos secundários inicializam quando a respetiva vista é aberta.
   // Evita renderizar Reputação, Agenda e Hotéis durante o primeiro paint.
-  // V35.7: o restauro é iniciado uma única vez pelo auth-client após autenticação.
+  // Auto-restauro ao arrancar (sobrepõe dados embutidos se existir sessão guardada)
+  idbAutoRestore();
 });
