@@ -1,4 +1,24 @@
-# VG Operations — V35.3 · Robustez
+# VG Operations — V35.4 · Acessos por Perfil
+
+A V35.4 transforma a autenticação central numa matriz de acessos configurável pela Direção de Operações. Introduz os perfis oficiais **Governanta** e **Chefe de Receção**, ambos compatíveis com um ou vários hotéis, e deixa de assumir que um perfil não-DO deve ver todos os menus da aplicação.
+
+## O que muda na V35.4
+
+- **Direção de Operações**: acesso automático a todos os hotéis e a todos os módulos. Governação, Backup, Centro de Dados e Carregamento administrativo permanecem exclusivos da DO.
+- **Governanta**: perfil oficial da autenticação VG Operations. Por defeito recebe apenas `Housekeeping & Têxtil`. Ao entrar, a plataforma encaminha-a diretamente para o modo mobile de contagem; com um hotel entra diretamente na unidade, com vários hotéis escolhe primeiro a unidade. Pode registar quebras com causa e contagens físicas, mas não aprovar inventários.
+- **Chefe de Receção**: perfil oficial, com suporte multi-hotel. A DO escolhe exatamente os hotéis e os menus/módulos que pretende disponibilizar.
+- **Diretor, Assistente e Compras**: passam igualmente a usar `hotels[]` e `modules[]`. Os valores recomendados são apenas um ponto de partida; a DO pode retirar ou acrescentar módulos operacionais utilizador a utilizador.
+- **Menu, mobile, Command Palette e Pesquisa Global** respeitam a matriz de módulos. Um menu não autorizado não é apenas escondido: as rotas centrais e os endpoints operacionais críticos também validam o acesso.
+- **Âmbito multi-hotel** aplicado a Hotel 360º, fichas dos hotéis, Ações, Agenda, Aprovações, Documentos, Cenários, Reputação, notificações, Housekeeping e A&B.
+- **Compatibilidade**: utilizadores antigos com um único `hotel` são migrados para `hotels[]`; quando não existe ainda uma matriz de módulos, é aplicado o perfil recomendado para não bloquear a operação existente.
+
+## Administração
+
+Em `Setup → Gestão de Utilizadores`, a DO define: utilizador, nome, perfil, um ou vários hotéis e os módulos visíveis. O botão **Aplicar perfil recomendado** repõe uma sugestão inicial para o perfil; não substitui a decisão da DO.
+
+---
+
+## Histórico da V35.3
 
 A V35.3 é uma versão de estabilização sobre a V35.2. Não cria um novo domínio funcional; endurece os módulos já existentes e corrige o erro de gravação da ficha de hotel reportado em produção.
 

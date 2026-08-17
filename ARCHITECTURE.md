@@ -1,4 +1,20 @@
-# Arquitetura — reforços V35.3
+# Arquitetura — V35.4 · RBAC e âmbito multi-hotel
+
+A V35.4 introduz um modelo RBAC simples e explícito na sessão central. Cada utilizador tem `role`, `hotels[]` e `modules[]`. A Direção de Operações recebe os curingas `hotels:["*"]` e `modules:["*"]`; os restantes perfis recebem listas concretas.
+
+## Fronteiras de autorização
+
+1. `auth-client.js` controla navegação, filtros e âmbito visual.
+2. `dashboard-sessao.js` normaliza perfis, migra contas antigas, persiste hotéis/módulos e rejeita recursos operacionais quando o módulo não está autorizado.
+3. Endpoints sensíveis como `hk-store.js` e `custos-ab-store.js` voltam a validar sessão, módulo e âmbito de hotel no servidor.
+4. Housekeeping converte o perfil central `governanta` para a sessão operacional `Governanta` e abre o modo mobile.
+5. Módulos que antes usavam apenas `user.hotel` foram atualizados para trabalhar com `hotels[]`, mantendo `hotel` como primeiro hotel apenas para retrocompatibilidade.
+
+A ocultação de um botão não é considerada controlo de segurança; a autorização relevante deve existir também no endpoint que persiste ou devolve dados.
+
+---
+
+## Histórico da arquitetura V35.3
 
 ## Princípio
 
