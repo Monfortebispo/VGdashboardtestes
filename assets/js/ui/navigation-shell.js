@@ -1,103 +1,49 @@
-
 (function(){
   'use strict';
   if(window.__VG_NAV_SHELL__) return;
   window.__VG_NAV_SHELL__ = true;
   var modules = [
-    ['resumo','◆','Visão Executiva','Início'],
-    ['hotel360','◉','Hotel 360º','Hotéis'],
-    ['hoteis','🏨','Hotéis','Hotéis'],
-    ['fichahotel','📝','Comentários Fecho do Mês','Hotéis'],
-    ['agenda','📅','Agenda Operacional','Gestão'],
-    ['approvals','✓','Aprovações','Gestão'],
-    ['receitas','↗','Receitas','Análise'],
-    ['custos','↘','Custos','Análise'],
-    ['pl','▦','P&L USALI','Análise'],
-    ['revenuehub','◈','Revenue & Forecast','Análise'],
-    ['compras','▤','Compras & Artigos','Análise'],
-    ['benchmark','◎','Benchmarking','Análise'],
-    ['anomalies','⚠','Deteção de Anomalias','Análise'],
-    ['ocupacao','▥','Ocupação','Análise avançada'],
-    ['costanalysis','⌁','Análise de Custos','Análise avançada'],
-    ['cua','⚡','Custo / Actividade','Análise avançada'],
-    ['compare','⚖','Comparar Hotéis','Análise avançada'],
-    ['ranking','🏆','Ranking Composto','Análise avançada'],
-    ['sazonalidade','◌','Sazonalidade','Análise avançada'],
-    ['simulador','🎛','Simulador','Análise avançada'],
-    ['orcamento','▣','Orçamento','Análise avançada'],
-    ['reputacao','★','Reputação','Qualidade'],
-    ['instagram','▣','Instagram','Qualidade'],
-    ['documents','🗂','Gestão de Documentos','Suporte'],
-    ['automaticreports','📄','Relatórios Automáticos','Suporte'],
-    ['datacenter','▥','Centro de Dados','Governação'],
-    ['governance','🛡','Auditoria & Governação','Governação'],
-    ['backup','💾','Backup & Recuperação','Governação'],
-    ['upload','⇧','Carregar Docs','Admin']
+    ['resumo','◆','Visão Executiva','Início'],['hotel360','◉','Hotel 360º','Hotéis'],['hoteis','🏨','Hotéis','Hotéis'],['fichahotel','📝','Comentários Fecho do Mês','Hotéis'],['agenda','📅','Agenda Operacional','Gestão'],['approvals','✓','Aprovações','Gestão'],['receitas','↗','Receitas','Análise'],['custos','↘','Custos','Análise'],['pl','▦','P&L USALI','Análise'],['revenuehub','◈','Revenue & Forecast','Análise'],['compras','▤','Compras & Artigos','Análise'],['benchmark','◎','Benchmarking','Análise'],['anomalies','⚠','Deteção de Anomalias','Análise'],['ocupacao','▥','Ocupação','Análise avançada'],['costanalysis','⌁','Análise de Custos','Análise avançada'],['cua','⚡','Custo / Actividade','Análise avançada'],['compare','⚖','Comparar Hotéis','Análise avançada'],['ranking','🏆','Ranking Composto','Análise avançada'],['sazonalidade','◌','Sazonalidade','Análise avançada'],['simulador','🎛','Simulador','Análise avançada'],['orcamento','▣','Orçamento','Análise avançada'],['reputacao','★','Reputação','Qualidade'],['instagram','▣','Instagram','Qualidade'],['documents','🗂','Gestão de Documentos','Suporte'],['automaticreports','📄','Relatórios Automáticos','Suporte'],['datacenter','▥','Centro de Dados','Governação'],['governance','🛡','Auditoria & Governação','Governação'],['backup','💾','Backup & Recuperação','Governação'],['upload','⇧','Carregar Docs','Admin']
   ];
-  var quick = ['resumo','hotel360','fichahotel','revenuehub','compras','agenda'];
-  var idx = 0, results = modules.slice();
+  var quick=['resumo','hotel360','fichahotel','revenuehub','compras','agenda'];
+  var idx=0,results=modules.slice();
   function q(s,r){return (r||document).querySelector(s)}
   function qa(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
   function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
-  function mod(id){for(var i=0;i<modules.length;i++){if(modules[i][0]===id)return modules[i]}return modules[0]}
-  function go(id){
-    try{
-      if(typeof window.setView === 'function') window.setView(id);
-      else { var b=q('#nav-'+id); if(b) b.click(); }
-      closeCmd();
-    }catch(e){console.error('VG navigation error',e)}
-  }
-  function applyThemeMode(mode){
-    document.body.classList.remove('vg-interface-modern','theme-v2');
-    if(mode === '2.0') document.body.classList.add('vg-interface-modern');
-    if(mode === 'v2') document.body.classList.add('theme-v2');
-    try{ localStorage.setItem('vg_theme_mode', mode); }catch(e){}
-    if(typeof buildChartsResumo === 'function' && currentView === 'resumo' && typeof RAW !== 'undefined' && RAW) buildChartsResumo();
-  }
-  function buildCmd(){
-    var el=q('#vgNavCmd'); if(!el) return;
-    el.innerHTML = '<div class="vg-nav-cmd-head"><input id="vgNavInput" placeholder="Pesquisar módulo: custos, ocupação, orçamento…" autocomplete="off"><button id="vgNavClose">Fechar</button></div><div class="vg-nav-cmd-list" id="vgNavList"></div>';
-    q('#vgNavClose').addEventListener('click',closeCmd);
-    q('#vgNavInput').addEventListener('input',renderCmd);
-    q('#vgNavBackdrop').addEventListener('click',closeCmd);
-    renderCmd();
-  }
-  function renderCmd(){
-    var input=q('#vgNavInput'); var list=q('#vgNavList'); if(!list) return;
-    var term=(input&&input.value||'').toLowerCase().trim();
-    results=modules.filter(function(m){return !term || (m[0]+' '+m[2]+' '+m[3]).toLowerCase().indexOf(term)>=0});
-    if(idx>=results.length) idx=Math.max(0,results.length-1);
-    if(!results.length){list.innerHTML='<div style="padding:20px;color:#64748b;font-weight:800">Sem resultados.</div>';return;}
-    list.innerHTML=results.map(function(m,i){return '<div class="vg-nav-cmd-item '+(i===idx?'active':'')+'" data-view="'+esc(m[0])+'"><div><strong>'+esc(m[1])+' '+esc(m[2])+'</strong><br><span>'+esc(m[3])+'</span></div><span>Enter</span></div>';}).join('');
-    qa('[data-view]',list).forEach(function(x){x.addEventListener('click',function(){go(x.getAttribute('data-view'))})});
-  }
-  function openCmd(){document.body.classList.add('vg-nav-cmd-open');idx=0;setTimeout(function(){var i=q('#vgNavInput'); if(i){i.value='';i.focus();renderCmd();}},30)}
+  function go(id){try{if(typeof window.setView==='function')window.setView(id);else{var b=q('#nav-'+id);if(b)b.click()}closeCmd()}catch(e){console.error('VG navigation error',e)}}
+
+  function interfaceLabel(mode){return mode==='original'?'Original':mode==='v2'?'V2':'2.0'}
+  function updateInterfacePicker(mode){var label=q('#vgInterfaceLabel');if(label)label.textContent=interfaceLabel(mode);qa('.vg-interface-option').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-interface')===mode)})}
+  function applyThemeMode(mode){if(['original','2.0','v2'].indexOf(mode)<0)mode='2.0';document.body.classList.remove('vg-interface-modern','theme-v2');if(mode==='2.0')document.body.classList.add('vg-interface-modern');if(mode==='v2')document.body.classList.add('theme-v2');try{localStorage.setItem('vg_theme_mode',mode)}catch(e){}updateInterfacePicker(mode);if(typeof buildChartsResumo==='function'&&typeof currentView!=='undefined'&&currentView==='resumo'&&typeof RAW!=='undefined'&&RAW)buildChartsResumo()}
+  function closeInterfacePicker(){var w=q('#vgInterfacePicker');if(w)w.classList.remove('open')}
+  function toggleInterfacePicker(ev){if(ev)ev.stopPropagation();var w=q('#vgInterfacePicker');if(w)w.classList.toggle('open')}
+  function installInterfaceStyles(){if(q('#vgInterfacePickerStyles'))return;var st=document.createElement('style');st.id='vgInterfacePickerStyles';st.textContent='.vg-interface-picker{position:relative;display:flex;align-items:center;z-index:1210}.vg-interface-trigger{height:32px;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:var(--text-2,#cbd5e1);font:700 11px/1 var(--font,system-ui);cursor:pointer;white-space:nowrap}.vg-interface-trigger:hover,.vg-interface-picker.open .vg-interface-trigger{background:rgba(255,255,255,.12);color:var(--text-1,#fff)}.vg-interface-trigger strong{font-size:10px;color:var(--gold,#d4b45b);padding:3px 6px;border-radius:999px;background:rgba(212,180,91,.12)}.vg-interface-menu{display:none;position:absolute;right:0;top:40px;width:230px;padding:7px;background:var(--surface-1,#fff);border:1px solid var(--border,#dbe2ea);border-radius:13px;box-shadow:0 18px 46px rgba(15,23,42,.22);z-index:2000}.vg-interface-picker.open .vg-interface-menu{display:block}.vg-interface-option{width:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;text-align:left;gap:2px 8px;padding:9px 10px;border:0;border-radius:9px;background:transparent;color:var(--text-1,#0f172a);cursor:pointer;font-family:var(--font,system-ui)}.vg-interface-option:hover,.vg-interface-option.active{background:var(--surface-2,#f4f6f8)}.vg-interface-option span{font-size:12px;font-weight:800;grid-column:1;grid-row:1}.vg-interface-option small{font-size:10px;color:var(--text-3,#64748b);grid-column:1;grid-row:2}.vg-interface-option i{display:none;grid-column:2;grid-row:1/3;align-self:center;font-style:normal;color:var(--teal,#0891b2);font-weight:900}.vg-interface-option.active i{display:block}body.vg-interface-modern .vg-interface-trigger,body.theme-v2 .vg-interface-trigger{border-color:rgba(15,23,42,.10);background:#fff;color:#334155;box-shadow:0 6px 16px rgba(15,23,42,.05)}@media(max-width:1180px){.vg-interface-trigger-text{display:none}.vg-interface-trigger{padding:0 8px}}@media(max-width:760px){.vg-interface-trigger strong,.vg-interface-chevron{display:none}.vg-interface-menu{position:fixed;right:12px;top:62px;width:min(260px,calc(100vw - 24px))}}';document.head.appendChild(st)}
+  function installInterfacePicker(){installInterfaceStyles();if(q('#vgInterfacePicker'))return;var host=q('.topbar-right');if(!host)return;var wrap=document.createElement('div');wrap.id='vgInterfacePicker';wrap.className='vg-interface-picker';wrap.innerHTML='<button type="button" class="vg-interface-trigger" id="vgInterfaceTrigger" title="Trocar interface (Ctrl+Shift+I)"><span class="vg-interface-icon">◫</span><span class="vg-interface-trigger-text">Interface</span><strong id="vgInterfaceLabel">2.0</strong><span class="vg-interface-chevron">⌄</span></button><div class="vg-interface-menu" role="menu" aria-label="Escolher interface"><button type="button" class="vg-interface-option" data-interface="original"><span>Original</span><small>Interface clássica</small><i>✓</i></button><button type="button" class="vg-interface-option" data-interface="2.0"><span>2.0</span><small>Interface moderna</small><i>✓</i></button><button type="button" class="vg-interface-option" data-interface="v2"><span>V2</span><small>Interface executiva clara</small><i>✓</i></button></div>';var anchor=q('.theme-dots',host);if(anchor)host.insertBefore(wrap,anchor);else host.appendChild(wrap);q('#vgInterfaceTrigger').addEventListener('click',toggleInterfacePicker);qa('.vg-interface-option',wrap).forEach(function(b){b.addEventListener('click',function(ev){ev.stopPropagation();applyThemeMode(b.getAttribute('data-interface'));closeInterfacePicker()})});document.addEventListener('click',function(ev){if(!wrap.contains(ev.target))closeInterfacePicker()})}
+  window.VG=window.VG||{};window.VG.interfaceSwitcher={set:applyThemeMode,get:function(){try{return localStorage.getItem('vg_theme_mode')||'2.0'}catch(e){return'2.0'}},open:function(){var w=q('#vgInterfacePicker');if(w)w.classList.add('open')}};
+
+  function buildCmd(){var el=q('#vgNavCmd');if(!el)return;el.innerHTML='<div class="vg-nav-cmd-head"><input id="vgNavInput" placeholder="Pesquisar módulo: custos, ocupação, orçamento…" autocomplete="off"><button id="vgNavClose">Fechar</button></div><div class="vg-nav-cmd-list" id="vgNavList"></div>';q('#vgNavClose').addEventListener('click',closeCmd);q('#vgNavInput').addEventListener('input',renderCmd);q('#vgNavBackdrop').addEventListener('click',closeCmd);renderCmd()}
+  function renderCmd(){var input=q('#vgNavInput'),list=q('#vgNavList');if(!list)return;var term=(input&&input.value||'').toLowerCase().trim();results=modules.filter(function(m){return !term||(m[0]+' '+m[2]+' '+m[3]).toLowerCase().indexOf(term)>=0});if(idx>=results.length)idx=Math.max(0,results.length-1);if(!results.length){list.innerHTML='<div style="padding:20px;color:#64748b;font-weight:800">Sem resultados.</div>';return}list.innerHTML=results.map(function(m,i){return '<div class="vg-nav-cmd-item '+(i===idx?'active':'')+'" data-view="'+esc(m[0])+'"><div><strong>'+esc(m[1])+' '+esc(m[2])+'</strong><br><span>'+esc(m[3])+'</span></div><span>Enter</span></div>'}).join('');qa('[data-view]',list).forEach(function(x){x.addEventListener('click',function(){go(x.getAttribute('data-view'))})})}
+  function openCmd(){document.body.classList.add('vg-nav-cmd-open');idx=0;setTimeout(function(){var i=q('#vgNavInput');if(i){i.value='';i.focus();renderCmd()}},30)}
   function closeCmd(){document.body.classList.remove('vg-nav-cmd-open')}
-  function bindKeys(){
-    document.addEventListener('keydown',function(ev){
-      var tag=(ev.target&&ev.target.tagName||'').toLowerCase(); var typing=['input','textarea','select'].indexOf(tag)>=0;
-      if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();openCmd();return;}
-      if(ev.key==='Escape'){closeCmd();return;}
-      if(ev.altKey&&/^[1-6]$/.test(ev.key)){ev.preventDefault();go(quick[parseInt(ev.key,10)-1]);return;}
-      if(document.body.classList.contains('vg-nav-cmd-open')){
-        if(ev.key==='ArrowDown'){ev.preventDefault();idx=Math.min(results.length-1,idx+1);renderCmd();}
-        if(ev.key==='ArrowUp'){ev.preventDefault();idx=Math.max(0,idx-1);renderCmd();}
-        if(ev.key==='Enter'&&!typing&&results[idx]){ev.preventDefault();go(results[idx][0]);}
-      }
-    });
-  }
-  function init(){
-    try{
-      var saved = null;
-      try{ saved = localStorage.getItem('vg_theme_mode'); }catch(e){}
-      if(saved === null){
-        var legacy = null;
-        try{ legacy = localStorage.getItem('vg20_safe_off'); }catch(e){}
-        saved = legacy === '1' ? 'original' : '2.0';
-      }
-      buildCmd(); bindKeys();
-      applyThemeMode(saved);
-    }catch(e){console.error('VG navigation init error',e)}
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
+  function bindKeys(){document.addEventListener('keydown',function(ev){var tag=(ev.target&&ev.target.tagName||'').toLowerCase(),typing=['input','textarea','select'].indexOf(tag)>=0;if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();openCmd();return}if(ev.ctrlKey&&ev.shiftKey&&ev.key.toLowerCase()==='i'&&!typing){ev.preventDefault();var w=q('#vgInterfacePicker');if(w)w.classList.toggle('open');return}if(ev.key==='Escape'){closeCmd();closeInterfacePicker();return}if(ev.altKey&&/^[1-6]$/.test(ev.key)){ev.preventDefault();go(quick[parseInt(ev.key,10)-1]);return}if(document.body.classList.contains('vg-nav-cmd-open')){if(ev.key==='ArrowDown'){ev.preventDefault();idx=Math.min(results.length-1,idx+1);renderCmd()}if(ev.key==='ArrowUp'){ev.preventDefault();idx=Math.max(0,idx-1);renderCmd()}if(ev.key==='Enter'&&!typing&&results[idx]){ev.preventDefault();go(results[idx][0])}}})}
+
+  var HK_HISTORY_KEY='vg_hk_inventario_v1';
+  var HK_HISTORY_SOURCE='https://inventariovg.netlify.app/.netlify/functions/hk-store?key='+encodeURIComponent(HK_HISTORY_KEY);
+  var HK_HISTORY_TARGET='/.netlify/functions/hk-store';
+  var hkSyncBusy=false,hkSyncDone=false,hkSyncTries=0;
+  function clone(x){return x==null?x:JSON.parse(JSON.stringify(x))}
+  function hkCampKey(c){return String(c&&c.nome||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim()}
+  function hkLineKey(l){return [l&&l.categoria,l&&l.cat,l&&l.item,l&&l.artigo,l&&l.cama,l&&l.medida,l&&l.tamanho,l&&l.id].filter(function(v){return v!==undefined&&v!==null&&String(v)!==''}).map(function(v){return String(v).trim().toUpperCase()}).join('|')}
+  function hkTouched(inv){if(!inv||typeof inv!=='object')return false;if(inv.updatedAt||inv.aprovado||inv.aprovadoPor||(Array.isArray(inv.movs)&&inv.movs.length)||(Array.isArray(inv.movimentos)&&inv.movimentos.length))return true;return Array.isArray(inv.linhas)&&inv.linhas.some(function(l){return l&&[l.existencias,l.invAnterior,l.quebras,l.vestido100,l.aprovadoDO,l.qtd,l.quantidade].some(function(v){return v!==''&&v!=null&&(!isNaN(Number(v))?Number(v)!==0:true)})})}
+  function hkStats(d){var camps=Array.isArray(d&&d.campanhas)?d.campanhas:[],invent=d&&d.invent&&typeof d.invent==='object'?d.invent:{},touched=0,records=0;Object.keys(invent).forEach(function(cid){var st=invent[cid];if(!st||typeof st!=='object')return;Object.keys(st).forEach(function(h){records++;if(hkTouched(st[h]))touched++})});return {campaigns:camps.length,closed:camps.filter(function(c){return c&&c.fechada}).length,open:camps.filter(function(c){return c&&!c.fechada}).length,touched:touched,records:records}}
+  function hkMergeLines(oldLines,newLines){if(!Array.isArray(oldLines))return Array.isArray(newLines)?clone(newLines):oldLines;if(!Array.isArray(newLines))return clone(oldLines);var out=clone(oldLines),idx={};out.forEach(function(x,i){idx[hkLineKey(x)||('OLD#'+i)]=i});newLines.forEach(function(x,i){var k=hkLineKey(x)||('NEW#'+i);if(Object.prototype.hasOwnProperty.call(idx,k))out[idx[k]]=Object.assign({},out[idx[k]],clone(x));else{idx[k]=out.length;out.push(clone(x))}});return out}
+  function hkMergeEvents(a,b){var out=[],seen={};(Array.isArray(a)?a:[]).concat(Array.isArray(b)?b:[]).forEach(function(x){var k=String(x&&x.id||x&&x.ts||x&&x.data||'')+'|'+String(x&&x.tipo||x&&x.acao||x&&x.artigo||'')+'|'+JSON.stringify(x||{});if(!seen[k]){seen[k]=1;out.push(clone(x))}});return out}
+  function hkMergeRecord(oldInv,newInv){if(!oldInv)return clone(newInv);if(!newInv)return clone(oldInv);if(!hkTouched(newInv))return clone(oldInv);var out=Object.assign({},clone(oldInv),clone(newInv));out.linhas=hkMergeLines(oldInv.linhas,newInv.linhas);['movs','movimentos','ajustes','historico','quebrasMovimentos'].forEach(function(k){if(Array.isArray(oldInv[k])||Array.isArray(newInv[k]))out[k]=hkMergeEvents(oldInv[k],newInv[k])});return out}
+  function hkMergeDatabases(current,legacy){var cur=clone(current||{}),old=clone(legacy||{});if(Array.isArray(old.users))old.users.forEach(function(u){if(u&&typeof u==='object')u.password=''});var out=Object.assign({},cur,old);out.users=Array.isArray(cur.users)?cur.users:old.users;out.campanhas=Array.isArray(old.campanhas)?clone(old.campanhas):[];out.invent=clone(old.invent||{});var map={};out.campanhas.forEach(function(c,i){map[hkCampKey(c)]=i});(cur.campanhas||[]).forEach(function(cp){var key=hkCampKey(cp),curStore=cur.invent&&cur.invent[cp.id]||{};if(Object.prototype.hasOwnProperty.call(map,key)){var legacyCp=out.campanhas[map[key]],destId=legacyCp.id,oldStore=out.invent[destId]||{},hasData=false;Object.keys(curStore).forEach(function(hid){if(hkTouched(curStore[hid]))hasData=true;oldStore[hid]=hkMergeRecord(oldStore[hid],curStore[hid])});out.invent[destId]=oldStore;if(hasData&&cp.fechada===false&&legacyCp.fechada===true&&cp.fechadaEm==null){legacyCp.fechada=false;legacyCp.fechadaEm=null}if(hasData&&cp.fechada===true&&legacyCp.fechada===false){legacyCp.fechada=true;legacyCp.fechadaEm=cp.fechadaEm||legacyCp.fechadaEm||new Date().toISOString()}}else{var c=clone(cp);map[key]=out.campanhas.length;out.campanhas.push(c);out.invent[c.id]=clone(curStore)}});out.log=hkMergeEvents(old.log,cur.log);out.meta=Object.assign({},old.meta||{},cur.meta||{});var st=hkStats(out);out.meta.legacyMergeV2={source:'https://inventariovg.netlify.app/',key:HK_HISTORY_KEY,mergedAt:new Date().toISOString(),campaigns:st.campaigns,closed:st.closed,open:st.open,records:st.records};out.meta.rev={ts:Date.now(),by:'history-merge-v2'};out.log.unshift({id:'mig'+Date.now().toString(36),ts:new Date().toISOString(),user:'VG Operations',role:'DO',acao:'Sincronização de histórico',detalhe:'Inventário original sincronizado · '+st.campaigns+' campanha(s), '+st.closed+' fechada(s), '+st.open+' aberta(s)'});return out}
+  async function hkSyncHistory(force){if(hkSyncBusy||(!force&&hkSyncDone))return false;var token='';try{token=typeof window.vgAuthToken==='function'?(window.vgAuthToken()||''):''}catch(e){}if(!token)return false;hkSyncBusy=true;var auth={Authorization:'Bearer '+token,Accept:'application/json'};try{var current=null,cr=await fetch(HK_HISTORY_TARGET+'?key='+encodeURIComponent(HK_HISTORY_KEY),{headers:auth,cache:'no-store'});if(cr.ok){var cj=await cr.json();current=cj&&cj.data?cj.data:null}var or=await fetch(HK_HISTORY_SOURCE,{mode:'cors',credentials:'omit',cache:'no-store',headers:{Accept:'application/json'}});if(!or.ok)throw new Error('origem HTTP '+or.status);var oj=await or.json(),legacy=oj&&oj.data?oj.data:null;var ls=hkStats(legacy),cs=hkStats(current);if(!legacy||ls.campaigns<2||ls.touched<1)throw new Error('histórico original não encontrado');var already=current&&current.meta&&current.meta.legacyMergeV2,needs=force||!already||ls.campaigns>cs.campaigns||ls.touched>cs.touched;if(!needs){hkSyncDone=true;return false}if(current&&(cs.campaigns>1||cs.touched>0))await fetch(HK_HISTORY_TARGET,{method:'POST',headers:Object.assign({},auth,{'Content-Type':'application/json'}),body:JSON.stringify({key:'vg_hk_backup_pre_legacy_merge_'+Date.now(),data:current})});var merged=hkMergeDatabases(current,legacy),wr=await fetch(HK_HISTORY_TARGET,{method:'POST',headers:Object.assign({},auth,{'Content-Type':'application/json'}),body:JSON.stringify({key:HK_HISTORY_KEY,data:merged})});if(!wr.ok)throw new Error('destino HTTP '+wr.status);try{localStorage.setItem(HK_HISTORY_KEY,JSON.stringify(merged));sessionStorage.setItem('vg_hk_history_merge_summary',JSON.stringify(hkStats(merged)))}catch(e){}hkSyncDone=true;console.info('[VG HK] histórico sincronizado',{antes:cs,origem:ls,depois:hkStats(merged)});if((location.hash||'').replace('#','')==='housekeeping'&&sessionStorage.getItem('vg_hk_history_merge_reloaded')!=='1'){sessionStorage.setItem('vg_hk_history_merge_reloaded','1');setTimeout(function(){location.reload()},250)}return true}catch(e){console.warn('[VG HK] sincronização histórica pendente:',e);return false}finally{hkSyncBusy=false}}
+  function scheduleHkSync(){if(hkSyncDone)return;hkSyncTries++;hkSyncHistory(false).finally(function(){if(!hkSyncDone&&hkSyncTries<60)setTimeout(scheduleHkSync,3000)})}
+  window.vgRecoverInventoryHistory=function(){hkSyncDone=false;return hkSyncHistory(true)};
+
+  function init(){try{var saved=null;try{saved=localStorage.getItem('vg_theme_mode')}catch(e){}if(saved===null){var legacy=null;try{legacy=localStorage.getItem('vg20_safe_off')}catch(e){}saved=legacy==='1'?'original':'2.0'}buildCmd();installInterfacePicker();bindKeys();applyThemeMode(saved);setTimeout(scheduleHkSync,700)}catch(e){console.error('VG navigation init error',e)}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
