@@ -91,9 +91,6 @@ function setView(v) {
     history.replaceState(null, '', '#' + fallback);
     return;
   }
-  const __vgLazy=window.VG?.lazy;
-  const __vgLazyNeeded=!!(__vgLazy?.needsView?.(v)&&!__vgLazy?.isViewReady?.(v));
-  const __vgLazyPromise=__vgLazyNeeded?__vgLazy.ensureView(v):null;
   currentView = v;
   // Hash routing — update URL
   history.replaceState(null, '', '#' + v);
@@ -115,15 +112,7 @@ function setView(v) {
     viewEl.classList.add('active');
   }
   if (window.innerWidth <= 960 && typeof drawerClose === 'function') drawerClose();
-  if(__vgLazyNeeded){
-    __vgLazy.showLoading?.(v);
-    __vgLazyPromise.then(()=>{
-      __vgLazy.hideLoading?.(v);
-      if(currentView===v){try{refreshAll();}catch(e){console.error('[V35.7] render lazy',v,e);}}
-    }).catch(err=>{console.error('[V35.7] falha a carregar módulo',v,err);__vgLazy.showError?.(v,err);});
-  }else{
-    refreshAll();
-  }
+  refreshAll();
   // A página Agenda & Tempo não depende do carregamento do Excel; por isso não deve reservar espaço para o empty state.
   const empty = document.getElementById('emptyState');
   if (empty) {
@@ -1400,11 +1389,6 @@ function showToast(msg, isError=false){
 // REFRESH
 // ==========================================================
 function refreshAll(){
-  // V35.7: módulos carregados por necessidade têm aqui o seu ponto de render canónico.
-  if(currentView === 'hotel360') { if(typeof hotel360Render==='function') hotel360Render(); else window.VG?.hotel360?.render?.(); return; }
-  if(currentView === 'revenuehub') { window.VG?.revenueHub?.render?.(); return; }
-  if(currentView === 'unitEconomics') { if(typeof unitEconomicsRender==='function') unitEconomicsRender(); else window.VG?.unitEconomics?.render?.(); return; }
-  if(currentView === 'cityledger') { if(window.VG?.cityLedger?.ensureLoaded) window.VG.cityLedger.ensureLoaded(false); else if(typeof cityLedgerRender==='function') cityLedgerRender(); return; }
   if(currentView === 'reputacao') { rtRender(); return; }
   if(currentView === 'vendassv') { svRender(); return; }
   { var _yw=document.getElementById('yearBtnsWrap'); if(_yw) _yw.style.display = (currentView==='compras') ? '' : 'none'; }

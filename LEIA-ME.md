@@ -1,23 +1,3 @@
-# VG Operations — V35.7 · Performance
-
-A V35.7 é uma versão de performance: não retira funcionalidades, altera a forma como a aplicação e os dados são carregados.
-
-- Arranque modular: o shell inicial carrega autenticação, navegação, Resumo e motores essenciais; módulos secundários são carregados apenas quando o utilizador os abre.
-- JavaScript local inicial: 1 731 116 bytes / 61 ficheiros na V35.6 → 928 306 bytes / 34 ficheiros na V35.7 (-46,4%).
-- CSS inicial: 349 954 bytes / 40 ficheiros → 229 103 bytes / 21 ficheiros (-34,5%).
-- PWA: pre-cache reduzido de 108 para 60 recursos (-44,4%); os módulos lazy entram na cache após a primeira utilização.
-- Dados: depois do primeiro carregamento, a sessão usa IndexedDB primeiro e compara apenas `meta.savedAt` com o servidor. Se a versão publicada não mudou, evita voltar a descarregar todos os meses, hotéis e lotes de custos.
-- Segurança do cache: o snapshot automático é separado por mercado, utilizador, perfil e hotéis autorizados; não é reutilizado entre âmbitos diferentes no mesmo browser.
-- Datasets secundários (Instagram, Receita Detalhada e fichas importadas de hotéis) passam também a integrar o snapshot local automático.
-- Restauro pós-login: existe um único fluxo de auto-restauro; foi removido o disparo duplicado no bootstrap.
-- Hotel 360º, Revenue Hub, City Ledger, Unit Economics, Agenda, Documentos, Aprovações, Relatórios, Assistente, Benchmarking, Anomalias, Governação, Backup e domínios operacionais usam carregamento por necessidade.
-- Pesquisa Global mantém `Ctrl/Cmd+K`; ao abrir, hidrata os índices avançados sem penalizar o arranque normal.
-- A&B e Housekeeping continuam nativos e lazy; o modo Governanta direto/mobile da V35.6 é preservado.
-
-Validação: 60/60 suites aprovadas. A Ficha do Hotel protegida mantém o SHA-256 `2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7`.
-
----
-
 # VG Operations — V35.6 · Navegação, Pesquisa e Governanta
 
 A V35.6 corrige três regressões de utilização encontradas em teste real e fecha a integração da responsividade V35.5 no HTML.
