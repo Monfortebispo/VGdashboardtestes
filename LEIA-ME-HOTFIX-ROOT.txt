@@ -1,0 +1,13 @@
+VG Operations V35.8 — CORREÇÃO ROOT
+
+Causa: os quatro lotes V35.8 anteriores omitiram por erro os ficheiros da raiz do projeto.
+Isto deixou o repositório híbrido: index.html/package.json em V35.7 e service worker/version guard em V35.8.
+
+Substituir estes ficheiros na raiz do repositório:
+- index.html
+- package.json
+- service-worker.js
+- manifest.webmanifest
+- netlify.toml
+
+Depois aguardar o deploy e fazer Ctrl+F5.
