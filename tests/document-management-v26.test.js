@@ -16,7 +16,7 @@ cp.execFileSync(process.execPath,['--check',jsPath],{stdio:'pipe'});
 cp.execFileSync(process.execPath,['--check',serverPath],{stdio:'pipe'});
 assert(html.includes('Gestão de Documentos')&&html.includes('document-management-v26.js')&&html.includes('document-management-v26.css'),'V26 deve estar ligada ao HTML');
 assert(sw.includes('vg-operations-shell-v32')&&sw.includes('document-management-v26.js')&&sw.includes('document-management-v26.css'),'PWA deve incluir shell V26');
-assert(server.includes('DOCUMENT_META_PREFIX = "ops-doc-meta/"')&&server.includes('resource === "ops-document-save"')&&server.includes('resource === "ops-document-file"'),'backend deve ter endpoints próprios de documentos');
+assert(server.includes('DOCUMENT_META_PREFIX = "ops-doc-meta/"')&&server.includes('resource === "ops-document-save"')&&server.includes('resource === "ops-document-file"')&&server.includes('resource === "ops-document-content"'),'backend deve ter endpoints próprios e download binário de documentos');
 assert(server.includes('"ops-doc-meta/","ops-doc-data/"')&&server.includes('return "Documentos"'),'Backup deve proteger metadados e conteúdo dos documentos');
 assert(search.includes("type:'document'")&&search.includes('buildDocuments(arr)'),'Pesquisa Global deve indexar documentos');
 assert(mobile.includes('data-view="documents"'),'mobile deve expor Gestão de Documentos');
@@ -26,7 +26,7 @@ const s=createSandbox();
 s.window.vgAuthCurrent=()=>({user:'dir_opera',name:'Diretor Ópera',role:'diretor',hotel:'OPERA'});
 s.window.VG={util:{escapeHtml:v=>String(v)},events:{emit(){},on(){}},shared:{},actions:{all:()=>[]},agenda:{all:()=>[]}};s.VG=s.window.VG;s.document.readyState='loading';
 load('assets/js/modules/document-management-v26.js',s);
-assert.strictEqual(s.window.VG.documents.version,26);
+assert(s.window.VG.documents.version>=26.2);
 assert(s.window.VG.documents.maxFileBytes>=3*1024*1024&&s.window.VG.documents.maxFileBytes<4*1024*1024);
 s.window.VG.documents.state.rows=[{id:'d1',hotel:'OPERA',title:'Auditoria HACCP',category:'audit',linkType:'hotel',fileName:'haccp.pdf',size:100,updatedAt:new Date().toISOString()}];
 assert.strictEqual(s.window.VG.documents.searchItems()[0].title,'Auditoria HACCP');
@@ -55,6 +55,12 @@ async function call(handler,...args){const r=await handler(ev(...args));let json
   let r=await call(handler,'POST','auth-login',{user:'admin26',password:'AdminDocs2027'});assert.strictEqual(r.statusCode,200);const admin=r.json.token;
   r=await call(handler,'POST','auth-login',{user:'dir26',password:'DiretorDocs2027'},null,null,'5.5.5.6');assert.strictEqual(r.statusCode,200);const dir=r.json.token;
 
+  // V35.2: ficha de hotel totalmente editável e partilhada
+  r=await call(handler,'POST','ops-hotel-profile-save',{key:'VG Opera',hotel:'Hotel Vila Galé Ópera',data:{nome:'Hotel Vila Galé Ópera',estrelas:4,morada:'Rua teste',contacts:[{role:'Director',nome:'Teste'}],rests:[{nome:'Restaurante',cap:100}],distances:[{label:'Aeroporto',val:'10 km'}]},static:{regiao:'Lisboa & Ilhas',url:'https://example.test'}},dir);
+  assert.strictEqual(r.statusCode,200,'Diretor deve editar a ficha do próprio hotel mesmo com nome completo');
+  r=await call(handler,'GET','ops-hotel-profiles',undefined,dir);assert.strictEqual(r.statusCode,200);assert(r.json.data.some(x=>x.key==='VG Opera'&&x.data.contacts[0].nome==='Teste'));
+  r=await call(handler,'POST','ops-hotel-profile-save',{key:'VG Estoril',hotel:'Hotel Vila Galé Estoril',data:{nome:'Hotel Vila Galé Estoril'},static:{}},dir);assert.strictEqual(r.statusCode,403,'Diretor não deve editar outro hotel');
+
   // criar ação que será associada ao documento
   r=await call(handler,'POST','ops-action-save',{hotel:'OPERA',sourceKey:'v26',sourceTitle:'Fechar auditoria',sourceType:'operational',ownerUser:'dir26',dueDate:'2027-08-25',status:'open'},dir);assert.strictEqual(r.statusCode,200);const action=r.json.data;
   const content=Buffer.from('conteudo-pdf-simulado').toString('base64');
@@ -68,6 +74,7 @@ async function call(handler,...args){const r=await handler(ev(...args));let json
 
   r=await call(handler,'GET','ops-documents',undefined,dir);assert.strictEqual(r.statusCode,200);assert(r.json.data.some(x=>x.id===doc.id));
   r=await call(handler,'GET','ops-document-file',undefined,dir,doc.id);assert.strictEqual(r.statusCode,200);assert.strictEqual(r.json.data.contentBase64,content);
+  r=await call(handler,'GET','ops-document-content',undefined,dir,doc.id);assert.strictEqual(r.statusCode,200);assert.strictEqual(r.isBase64Encoded,true);assert.strictEqual(Buffer.from(r.body,'base64').toString(),'conteudo-pdf-simulado');
   r=await call(handler,'POST','ops-doc-meta/'+doc.id,{title:'contorno'},admin);assert.strictEqual(r.statusCode,403,'não deve ser possível contornar auditoria por acesso direto ao blob');
 
   // concorrência e atualização sem substituir ficheiro

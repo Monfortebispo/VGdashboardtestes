@@ -21,4 +21,11 @@ for(const backend of [abStore,hkStore]){
 }
 assert(!hk.includes('navigator.sendBeacon(FN_URL'),'Housekeeping não deve contornar o header de autenticação no flush de saída');
 const ficha=read('assets/js/modules/ficha-hotel.js');assert.strictEqual(crypto.createHash('sha256').update(ficha).digest('hex'),'2779d6f5cbfcedb672f037494ee54847a16aec2247f5a0594346e3e6c4963dc7','Ficha do Hotel deve permanecer intacta');
-console.log('✓ V35: arquitetura nativa, sem iframe, com sessão/geografia e paridade funcional validada');
+
+const hotels=read('assets/js/modules/hoteis.js'),docs=read('assets/js/modules/document-management-v26.js'),nav=read('assets/js/ui/navigation-shell.js'),server35=read('netlify/functions/dashboard-sessao.js');
+assert(hotels.includes('hoteisOpenEditor')&&hotels.includes('ops-hotel-profile-save')&&hotels.includes('ht_contacts')&&hotels.includes('ht_rests')&&hotels.includes('ht_distances'),'V35.2: todos os campos de hotel devem ser editáveis e partilhados');
+assert(server35.includes('ops-hotel-profiles')&&server35.includes('HOTEL_PROFILE_PREFIX'),'V35.2: backend deve persistir fichas editadas');
+assert(docs.includes('fetchDocumentBlob')&&docs.includes('documentPreviewModal')&&server35.includes('ops-document-content'),'V35.2: anexos devem abrir por endpoint binário autenticado');
+assert(nav.includes('vgInterfacePicker')&&nav.includes('Ctrl+Shift+I')&&nav.includes('HK_LEGACY_URL')&&nav.includes('hkMergeHistory'),'V35.2: seletor compacto de interface e merge histórico HK devem existir');
+
+console.log('✓ V35.2: módulos nativos + edição total de hotéis + anexos + interface + histórico HK validados');

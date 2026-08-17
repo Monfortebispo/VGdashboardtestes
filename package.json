@@ -1,8 +1,8 @@
 {
   "name": "vg-dashboard-operacoes",
-  "version": "35.0.0",
+  "version": "35.2.0",
   "private": true,
-  "description": "VG Operations v35.0: módulos nativos de Custos & Compras A&B e Housekeeping Têxtil reconstruídos a partir das ferramentas originais, sem iframe nem segundo login",
+  "description": "VG Operations v35.2: módulos nativos, fichas de hotel totalmente editáveis, documentos com abertura robusta, seletor compacto de interfaces e sincronização de histórico HK",
   "scripts": {
     "test": "node tests/run-tests.js",
     "validate": "node tests/run-tests.js"

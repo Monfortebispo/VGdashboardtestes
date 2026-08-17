@@ -24,6 +24,7 @@ const ACTION_PREFIX = "ops-action/";
 const AGENDA_PREFIX = "ops-agenda/";
 const DOCUMENT_META_PREFIX = "ops-doc-meta/";
 const DOCUMENT_DATA_PREFIX = "ops-doc-data/";
+const HOTEL_PROFILE_PREFIX = "ops-hotel-profile/";
 const APPROVAL_PREFIX = "ops-approval/";
 const SCENARIO_PREFIX = "ops-scenario/";
 const CITYLEDGER_SNAPSHOT_PREFIX = "ops-cityledger-snapshot/";
@@ -114,6 +115,8 @@ function actionBlobKey(id) { return ACTION_PREFIX + String(id || "").replace(/[^
 function agendaBlobKey(id) { return AGENDA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function documentMetaBlobKey(id) { return DOCUMENT_META_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function documentDataBlobKey(id) { return DOCUMENT_DATA_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
+function hotelProfileBlobKey(market,key){ const h=crypto.createHash("sha1").update(norm(key)).digest("hex"); return HOTEL_PROFILE_PREFIX+marketId(market)+"/"+h; }
+function hotelProfileNorm(v){ return normHotelMarket(v).replace(/^(HOTEL\s+)?VILA\s+GALE\s+/,"").replace(/^VG(C)?\s+/,"").replace(/^COLLECTION\s+/,"").replace(/\s+/g," ").trim(); }
 function approvalBlobKey(id) { return APPROVAL_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function scenarioBlobKey(id) { return SCENARIO_PREFIX + String(id || "").replace(/[^a-zA-Z0-9_.-]/g, ""); }
 function citySafeId(v){ return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_.-]/g,"_").slice(0,180); }
@@ -334,7 +337,7 @@ function isRecoverableBusinessKey(key) {
   let k = String(key || "");
   if (k.startsWith("market/brasil/")) k = k.slice("market/brasil/".length);
   if (["index","meta","notas","cdmeta","targets-rules"].includes(k)) return true;
-  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/","ops-housekeeping-","ops-ab-","ops-reputation-semester-","ops-cityledger-email-templates"].some(p => k.startsWith(p));
+  return ["mes-","mesacum-","hotel-","occ-","ig-","rd-","piu-","hotelxlsx-","cdbatch-","settings-","hotelsheet-","ops-action/","ops-agenda/","ops-doc-meta/","ops-doc-data/","ops-hotel-profile/","ops-approval/","ops-scenario/","ops-cityledger-snapshot/","ops-cityledger-data/","ops-cityledger-diligence/","ops-housekeeping-","ops-ab-","ops-reputation-semester-","ops-cityledger-email-templates"].some(p => k.startsWith(p));
 }
 function recoveryCategoryForKey(key) {
   let k=String(key||""); if(k.startsWith("market/brasil/")) k=k.slice("market/brasil/".length);
@@ -345,6 +348,7 @@ function recoveryCategoryForKey(key) {
   if (k.startsWith("ops-action/")) return "Ações";
   if (k.startsWith("ops-agenda/")) return "Agenda";
   if (k.startsWith("ops-doc-meta/") || k.startsWith("ops-doc-data/")) return "Documentos";
+  if (k.startsWith("ops-hotel-profile/")) return "Fichas dos Hotéis";
   if (k.startsWith("ops-approval/")) return "Aprovações";
   if (k.startsWith("ops-scenario/")) return "Cenários";
   if (k.startsWith("ops-cityledger-snapshot/") || k.startsWith("ops-cityledger-data/") || k.startsWith("ops-cityledger-diligence/") || k.startsWith("ops-cityledger-email-templates")) return "City Ledger";
@@ -418,7 +422,7 @@ async function createRecoverySnapshot(store, user, options = {}) {
       id, status:"ready", kind: options.kind === "pre_restore" ? "pre_restore" : "manual",
       createdAt: now, user:user.user, name:user.name, role:user.role,
       note: cleanText(options.note, 500), sourceSnapshotId: cleanText(options.sourceSnapshotId, 100),
-      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.0"
+      items:entries.length, sizeBytes, resourceCounts, entries, appVersion:"29", buildVersion:"35.2"
     };
     await store.setJSON(recoverySnapshotKey(id), manifest);
     await pruneRecoverySnapshots(store);
@@ -1079,6 +1083,27 @@ exports.handler = async (event) => {
     if (["ops-agenda","ops-agenda-save","ops-agenda-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
     if (resource.startsWith("ops-agenda/")) return forbidden("A agenda só pode ser acedida pelos endpoints próprios.");
 
+    // -------------------- FICHAS EDITÁVEIS DOS HOTÉIS (V35.2) --------------------
+    if (resource === "ops-hotel-profiles" && event.httpMethod === "GET") {
+      const listing=await store.list({prefix:HOTEL_PROFILE_PREFIX+market+"/"});
+      const blobs=listing&&Array.isArray(listing.blobs)?listing.blobs:[];
+      const rows=(await Promise.all(blobs.map(async e=>{try{return await store.get(e.key,{type:"json"});}catch(err){return null;}}))).filter(x=>x&&x.key&&itemMarket(x)===market);
+      return ok({data:rows,total:rows.length,updatedAt:new Date().toISOString()});
+    }
+    if (resource === "ops-hotel-profile-save" && event.httpMethod === "POST") {
+      if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("A ficha do hotel excede o tamanho permitido.");
+      const payload=parseBody(event); if(!payload||typeof payload!=="object")return badRequest("Ficha inválida.");
+      const profileKey=cleanText(payload.key,180); const hotel=cleanText(payload.hotel,180); if(!profileKey||!hotel)return badRequest("Hotel obrigatório.");
+      if(!isDirection(authUser) && hotelProfileNorm(hotel)!==hotelProfileNorm(authUser.hotel) && hotelProfileNorm(profileKey)!==hotelProfileNorm(authUser.hotel))return forbidden("Não pode editar a ficha deste hotel.");
+      if(!payload.data||typeof payload.data!=="object"||Array.isArray(payload.data))return badRequest("Dados da ficha inválidos.");
+      const bkey=hotelProfileBlobKey(market,profileKey); const existing=await store.get(bkey,{type:"json"});
+      const now=nextIsoTimestamp(existing?.updatedAt); const item={key:profileKey,hotel,market,data:payload.data,static:(payload.static&&typeof payload.static==="object"&&!Array.isArray(payload.static))?payload.static:{},createdAt:existing?.createdAt||now,createdBy:existing?.createdBy||{user:authUser.user,name:authUser.name},updatedAt:now,updatedBy:{user:authUser.user,name:authUser.name}};
+      await store.setJSON(bkey,item);
+      await safeGovernanceAudit(store,authUser,{category:"Hotéis",action:existing?"Ficha de hotel atualizada":"Ficha de hotel criada",resource:"ops-hotel-profile",key:profileKey,hotel,detail:hotel,severity:"info",before:existing?{hotel:existing.hotel,updatedAt:existing.updatedAt}:null,after:{hotel,updatedAt:now}});
+      return ok({ok:true,data:item});
+    }
+    if (["ops-hotel-profiles","ops-hotel-profile-save"].includes(resource)) return response(405,{error:"Método não permitido."});
+
     // -------------------- GESTÃO DE DOCUMENTOS (v26) --------------------
     if (resource === "ops-documents" && event.httpMethod === "GET") {
       const rows = (await listOperationalDocuments(store, market)).filter(x=>canSeeDocument(authUser,x));
@@ -1090,6 +1115,18 @@ exports.handler = async (event) => {
       if(!canSeeDocument(authUser,meta))return forbidden("Sem acesso a este documento.");
       const contentBase64=await store.get(documentDataBlobKey(id),{type:"text",consistency:"strong"}); if(!contentBase64)return response(404,{error:"Conteúdo do documento indisponível."});
       return ok({data:{id:meta.id,fileName:meta.fileName,mime:meta.mime,size:meta.size,contentBase64}});
+    }
+    if (resource === "ops-document-content" && event.httpMethod === "GET") {
+      const id=cleanText(key,80).replace(/[^a-zA-Z0-9_.-]/g,""); if(!id)return badRequest("Documento obrigatório.");
+      const meta=await store.get(documentMetaBlobKey(id),{type:"json"}); if(!meta||itemMarket(meta)!==market)return response(404,{error:"Documento não encontrado."});
+      if(!canSeeDocument(authUser,meta))return forbidden("Sem acesso a este documento.");
+      const contentBase64=await store.get(documentDataBlobKey(id),{type:"text"}); if(!contentBase64)return response(404,{error:"Conteúdo do documento indisponível."});
+      let buf; try{buf=Buffer.from(contentBase64,"base64");}catch(e){return response(500,{error:"Conteúdo do documento corrompido."});}
+      if(!buf.length)return response(404,{error:"Conteúdo do documento vazio."});
+      const safeName=safeDocumentFileName(meta.fileName||"documento").replace(/["\\r\\n]/g,"_");
+      const asciiName=safeName.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g,"_");
+      const disposition=`inline; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`;
+      return {statusCode:200,headers:{"Content-Type":meta.mime||"application/octet-stream","Content-Disposition":disposition,"Cache-Control":"no-store, private","X-Content-Type-Options":"nosniff","Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"Content-Type, Authorization"},body:buf.toString("base64"),isBase64Encoded:true};
     }
     if (resource === "ops-document-save" && event.httpMethod === "POST") {
       if(bodySizeOf(event)>MAX_BODY_BYTES)return tooLarge("O documento excede o limite do endpoint. Máximo recomendado: 3,5 MB.");
@@ -1139,7 +1176,7 @@ exports.handler = async (event) => {
       await safeGovernanceAudit(store,authUser,{category:"Documentos",action:"Documento eliminado",resource:"ops-document",key:id,hotel:existing.hotel,detail:[existing.title,existing.fileName].filter(Boolean).join(" · "),severity:"warning",before:{hotel:existing.hotel,title:existing.title,category:existing.category,fileName:existing.fileName,size:existing.size},after:null});
       return ok({ok:true,id});
     }
-    if (["ops-documents","ops-document-file","ops-document-save","ops-document-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
+    if (["ops-documents","ops-document-file","ops-document-content","ops-document-save","ops-document-delete"].includes(resource)) return response(405,{error:"Método não permitido."});
     if (resource.startsWith("ops-doc-meta/")||resource.startsWith("ops-doc-data/")) return forbidden("Os documentos só podem ser acedidos pelos endpoints próprios.");
 
 
