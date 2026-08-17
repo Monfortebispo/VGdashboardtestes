@@ -1,3 +1,15 @@
+# VG Operations — V35.6 · Navegação, Pesquisa e Governanta
+
+A V35.6 corrige três regressões de utilização encontradas em teste real e fecha a integração da responsividade V35.5 no HTML.
+
+- Hotel 360º: o separador `Eficiência` passa a abrir efetivamente `Eficiência & Unit Economics`; a validação interna contempla os 8 separadores.
+- Pesquisa Global: `Ctrl/Cmd + K` fica reservado exclusivamente à Pesquisa Global. A antiga command palette deixa de disputar o foco do teclado.
+- Governanta: ao autenticar, entra diretamente na interface operacional de roupas. O hero da Dashboard e o shell desktop de Housekeeping deixam de ocupar altura antes do modo mobile; a página é reposicionada no topo.
+- Responsividade: o CSS de desktop para Windows 125%/150% passa a estar realmente ligado ao `index.html`, além do Service Worker.
+- Versão: HTML, package, Version Guard, Service Worker e backend identificam V35.6.
+
+---
+
 # VG Operations — V35.4 · Acessos por Perfil
 
 A V35.4 transforma a autenticação central numa matriz de acessos configurável pela Direção de Operações. Introduz os perfis oficiais **Governanta** e **Chefe de Receção**, ambos compatíveis com um ou vários hotéis, e deixa de assumir que um perfil não-DO deve ver todos os menus da aplicação.
@@ -73,7 +85,7 @@ As vistas históricas que continuam a ter utilidade técnica não foram apagadas
 
 Nova visão executiva por unidade, com separadores:
 
-`Visão Executiva | Financeiro | Revenue | Operação | Reputação | Ações | Documentos`
+`Visão Executiva | Financeiro | Revenue | Eficiência | Operação | Reputação | Ações | Documentos`
 
 A visão executiva agrega informação já produzida pelos módulos existentes, incluindo Performance Hotel, Benchmarking, Revenue Intelligence, Ações, Reputação, Anomalias e Qualidade de Dados.
 

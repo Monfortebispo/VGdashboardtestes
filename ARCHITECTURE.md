@@ -1,3 +1,15 @@
+# Arquitetura — V35.6 · Navegação e experiência Governanta
+
+A Pesquisa Global é a única dona do atalho `Ctrl/Cmd + K`. A command palette histórica permanece apenas como código de compatibilidade, sem atalho concorrente.
+
+O Hotel 360º mantém 8 tabs válidos e `efficiency` é uma rota de primeira classe para `VG.unitEconomics.hotel360Html()`.
+
+No perfil `governanta`, `operations-domains-v33.js` monta diretamente o módulo nativo sem o hero analítico. Dentro do Shadow DOM, `#app.hidden` vence explicitamente a regra normal de `#app`, deixando apenas `#govMode`. O host recebe `hk35-governanta`, ocupa o viewport e o scroll externo é reposto no topo. O scroll vertical necessário passa a existir somente dentro de `.gov-body`.
+
+A folha `responsive-desktop-v35_6.css` é carregada pelo HTML e também incluída no shell estático do Service Worker.
+
+---
+
 # Arquitetura — V35.4 · RBAC e âmbito multi-hotel
 
 A V35.4 introduz um modelo RBAC simples e explícito na sessão central. Cada utilizador tem `role`, `hotels[]` e `modules[]`. A Direção de Operações recebe os curingas `hotels:["*"]` e `modules:["*"]`; os restantes perfis recebem listas concretas.
