@@ -1,12 +1,12 @@
 // ==========================================================
-// VG OPERATIONS v36.2 — COERÊNCIA DE VERSÃO / PWA + SHELL COMPACTO
+// VG OPERATIONS v35.7 — COERÊNCIA DE VERSÃO / PWA + SHELL COMPACTO
 // Garante coerência do shell, login responsivo desde o primeiro clique e
 // reorganiza controlos globais sem alterar a lógica funcional dos módulos.
 // ==========================================================
 (function(){
   'use strict';
   const BUILD='32.9'; // identificador de compatibilidade do guard legado
-  const PLATFORM_BUILD='35.6';
+  const PLATFORM_BUILD='35.7';
   const SW_URL='/service-worker.js?vg='+encodeURIComponent(PLATFORM_BUILD);
   window.__VG_APP_BUILD__=PLATFORM_BUILD;
   window.__VG_SW_URL__=SW_URL;
@@ -70,13 +70,16 @@
   },true);
 
   // ----------------------------------------------------------
-  // SHELL V36.2 — resolver por estrutura, não por zoom
+  // SHELL V35.7 — resolver por estrutura, não por zoom
   // ----------------------------------------------------------
   function installShellStyle(){
-    if(document.getElementById('vgShellV362Style'))return;
+    if(document.getElementById('vgShellV357Style'))return;
     const s=document.createElement('style');
-    s.id='vgShellV362Style';
+    s.id='vgShellV357Style';
     s.textContent=`
+      /* Popup de carregamento removido: o estado continua disponível na sidebar. */
+      #vgLoadPop{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
       /* A barra superior é sempre uma única faixa fechada. */
       html body header.topbar{
         height:48px!important;min-height:48px!important;max-height:48px!important;
@@ -228,7 +231,13 @@
     }
   }
 
+  function removeLoadPopup(){
+    const pop=document.getElementById('vgLoadPop');
+    if(pop)pop.remove();
+  }
+
   function relocateShellControls(){
+    removeLoadPopup();
     const sidebar=document.getElementById('sidebar');
     if(sidebar){
       const market=document.getElementById('vgMarketSwitch');
@@ -250,7 +259,9 @@
     installShellStyle();
     relocateShellControls();
     // Alguns controlos são criados por módulos no DOMContentLoaded.
-    [0,60,180,450,900,1600,2600].forEach(ms=>setTimeout(relocateShellControls,ms));
+    [0,60,180,450,900,1600,2600,5000].forEach(ms=>setTimeout(relocateShellControls,ms));
+    // Se algum módulo legado voltar a criar o popup, remove-o sem afetar o carregamento.
+    new MutationObserver(removeLoadPopup).observe(document.documentElement,{childList:true,subtree:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootCompactShell,{once:true});else bootCompactShell();
 
