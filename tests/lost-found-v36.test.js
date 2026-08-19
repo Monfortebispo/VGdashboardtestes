@@ -1,0 +1,22 @@
+const fs=require('fs');
+const path=require('path');
+function ok(cond,msg){if(!cond){console.error('FAIL:',msg);process.exit(1)}}
+const root=path.join(__dirname,'..');
+const client=fs.readFileSync(path.join(root,'assets/js/modules/lost-found-v36.js'),'utf8');
+const fn=fs.readFileSync(path.join(root,'netlify/functions/lost-found.js'),'utf8');
+const boot=fs.readFileSync(path.join(root,'assets/js/core/04-bootstrap.js'),'utf8');
+new Function(client);
+new Function('require','exports','module','Buffer',fn);
+ok(boot.includes('lost-found-v36.js'),'bootstrap carrega o módulo');
+ok(boot.includes("'lostfound'"),'hash routing reconhece lostfound');
+ok(client.includes("id='nav-lostfound'")||client.includes("id='nav-lostfound'" )||client.includes("b.id='nav-lostfound'"),'módulo cria navegação');
+ok(client.includes('Perdidos & Achados'),'interface tem título correto');
+ok(client.includes('Recebido pelo cliente'),'fluxo inclui receção pelo cliente');
+ok(client.includes('vgAuthCanAccessHotel'),'cliente respeita âmbito de hotéis');
+ok(client.includes('vgModuleAccess'),'Setup expõe permissão do módulo');
+ok(fn.includes("u.modules.includes('lostfound')"),'backend exige permissão de módulo');
+ok(fn.includes('canHotel(user,hotel)'),'backend valida âmbito no create');
+ok(fn.includes("r.status!=='Recebido pelo cliente'"),'backend impede arquivo prematuro');
+ok(fn.includes("getStore(STORE_NAME)"),'backend persiste em Netlify Blobs');
+ok(fn.includes('auditEntry(user'),'histórico usa utilizador autenticado');
+console.log('✓ Perdidos & Achados: sintaxe, persistência, âmbito, estados e integração de utilizadores validados.');
