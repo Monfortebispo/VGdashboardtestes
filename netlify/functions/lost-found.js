@@ -5,7 +5,6 @@ const STORE_NAME='vg-dashboard-operacoes';
 const RECORD_PREFIX='ops-lostfound-record/';
 const FILE_PREFIX='ops-lostfound-file/';
 const COUNTER_PREFIX='ops-lostfound-counter/';
-const SESSION_TTL_SECONDS=12*60*60;
 const MAX_JSON_BYTES=4.8*1024*1024;
 const MAX_FILE_BYTES=3.2*1024*1024;
 const STATES=new Set(['Encontrado','Cliente contactado','A processar envio','Enviado','Recebido pelo cliente']);
@@ -34,7 +33,6 @@ function isDirection(u){return !!u&&normalizeRole(u.role)==='direcao'}
 function userHotels(u){if(!u)return[];if(isDirection(u))return['*'];const a=Array.isArray(u.hotels)?u.hotels:(u.hotel&&u.hotel!=='*'?[u.hotel]:[]);return [...new Set(a.map(x=>String(x||'').trim()).filter(Boolean))]}
 function canHotel(u,h){if(isDirection(u))return true;const n=normHotel(h);return !!n&&userHotels(u).some(x=>normHotel(x)===n)}
 function canModule(u){if(isDirection(u))return true;return Array.isArray(u.modules)&&u.modules.includes('lostfound')}
-function b64url(input){return Buffer.from(input).toString('base64').replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}
 function fromB64url(input){let s=String(input).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Buffer.from(s,'base64')}
 async function authSecret(store){const rec=await store.get('_auth-secret-v1',{type:'json'});return rec&&rec.value?Buffer.from(rec.value,'base64'):null}
 async function verifyToken(store,token){
@@ -54,16 +52,13 @@ function bearer(event){const h=(event.headers&&(event.headers.authorization||eve
 function recordKey(id){return RECORD_PREFIX+safeId(id)}
 function fileKey(id,fileId){return FILE_PREFIX+safeId(id)+'/'+safeId(fileId)}
 function auditEntry(user,action,detail){return{at:new Date().toISOString(),user:user.user,name:user.name||user.user,profile:normalizeRole(user.role),action,detail:clean(detail,800)}}
-function publicRecord(r){
-  if(!r)return r;
-  return Object.assign({},r,{files:(r.files||[]).map(f=>({id:f.id,name:f.name,type:f.type,size:f.size,kind:f.kind,createdAt:f.createdAt}))});
-}
-async function listRecords(store,user){
+function publicRecord(r){if(!r)return r;return Object.assign({},r,{files:(r.files||[]).map(f=>({id:f.id,name:f.name,type:f.type,size:f.size,kind:f.kind,createdAt:f.createdAt}))})}
+async function listRecords(store){
   const listing=await store.list({prefix:RECORD_PREFIX});
   const out=[];
   for(const b of (listing.blobs||[])){
     const r=await store.get(b.key,{type:'json'});
-    if(r&&canHotel(user,r.hotel))out.push(publicRecord(r));
+    if(r)out.push(publicRecord(r));
   }
   return out.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
 }
@@ -75,7 +70,7 @@ async function nextCode(store,hotel){
   await store.setJSON(key,{value,updatedAt:new Date().toISOString()});
   return `${hotelPrefix(hotel)}-${String(value).padStart(6,'0')}`;
 }
-async function getRecord(store,id,user){const r=await store.get(recordKey(id),{type:'json'});if(!r)return null;if(!canHotel(user,r.hotel))return false;return r}
+async function getRecord(store,id){return await store.get(recordKey(id),{type:'json'})||null}
 async function saveRecord(store,r){r.updatedAt=new Date().toISOString();await store.setJSON(recordKey(r.id),r);return r}
 
 exports.handler=async(event)=>{
@@ -90,12 +85,12 @@ exports.handler=async(event)=>{
     const action=clean(p.action||'list',40);
 
     if(event.httpMethod==='GET'&&action==='list'){
-      const rows=await listRecords(store,user);
+      const rows=await listRecords(store);
       return ok({data:rows,total:rows.length,updatedAt:new Date().toISOString()});
     }
     if(event.httpMethod==='GET'&&action==='file'){
       const id=clean(p.id,120),fileId=clean(p.file,120);
-      const r=await getRecord(store,id,user);if(r===false)return forbid();if(!r)return notFound();
+      const r=await getRecord(store,id);if(!r)return notFound();
       const meta=(r.files||[]).find(f=>f.id===fileId);if(!meta)return notFound('Ficheiro não encontrado.');
       const data=await store.get(fileKey(id,fileId),{type:'json'});if(!data||!data.base64)return notFound('Ficheiro não encontrado.');
       return ok({data:{name:meta.name,type:meta.type,base64:data.base64}});
@@ -108,14 +103,16 @@ exports.handler=async(event)=>{
       const hotel=clean(payload.hotel,120),location=clean(payload.location,300),foundBy=clean(payload.foundBy,200);
       const items=Array.isArray(payload.items)?payload.items.map(x=>({description:clean(x.description,300),qty:Math.max(1,Math.min(999,Number(x.qty)||1))})).filter(x=>x.description).slice(0,50):[];
       if(!hotel||!location||!foundBy||!items.length)return bad('Preencha hotel, local, quem encontrou e pelo menos um objeto.');
-      if(!canHotel(user,hotel))return forbid('Este hotel está fora do âmbito do utilizador.');
+      if(!canHotel(user,hotel))return forbid('Só pode criar registos nos hotéis atribuídos ao seu utilizador.');
       const now=new Date().toISOString(),code=await nextCode(store,hotel),id=code;
       const r={id,code,hotel,reservation:clean(payload.reservation,120),room:clean(payload.room,60),location,foundBy,notes:clean(payload.notes,4000),items,createdAt:now,updatedAt:now,year:new Date().getFullYear(),status:'Encontrado',customerName:'',customerContact:'',contactedBy:'',shippingMethod:'',customerCost:'',hotelCost:'',deliveredBy:'',archived:false,files:[],createdBy:{user:user.user,name:user.name||user.user,profile:normalizeRole(user.role)},history:[auditEntry(user,'Criou registo',`Objeto encontrado por ${foundBy}`)]};
       await saveRecord(store,r);
       return ok({ok:true,data:publicRecord(r)});
     }
+
     const id=clean(payload.id||p.id,120);if(!id)return bad('Identificador obrigatório.');
-    const r=await getRecord(store,id,user);if(r===false)return forbid();if(!r)return notFound();
+    const r=await getRecord(store,id);if(!r)return notFound();
+    if(!canHotel(user,r.hotel))return forbid('Este registo pertence a outro hotel. O seu perfil tem acesso apenas de consulta.');
 
     if(action==='update'){
       const old=r.status,next=clean(payload.status||r.status,80);if(!STATES.has(next))return bad('Estado inválido.');
