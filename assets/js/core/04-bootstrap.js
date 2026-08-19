@@ -7,6 +7,14 @@
   s.src='assets/js/modules/lost-found-v36.js';
   s.async=false;
   s.dataset.vgModule='lostfound';
+  s.onload=()=>{
+    if(document.querySelector('script[data-vg-module="lostfound-status-comment"]'))return;
+    const p=document.createElement('script');
+    p.src='assets/js/modules/lost-found-status-comment-v36.js';
+    p.async=false;
+    p.dataset.vgModule='lostfound-status-comment';
+    document.head.appendChild(p);
+  };
   document.head.appendChild(s);
 })();
 
