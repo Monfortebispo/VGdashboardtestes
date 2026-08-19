@@ -2,6 +2,14 @@
 // MÓDULOS NATIVOS ADICIONAIS
 // ==========================================================
 (function(){
+  if(!document.querySelector('script[data-vg-module="hotel-access-sanitizer"]')){
+    const h=document.createElement('script');
+    h.src='assets/js/auth/hotel-access-sanitizer-v36.js';
+    h.async=false;
+    h.dataset.vgModule='hotel-access-sanitizer';
+    document.head.appendChild(h);
+  }
+
   if(document.querySelector('script[data-vg-module="lostfound"]'))return;
   const s=document.createElement('script');
   s.src='assets/js/modules/lost-found-v36.js';
