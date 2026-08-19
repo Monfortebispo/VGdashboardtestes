@@ -4,13 +4,16 @@ function ok(cond,msg){if(!cond){console.error('FAIL:',msg);process.exit(1)}}
 const root=path.join(__dirname,'..');
 const client=fs.readFileSync(path.join(root,'assets/js/modules/lost-found-v36.js'),'utf8');
 const commentPatch=fs.readFileSync(path.join(root,'assets/js/modules/lost-found-status-comment-v36.js'),'utf8');
+const accessBridge=fs.readFileSync(path.join(root,'assets/js/auth/lostfound-access-bridge-v36.js'),'utf8');
 const fn=fs.readFileSync(path.join(root,'netlify/functions/lost-found.js'),'utf8');
 const boot=fs.readFileSync(path.join(root,'assets/js/core/04-bootstrap.js'),'utf8');
 new Function(client);
 new Function(commentPatch);
+new Function(accessBridge);
 new Function('require','exports','module','Buffer',fn);
 ok(boot.includes('lost-found-v36.js'),'bootstrap carrega o módulo');
 ok(boot.includes('lost-found-status-comment-v36.js'),'bootstrap carrega validação de comentário de estado');
+ok(boot.includes('lostfound-access-bridge-v36.js'),'bootstrap carrega ponte de permissões/navegação');
 ok(boot.includes("'lostfound'"),'hash routing reconhece lostfound');
 ok(client.includes("b.id='nav-lostfound'"),'módulo cria navegação');
 ok(client.includes('Perdidos & Achados'),'interface tem título correto');
@@ -20,6 +23,10 @@ ok(client.includes('writableHotels()'),'criação usa apenas hotéis atribuídos
 ok(client.includes('Modo consulta'),'detalhe distingue leitura de edição');
 ok(client.includes('vgAuthCanAccessHotel'),'cliente valida âmbito para escrita');
 ok(client.includes('vgModuleAccess'),'Setup expõe permissão do módulo');
+ok(accessBridge.includes("window.vgAuthCanAccessModule?.(MODULE)===true"),'ponte usa a sessão/permissão como fonte de verdade');
+ok(accessBridge.includes("data-view=\"lostfound\"")||accessBridge.includes("dataset.view='lostfound'"),'ponte integra navegação mobile');
+ok(accessBridge.includes('vg-nav-cmd-item'),'ponte integra comando da Interface 2.0');
+ok(accessBridge.includes("document.getElementById('nav-lostfound')"),'ponte garante sidebar');
 ok(commentPatch.includes('Comentário da alteração de estado'),'interface pede comentário na mudança de estado');
 ok(commentPatch.includes('Para alterar o estado é obrigatório escrever um comentário.'),'cliente bloqueia mudança sem comentário');
 ok(commentPatch.includes('statusComment'),'cliente envia comentário ao backend');
@@ -32,4 +39,4 @@ ok(fn.includes('Comentário: ${statusComment}'),'histórico inclui comentário d
 ok(fn.includes("r.status!=='Recebido pelo cliente'"),'backend impede arquivo prematuro');
 ok(fn.includes("getStore(STORE_NAME)"),'backend persiste em Netlify Blobs');
 ok(fn.includes('auditEntry(user'),'histórico usa utilizador autenticado');
-console.log('✓ Perdidos & Achados: consulta global, escrita por hotel, comentário obrigatório por estado, persistência e integração validados.');
+console.log('✓ Perdidos & Achados: permissões, navegação, consulta global, escrita por hotel, comentário obrigatório e persistência validados.');
