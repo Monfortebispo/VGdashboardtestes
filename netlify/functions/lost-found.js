@@ -116,9 +116,12 @@ exports.handler=async(event)=>{
 
     if(action==='update'){
       const old=r.status,next=clean(payload.status||r.status,80);if(!STATES.has(next))return bad('Estado inválido.');
+      const statusComment=clean(payload.statusComment,800);
+      if(old!==next&&!statusComment)return bad('É obrigatório indicar um comentário sempre que o estado é alterado.');
       const method=clean(payload.shippingMethod,80);if(!SHIPPING.has(method))return bad('Método de envio inválido.');
       r.customerName=clean(payload.customerName,200);r.customerContact=clean(payload.customerContact,300);r.contactedBy=clean(payload.contactedBy,200);r.shippingMethod=method;r.customerCost=clean(payload.customerCost,80);r.hotelCost=clean(payload.hotelCost,80);r.deliveredBy=clean(payload.deliveredBy,200);r.status=next;
-      r.history=(r.history||[]).concat([auditEntry(user,old===next?'Atualizou registo':`Estado: ${old} → ${next}`,'')]);
+      const actionText=old===next?'Atualizou registo':`Estado: ${old} → ${next} · Comentário: ${statusComment}`;
+      r.history=(r.history||[]).concat([auditEntry(user,actionText,statusComment)]);
       await saveRecord(store,r);return ok({ok:true,data:publicRecord(r)});
     }
     if(action==='archive'){
