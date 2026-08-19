@@ -51,6 +51,19 @@ html body header.topbar.topbar .topbar-right{overflow:visible!important;}
 html body header.topbar.topbar .vg-interface-picker{overflow:visible!important;position:relative!important;z-index:1900!important;}
 html body header.topbar.topbar .vg-interface-menu{z-index:2000!important;}
 
+/* Hotfix V35.7: a regra global de tabelas não pode esconder o scroll vertical
+   da gestão de utilizadores. Esta exceção é deliberadamente mais específica. */
+html body #vgSetupModal .vg-auth-table-wrap{
+  height:min(58vh,560px)!important;
+  max-height:min(58vh,560px)!important;
+  overflow-x:auto!important;
+  overflow-y:scroll!important;
+  scrollbar-gutter:stable both-edges!important;
+  overscroll-behavior:contain!important;
+}
+html body #vgSetupModal .vg-auth-table{min-width:820px;}
+html body #vgSetupModal .vg-auth-table th{position:sticky!important;top:0!important;z-index:3!important;}
+
 /* V35.6 · Governanta: experiência operacional mobile dedicada e direta.
    A autenticação continua central; o chrome analítico da Dashboard é ocultado. */
 body.vg-governanta-mode{
