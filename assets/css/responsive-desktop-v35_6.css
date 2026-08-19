@@ -11,6 +11,26 @@ body,.main,.view-content,.global-filter-bar,.topbar,.topbar-center,.topbar-right
 img,svg,canvas,video{max-width:100%}
 pre{max-width:100%;overflow:auto}
 
+/*
+   A barra global é um elemento de navegação/filtro, não um overlay.
+   Fica sempre no fluxo normal da página para nunca cobrir títulos,
+   cartões, botões ou informação dos módulos, qualquer que seja o zoom,
+   tema ou resolução. Esta regra vence o sticky histórico de base.css.
+*/
+html body .global-filter-bar,
+html body.vg-interface-modern .global-filter-bar{
+  position:relative!important;
+  top:auto!important;
+  left:auto!important;
+  right:auto!important;
+  z-index:20!important;
+  flex:0 0 auto!important;
+}
+html body .global-filter-bar + .view-content{
+  position:relative!important;
+  z-index:1!important;
+}
+
 /* Qualquer tabela larga deve deslocar-se dentro do cartão e nunca alargar o body. */
 .table-wrapper,
 [class*="table-wrap"],
