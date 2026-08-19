@@ -36,14 +36,19 @@ load('assets/js/modules/forecast-scenarios.js',sb);
 const ri=sb.window.VG.revenue.getHotelMonthForecast('HOTEL A',9);
 assert.strictEqual(ri.available,true);
 assert(Math.abs(ri.trend-2)<0.01);
-assert(Math.abs(ri.forecast-62)<0.05,'forecast deve usar 2 pp/semana durante 6 semanas');
+// O horizonte é calculado em tempo real pelo Revenue Intelligence e limitado a 6 semanas.
+// O teste antigo exigia sempre 62% (= 50 + 2*6), ficando dependente do dia/hora em que
+// o CI corria. Validamos agora a fórmula real, tornando a regressão determinística.
+const expectedForecast=Math.max(0,Math.min(100,50+2*ri.weeksLeft));
+assert(ri.weeksLeft>=0&&ri.weeksLeft<=6,'horizonte deve ficar entre 0 e 6 semanas');
+assert(Math.abs(ri.forecast-expectedForecast)<0.01,'forecast deve aplicar tendência semanal ao horizonte restante');
 assert.strictEqual(ri.target,72);
 const base=sb.window.VG.forecast.buildBase('HOTEL A',9);
 assert.strictEqual(base.available,true);
 assert.strictEqual(base.refYear,'2025');
 assert(Math.abs(base.adrBase-104)<0.001);
 assert.strictEqual(base.availableRN,900);
-assert(Math.abs(base.forecastOcc-62)<0.05);
+assert(Math.abs(base.forecastOcc-ri.forecast)<0.01,'cenário base deve reutilizar o forecast do Revenue Intelligence');
 assert(base.baseScenario.revenue>90000&&base.baseScenario.revenue<105000);
 assert(base.baseScenario.gop>0);
 assert(base.confidence.score>=50);
