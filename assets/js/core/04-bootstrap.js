@@ -1,4 +1,14 @@
 // ==========================================================
+// MÓDULOS NATIVOS ADICIONAIS
+// ==========================================================
+(function(){
+  if(document.querySelector('script[data-vg-module="lostfound"]'))return;
+  const s=document.createElement('script');
+  s.src='assets/js/modules/lost-found-v36.js';
+  s.async=false;
+  s.dataset.vgModule='lostfound';
+  document.head.appendChild(s);
+})();
 
 function drawerOpen() {
   document.getElementById('sidebar').classList.add('open');
@@ -43,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   // Hash routing — restore view from URL, else default to resumo
   const hash = window.location.hash.replace('#', '');
-  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
+  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','lostfound','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
   setView(hash && validViews.includes(hash) ? hash : 'resumo');
   window.addEventListener('popstate', () => {
     const h = window.location.hash.replace('#', '');
