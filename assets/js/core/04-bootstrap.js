@@ -10,19 +10,31 @@
     document.head.appendChild(h);
   }
 
-  if(document.querySelector('script[data-vg-module="lostfound"]'))return;
+  function loadLostFoundAccessBridge(){
+    if(document.querySelector('script[data-vg-module="lostfound-access-bridge"]'))return;
+    const a=document.createElement('script');
+    a.src='assets/js/auth/lostfound-access-bridge-v36.js';
+    a.async=false;
+    a.dataset.vgModule='lostfound-access-bridge';
+    document.head.appendChild(a);
+  }
+  function loadLostFoundStatus(){
+    if(!document.querySelector('script[data-vg-module="lostfound-status-comment"]')){
+      const p=document.createElement('script');
+      p.src='assets/js/modules/lost-found-status-comment-v36.js';
+      p.async=false;
+      p.dataset.vgModule='lostfound-status-comment';
+      p.onload=loadLostFoundAccessBridge;
+      document.head.appendChild(p);
+    }else loadLostFoundAccessBridge();
+  }
+
+  if(document.querySelector('script[data-vg-module="lostfound"]')){loadLostFoundStatus();return;}
   const s=document.createElement('script');
   s.src='assets/js/modules/lost-found-v36.js';
   s.async=false;
   s.dataset.vgModule='lostfound';
-  s.onload=()=>{
-    if(document.querySelector('script[data-vg-module="lostfound-status-comment"]'))return;
-    const p=document.createElement('script');
-    p.src='assets/js/modules/lost-found-status-comment-v36.js';
-    p.async=false;
-    p.dataset.vgModule='lostfound-status-comment';
-    document.head.appendChild(p);
-  };
+  s.onload=loadLostFoundStatus;
   document.head.appendChild(s);
 })();
 
