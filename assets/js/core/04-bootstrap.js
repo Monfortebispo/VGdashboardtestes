@@ -10,12 +10,21 @@
     document.head.appendChild(h);
   }
 
+  function loadGovernantaFix(){
+    if(document.querySelector('script[data-vg-module="governanta-mobile-fix"]'))return;
+    const g=document.createElement('script');
+    g.src='assets/js/modules/governanta-mobile-fix-v36.js';
+    g.async=false;
+    g.dataset.vgModule='governanta-mobile-fix';
+    document.head.appendChild(g);
+  }
   function loadLostFoundEmailMobile(){
-    if(document.querySelector('script[data-vg-module="lostfound-email-mobile"]'))return;
+    if(document.querySelector('script[data-vg-module="lostfound-email-mobile"]')){loadGovernantaFix();return;}
     const e=document.createElement('script');
     e.src='assets/js/modules/lost-found-email-mobile-v36.js';
     e.async=false;
     e.dataset.vgModule='lostfound-email-mobile';
+    e.onload=loadGovernantaFix;
     document.head.appendChild(e);
   }
   function loadLostFoundAccessBridge(){
