@@ -40,6 +40,25 @@
       body.vg-gov-inventory-mode #sidebar,
       body.vg-gov-inventory-mode #portfolioRail{visibility:hidden!important;pointer-events:none!important}
       body.vg-gov-inventory-mode main{margin:0!important;padding:0!important;min-height:0!important}
+
+      /* Perdidos & Achados da Governanta é igualmente exclusivo: nunca mostra inventários por baixo. */
+      body.vg-gov-lostfound-mode{overflow:hidden!important}
+      body.vg-gov-lostfound-mode header.topbar,
+      body.vg-gov-lostfound-mode .global-filter-bar,
+      body.vg-gov-lostfound-mode #sidebar,
+      body.vg-gov-lostfound-mode #portfolioRail,
+      body.vg-gov-lostfound-mode #view-housekeeping{display:none!important;visibility:hidden!important;pointer-events:none!important}
+      body.vg-gov-lostfound-mode main{margin:0!important;padding:0!important;min-height:0!important}
+      body.vg-gov-lostfound-mode #vgGovMobile{
+        display:block!important;position:fixed!important;inset:0!important;z-index:2147481950!important;
+        width:100vw!important;height:100dvh!important;max-width:none!important;margin:0!important;
+        overflow:auto!important;background:var(--surface-0,#071525)!important;padding:18px 14px 80px!important;
+      }
+      body.vg-gov-lostfound-mode #view-lostfound{
+        display:block!important;position:fixed!important;inset:0!important;z-index:2147481950!important;
+        width:100vw!important;height:100dvh!important;max-width:none!important;margin:0!important;
+        overflow:auto!important;background:var(--surface-0,#071525)!important;padding:12px!important;
+      }
     `;document.head.appendChild(s);
   }
 
@@ -52,19 +71,21 @@
 
   function showEntry(){
     if(!isGov())return;
-    document.body.classList.remove('vg-gov-inventory-mode');
+    document.body.classList.remove('vg-gov-inventory-mode','vg-gov-lostfound-mode');
     document.body.classList.add('vg-governanta-session');
     hideLegacyGov();
     let root=$('vgGovEntry36');
     if(!root){buildEntry();root=$('vgGovEntry36')}
     if(root)root.style.display='block';
     const ret=$('vgGovReturn36');if(ret)ret.style.display='none';
+    try{window.scrollTo?.(0,0)}catch(e){}
   }
 
   function openInventory(){
     const root=$('vgGovEntry36');if(root)root.style.display='none';
-    document.body.classList.remove('vg-governanta-session');
+    document.body.classList.remove('vg-governanta-session','vg-gov-lostfound-mode');
     document.body.classList.add('vg-gov-inventory-mode');
+    hideLegacyGov();
     try{window.setView?.('housekeeping')}catch(e){}
     const ret=$('vgGovReturn36');if(ret)ret.style.display='block';
     window.scrollTo?.(0,0);
@@ -73,8 +94,8 @@
   function openLostFound(){
     if(!canLostFound())return;
     const root=$('vgGovEntry36');if(root)root.style.display='none';
-    document.body.classList.remove('vg-governanta-session');
-    document.body.classList.remove('vg-gov-inventory-mode');
+    document.body.classList.remove('vg-governanta-session','vg-gov-inventory-mode');
+    document.body.classList.add('vg-gov-lostfound-mode');
     const legacy=$('vgGovMobile');
     if(legacy){
       legacy.style.display='block';
@@ -86,6 +107,7 @@
       setTimeout(()=>document.getElementById('vlfNew')?.click(),100);
     }
     const ret=$('vgGovReturn36');if(ret)ret.style.display='block';
+    window.scrollTo?.(0,0);
   }
 
   function buildEntry(){
@@ -102,14 +124,15 @@
 
   function sync(){
     if(!isGov()){
-      document.body.classList.remove('vg-governanta-session','vg-gov-inventory-mode');
+      document.body.classList.remove('vg-governanta-session','vg-gov-inventory-mode','vg-gov-lostfound-mode');
       $('vgGovEntry36')?.remove();$('vgGovReturn36')?.remove();
       return;
     }
-    installStyle();hideLegacyGov();
+    installStyle();
     if(!$('vgGovEntry36'))buildEntry();
     const root=$('vgGovEntry36');
-    if(root&&root.style.display!=='none'&&!document.body.classList.contains('vg-gov-inventory-mode'))document.body.classList.add('vg-governanta-session');
+    const inMode=document.body.classList.contains('vg-gov-inventory-mode')||document.body.classList.contains('vg-gov-lostfound-mode');
+    if(root&&root.style.display!=='none'&&!inMode){hideLegacyGov();document.body.classList.add('vg-governanta-session')}
   }
 
   function boot(){
@@ -120,7 +143,9 @@
       if(isGov()&&hotels().length){clearInterval(t);showEntry()}
       if(tries>80)clearInterval(t);
     },125);
-    window.addEventListener('hashchange',()=>{if(isGov()&&document.body.classList.contains('vg-gov-inventory-mode'))window.scrollTo?.(0,0)});
+    window.addEventListener('hashchange',()=>{
+      if(isGov()&&(document.body.classList.contains('vg-gov-inventory-mode')||document.body.classList.contains('vg-gov-lostfound-mode')))window.scrollTo?.(0,0)
+    });
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
