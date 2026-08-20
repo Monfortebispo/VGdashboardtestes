@@ -66,6 +66,16 @@
   document.head.appendChild(s);
 })();
 
+// Orçamentos: 3–4 propostas, decisão DO, adjudicação e ligação à intervenção.
+(function(){
+  if(document.querySelector('script[data-vg-module="budgets"]'))return;
+  const s=document.createElement('script');
+  s.src='assets/js/modules/budgets-v36.js';
+  s.async=false;
+  s.dataset.vgModule='budgets';
+  document.head.appendChild(s);
+})();
+
 // Banco de Horas & Férias: módulo consolidado, sem observers/polling auxiliares.
 (function(){
   if(document.querySelector('script[data-vg-module="hrbalances"]'))return;
@@ -116,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
     applyMesSelection();
   }
   const hash = window.location.hash.replace('#', '');
-  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','lostfound','complaints','hrbalances','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
+  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','lostfound','complaints','budgets','hrbalances','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
   setView(hash && validViews.includes(hash) ? hash : 'resumo');
   window.addEventListener('popstate', () => {
     const h = window.location.hash.replace('#', '');
