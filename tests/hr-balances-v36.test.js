@@ -13,6 +13,10 @@ ok(!boot.includes('hr-balances-import-fix-v36.js'),'bootstrap já não carrega i
 ok(boot.includes("'hrbalances'"),'routing reconhece hrbalances');
 ok(client.includes('Banco de Horas & Férias'),'interface tem título');
 ok(client.includes('RH - Saldos por Gozar'),'fonte RH identificada');
+ok(client.includes('Resumo por departamento'),'interface tem resumo por departamento');
+ok(client.includes('vhrDeptSummary'),'resumo departamental tem área própria');
+ok(client.includes('deptMap=new Map()'),'agregação departamental é calculada numa passagem');
+ok(client.includes('d.people.add(personKey)'),'colaboradores por departamento não são duplicados por saldo');
 ok(client.includes('ensureXLSX'),'importador usa biblioteca Excel');
 ok(client.includes('parseSheet'),'existe parser do relatório');
 ok(client.includes("'Banco de Horas','Férias','Férias - Anos Anteriores'"),'tipos principais preservados');
@@ -31,4 +35,4 @@ ok(fn.includes("if(!direction(u))return forbid('A atualização dos saldos RH es
 ok(fn.includes("store.setJSON(SNAP_PREFIX+Date.now(),old)"),'importação cria snapshot anterior');
 ok(fn.includes("store.setJSON(DATA_KEY,data)"),'dados persistem em Netlify Blobs');
 ok(fn.includes('scopedMeta'),'metadados também respeitam âmbito');
-console.log('✓ Banco de Horas & Férias: arquitetura consolidada, performance, importação, persistência e permissões validadas.');
+console.log('✓ Banco de Horas & Férias: arquitetura consolidada, resumo por departamento, performance, importação, persistência e permissões validadas.');
