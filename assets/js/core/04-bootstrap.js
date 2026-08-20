@@ -78,11 +78,20 @@
 
 // Energia & Consumos: faturas, persistência e análise operacional.
 (function(){
-  if(document.querySelector('script[data-vg-module="energy"]'))return;
+  function loadEnergyMenuFix(){
+    if(document.querySelector('script[data-vg-module="energy-menu-fix"]'))return;
+    const f=document.createElement('script');
+    f.src='assets/js/modules/energy-menu-fix-v36.js';
+    f.async=false;
+    f.dataset.vgModule='energy-menu-fix';
+    document.head.appendChild(f);
+  }
+  if(document.querySelector('script[data-vg-module="energy"]')){loadEnergyMenuFix();return;}
   const s=document.createElement('script');
   s.src='assets/js/modules/energy-v36.js';
   s.async=false;
   s.dataset.vgModule='energy';
+  s.onload=loadEnergyMenuFix;
   document.head.appendChild(s);
 })();
 
