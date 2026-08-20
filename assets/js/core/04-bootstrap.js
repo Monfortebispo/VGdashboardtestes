@@ -57,12 +57,21 @@
 })();
 
 (function(){
+  function loadImportFix(){
+    if(document.querySelector('script[data-vg-module="hrbalances-import-fix"]'))return;
+    const p=document.createElement('script');
+    p.src='assets/js/modules/hr-balances-import-fix-v36.js';
+    p.async=false;
+    p.dataset.vgModule='hrbalances-import-fix';
+    document.head.appendChild(p);
+  }
   function loadLayoutFix(){
-    if(document.querySelector('script[data-vg-module="hrbalances-layout-fix"]'))return;
+    if(document.querySelector('script[data-vg-module="hrbalances-layout-fix"]')){loadImportFix();return;}
     const f=document.createElement('script');
     f.src='assets/js/modules/hr-balances-layout-fix-v36.js';
     f.async=false;
     f.dataset.vgModule='hrbalances-layout-fix';
+    f.onload=loadImportFix;
     document.head.appendChild(f);
   }
   function loadAccess(){
