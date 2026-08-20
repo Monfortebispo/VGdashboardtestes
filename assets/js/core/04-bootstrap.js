@@ -56,39 +56,13 @@
   document.head.appendChild(s);
 })();
 
+// Banco de Horas & Férias: módulo consolidado, sem observers/polling auxiliares.
 (function(){
-  function loadImportFix(){
-    if(document.querySelector('script[data-vg-module="hrbalances-import-fix"]'))return;
-    const p=document.createElement('script');
-    p.src='assets/js/modules/hr-balances-import-fix-v36.js';
-    p.async=false;
-    p.dataset.vgModule='hrbalances-import-fix';
-    document.head.appendChild(p);
-  }
-  function loadLayoutFix(){
-    if(document.querySelector('script[data-vg-module="hrbalances-layout-fix"]')){loadImportFix();return;}
-    const f=document.createElement('script');
-    f.src='assets/js/modules/hr-balances-layout-fix-v36.js';
-    f.async=false;
-    f.dataset.vgModule='hrbalances-layout-fix';
-    f.onload=loadImportFix;
-    document.head.appendChild(f);
-  }
-  function loadAccess(){
-    if(document.querySelector('script[data-vg-module="hrbalances-access"]')){loadLayoutFix();return;}
-    const a=document.createElement('script');
-    a.src='assets/js/auth/hr-balances-access-v36.js';
-    a.async=false;
-    a.dataset.vgModule='hrbalances-access';
-    a.onload=loadLayoutFix;
-    document.head.appendChild(a);
-  }
-  if(document.querySelector('script[data-vg-module="hrbalances"]')){loadAccess();return;}
+  if(document.querySelector('script[data-vg-module="hrbalances"]'))return;
   const s=document.createElement('script');
   s.src='assets/js/modules/hr-balances-v36.js';
   s.async=false;
   s.dataset.vgModule='hrbalances';
-  s.onload=loadAccess;
   document.head.appendChild(s);
 })();
 
