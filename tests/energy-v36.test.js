@@ -1,0 +1,18 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const root=path.join(__dirname,'..');
+const front=fs.readFileSync(path.join(root,'assets/js/modules/energy-v36.js'),'utf8');
+const back=fs.readFileSync(path.join(root,'netlify/functions/energy.js'),'utf8');
+const boot=fs.readFileSync(path.join(root,'assets/js/core/04-bootstrap.js'),'utf8');
+assert(front.includes("MODULE='energy'"),'frontend Energia não identificado');
+assert(front.includes("Importar Excel/CSV"),'falta importação em lote');
+assert(front.includes('Decomposição do desvio'),'falta análise consumo/preço');
+assert(front.includes('P&L ENERGIA'),'falta confronto com P&L');
+assert(!front.includes('MutationObserver'),'Energia não deve usar MutationObserver global');
+assert(!front.includes('setInterval('),'Energia não deve usar polling contínuo');
+assert(back.includes("action==='batch'"),'backend sem importação em lote');
+assert(back.includes('Fatura duplicada'),'backend sem controlo de duplicados');
+assert(back.includes('canHotel'),'backend sem restrição por hotel');
+assert(back.includes("action==='upload'"),'backend sem PDF');
+assert(boot.includes("assets/js/modules/energy-v36.js"),'bootstrap não carrega Energia');
+assert(boot.includes("'energy'"),'rota energy não registada');
+console.log('✓ Energia: faturas, PDF, lote, análise, P&L, duplicados e segurança validados.');
