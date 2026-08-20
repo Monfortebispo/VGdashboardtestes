@@ -10,12 +10,21 @@
     document.head.appendChild(h);
   }
 
+  function loadLostFoundEmailMobile(){
+    if(document.querySelector('script[data-vg-module="lostfound-email-mobile"]'))return;
+    const e=document.createElement('script');
+    e.src='assets/js/modules/lost-found-email-mobile-v36.js';
+    e.async=false;
+    e.dataset.vgModule='lostfound-email-mobile';
+    document.head.appendChild(e);
+  }
   function loadLostFoundAccessBridge(){
-    if(document.querySelector('script[data-vg-module="lostfound-access-bridge"]'))return;
+    if(document.querySelector('script[data-vg-module="lostfound-access-bridge"]')){loadLostFoundEmailMobile();return;}
     const a=document.createElement('script');
     a.src='assets/js/auth/lostfound-access-bridge-v36.js';
     a.async=false;
     a.dataset.vgModule='lostfound-access-bridge';
+    a.onload=loadLostFoundEmailMobile;
     document.head.appendChild(a);
   }
   function loadLostFoundStatus(){
@@ -68,18 +77,15 @@ function uploadSetStatus(elId, msg, ok) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Close drawer when a nav button is tapped on mobile
   document.querySelectorAll('.sb-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => { if (window.innerWidth <= 960) drawerClose(); });
   });
-  buildMesButtons();  // also calls updateYearGlobals internally
-  // Default: load highest month available
+  buildMesButtons();
   if (Object.keys(STORE).length > 0) {
     const defaultMes = Math.max(...Object.keys(STORE).map(Number));
     selectedMeses.add(defaultMes);
     applyMesSelection();
   }
-  // Hash routing — restore view from URL, else default to resumo
   const hash = window.location.hash.replace('#', '');
   const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','lostfound','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
   setView(hash && validViews.includes(hash) ? hash : 'resumo');
@@ -87,8 +93,5 @@ document.addEventListener('DOMContentLoaded', function() {
     const h = window.location.hash.replace('#', '');
     if (h && validViews.includes(h)) setView(h);
   });
-  // v18: módulos secundários inicializam quando a respetiva vista é aberta.
-  // Evita renderizar Reputação, Agenda e Hotéis durante o primeiro paint.
-  // Auto-restauro ao arrancar (sobrepõe dados embutidos se existir sessão guardada)
   idbAutoRestore();
 });
