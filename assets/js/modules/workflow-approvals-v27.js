@@ -97,21 +97,10 @@
     (document.head||document.documentElement).appendChild(s);
   }
 
-  function ensureCommunicationsV39(){
-    if(window.__VG_COMMUNICATIONS_V39__ || document.querySelector('script[data-vg-module="communications-v39"]'))return;
-    const s=document.createElement('script');
-    s.src='assets/js/modules/communications-v39.js';
-    s.async=false;
-    s.dataset.vgModule='communications-v39';
-    s.onerror=()=>console.error('VG Dashboard: sincronização fluida das Mensagens V39 não carregou.');
-    (document.head||document.documentElement).appendChild(s);
-  }
-
   ensureV36Script();
   ensureCommunications();
   ensureCommunicationsStability();
   ensureCommunicationsFix();
-  ensureCommunicationsV39();
 
   if(typeof window.approvalsRender!=='function'){
     window.approvalsRender=function approvalsV36BootProxy(){
