@@ -51,6 +51,28 @@
     window.VG.approvals={version:27,state,all,searchItems,ensureLoaded,open,legacy:true};
   }
 
+  function ensureV36Script(){
+    if(Number(window.VG?.approvals?.version||0)>=36 || window.__VG_APPROVALS_V36__)return;
+    if(document.querySelector('script[data-vg-module="workflow-v36"],script[src*="workflow-approvals-v36.js"]'))return;
+    const s=document.createElement('script');
+    s.src='assets/js/modules/workflow-approvals-v36.js';
+    s.async=false;
+    s.dataset.vgModule='workflow-v36';
+    s.onload=()=>{
+      try{
+        if(Number(window.VG?.approvals?.version||0)>=36 && (location.hash==='#approvals' || document.getElementById('view-approvals')?.classList.contains('active'))){
+          window.VG.approvals.render?.();
+        }
+      }catch(e){console.warn('Workflow V36: render inicial falhou',e);}
+    };
+    s.onerror=()=>console.error('Workflow V36: ficheiro não carregado');
+    (document.head||document.documentElement).appendChild(s);
+  }
+
+  // O V27 é carregado diretamente pelo index.html; usa-o como ponto de arranque
+  // garantido do V36, em vez de depender apenas do bootstrap tardio.
+  ensureV36Script();
+
   // Proxy de arranque. Existe para o version guard não classificar o módulo
   // como ausente enquanto workflow-approvals-v36.js ainda está a carregar.
   // Nunca renderiza a interface V27.
@@ -60,6 +82,7 @@
       if(Number(api?.version||0)>=36 && typeof api?.render==='function'){
         return api.render();
       }
+      ensureV36Script();
       const root=document.getElementById('approvalsRoot');
       if(root && !root.dataset.vgWorkflowWaiting){
         root.dataset.vgWorkflowWaiting='1';
