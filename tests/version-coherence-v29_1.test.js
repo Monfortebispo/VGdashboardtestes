@@ -29,10 +29,11 @@ assert(!sw.includes('const cached=await caches.match(req, {ignoreSearch:true});\
 assert(sw.includes("caches.match(req,{ignoreSearch:true})")&&sw.indexOf("caches.match(req,{ignoreSearch:true})")>sw.indexOf('catch (e)'),'cache deve ser apenas fallback offline');
 assert(/service-worker\.js\?vg=(?:32\.[3-9]|(?:3[3-9]|[4-9]\d)\.\d+)/.test(mobile)&&mobile.includes("updateViaCache:'none'"),'cliente PWA deve manter URL/versionamento do guard');
 assert(docs.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Documentos deve mostrar shell antes da rede');
-// Desde V36, o Workflow tem renderer próprio e o V27 é apenas compatibilidade sem DOM.
-assert(approvalsV27.includes('approvalsLegacy')&&approvalsV27.includes('disabledRenderer:true'),'V27 deve permanecer apenas como compatibilidade com renderer desativado');
-assert(!approvalsV27.includes('window.approvalsRender=renderPage')&&!approvalsV27.includes('V27 · Governação de decisões'),'V27 não deve voltar a renderizar a página de Aprovações');
+// Desde V36, o V27 mantém apenas compatibilidade e um proxy de arranque para o guard.
+assert(approvalsV27.includes('approvalsLegacy')&&approvalsV27.includes('disabledRenderer:true'),'V27 deve permanecer apenas como compatibilidade visualmente desativada');
+assert(approvalsV27.includes('approvalsV36BootProxy'),'V27 deve disponibilizar um proxy temporário enquanto o V36 carrega');
+assert(!approvalsV27.includes('V27 · Governação de decisões')&&!approvalsV27.includes('function renderPage'),'V27 não deve voltar a renderizar a página');
 assert(approvalsV36.includes('async function renderPage(){render();await load(false)}'),'Aprovações V36 deve renderizar o shell antes da leitura da rede');
-assert(approvalsV36.includes('window.VG.approvals={version:36'),'V36 deve ser o proprietário final do Workflow');
+assert(approvalsV36.includes('window.VG.approvals={version:36')&&approvalsV36.includes('window.approvalsRender=renderPage'),'V36 deve substituir o proxy e assumir o Workflow');
 assert(scenarios.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Cenários deve mostrar shell antes da rede');
-console.log('✓ v29.1: coerência HTML/JS/SW, atualização automática e módulos sem placeholder infinito');
+console.log('✓ v29.1: coerência HTML/JS/SW, atualização automática e Workflow V36 com proxy de arranque seguro');
