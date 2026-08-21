@@ -74,6 +74,7 @@ const STATIC_ASSETS = [
   "/assets/js/modules/analytical-assistant-v25.js",
   "/assets/js/modules/document-management-v26.js",
   "/assets/js/modules/workflow-approvals-v27.js",
+  "/assets/js/modules/communications-v38.js",
   "/assets/js/modules/analysis-tools.js",
   "/assets/js/modules/anomaly-detection.js",
   "/assets/js/modules/benchmarking.js",
@@ -116,7 +117,6 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    // v31: correções de Portefólio, Ponte GOP e Revenue Hub; dados empresariais continuam network-only.
     const batchSize=8;
     for(let i=0;i<STATIC_ASSETS.length;i+=batchSize){
       const batch=STATIC_ASSETS.slice(i,i+batchSize);
@@ -138,6 +138,35 @@ self.addEventListener('message', event => {
   if (event.data && event.data.type==='SKIP_WAITING') self.skipWaiting();
 });
 
+// VG Dashboard V38 — Web Push para mensagens e alertas operacionais.
+self.addEventListener('push', event => {
+  let data={};
+  try{data=event.data?event.data.json():{}}catch(e){data={body:event.data?.text?.()||'Nova notificação'}}
+  const title=data.title||'VG Dashboard';
+  const options={
+    body:data.body||'Nova notificação',
+    icon:'/assets/icons/vg-ops-192.png',
+    badge:'/assets/icons/vg-ops-192.png',
+    tag:'vg-dashboard-'+(data.chatId||data.processId||Date.now()),
+    renotify:true,
+    vibrate:[180,80,180],
+    data:{url:data.url||'/#messages',chatId:data.chatId||'',processId:data.processId||'',view:data.view||''}
+  };
+  event.waitUntil(self.registration.showNotification(title,options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url=event.notification?.data?.url||'/#messages';
+  event.waitUntil((async()=>{
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const client of windows){
+      try{await client.navigate(url);await client.focus();client.postMessage({type:'VG_NOTIFICATION_OPEN',data:event.notification.data||{}});return}catch(e){}
+    }
+    if(self.clients.openWindow)await self.clients.openWindow(url);
+  })());
+});
+
 function isSensitive(req,url) {
   if (req.method!=='GET') return true;
   if (url.pathname.startsWith('/.netlify/')) return true;
@@ -148,9 +177,9 @@ function isSensitive(req,url) {
 self.addEventListener('fetch', event => {
   const req=event.request;
   const url=new URL(req.url);
-  if (isSensitive(req,url)) return; // network-only: nunca cachear dados empresariais/API
+  if (isSensitive(req,url)) return;
 
-  // Navegação: rede primeiro, shell apenas como fallback offline.
+  // NETWORK-FIRST: rede primeiro; Cache Storage é apenas fallback offline.
   if (req.mode==='navigate') {
     event.respondWith((async()=>{
       try {
@@ -167,10 +196,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // v30.3: recursos estáticos da própria aplicação são NETWORK-FIRST.
-  // Isto impede misturas do tipo HTML novo + JavaScript antigo. O browser
-  // continua a poder usar a sua cache HTTP e o Cache Storage fica como
-  // fallback offline, nunca como fonte prioritária quando há rede.
   if (url.origin===self.location.origin) {
     event.respondWith((async()=>{
       try {
@@ -185,5 +210,4 @@ self.addEventListener('fetch', event => {
       }
     })());
   }
-  // Recursos CDN são network-only. A app abre offline, mas gráficos/Excel podem ficar indisponíveis.
 });
