@@ -65,7 +65,18 @@
     (document.head||document.documentElement).appendChild(s);
   }
 
+  function ensureCommunications(){
+    if(window.__VG_COMMUNICATIONS_V38__ || document.querySelector('script[data-vg-module="communications-v38"]'))return;
+    const s=document.createElement('script');
+    s.src='assets/js/modules/communications-v38.js';
+    s.async=false;
+    s.dataset.vgModule='communications-v38';
+    s.onerror=()=>console.error('VG Dashboard: sistema de mensagens V38 não carregou.');
+    (document.head||document.documentElement).appendChild(s);
+  }
+
   ensureV36Script();
+  ensureCommunications();
 
   if(typeof window.approvalsRender!=='function'){
     window.approvalsRender=function approvalsV36BootProxy(){
