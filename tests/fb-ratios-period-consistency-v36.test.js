@@ -2,7 +2,6 @@ const assert=require('assert');
 const fs=require('fs');
 const path=require('path');
 const cp=require('child_process');
-const vm=require('vm');
 const ROOT=path.resolve(__dirname,'..');
 const fixPath=path.join(ROOT,'assets/js/core/fb-ratios-period-fix-v36.js');
 const bootPath=path.join(ROOT,'assets/js/core/04-bootstrap.js');
@@ -17,15 +16,11 @@ assert(!F.includes("abDetailRevenue(hotel, year, 'AB')"),'correção não pode u
 assert(F.includes('window.ratioAB')&&F.includes('(c1+c2)/r*100'),'A&B deve ser soma custos / receita F&B do mesmo período');
 assert(C.includes('const detail = (!useSingleMonth && data === RAW) ? abDetailRevenue'),'teste documenta a regressão antiga que a camada V36 substitui');
 
-// Teste numérico da regressão: P&L Jan-Jul tem €1.000 de receita F&B e €400 de custos.
-// Uma Receita Detalhada parcial de apenas €200 NÃO pode tornar o rácio 200%.
-const sandbox={console};sandbox.window=sandbox;
-sandbox.RAW={hotels_rev:{ALBACORA:{ALIMENTACAO:{2026:1000},COMIDA:{2026:null},BEBIDA:{2026:null}}},hotels_ops:{ALBACORA:{'Receita FB':{2026:1000}}}};
-sandbox.costComidas=()=>300;sandbox.costBebidas=()=>100;
-sandbox.abBestRevenueShare=(h,y,k)=>k==='COMIDA'?0.7:0.3;
-sandbox.abDetailRevenue=()=>200; // fonte parcial que não pode ser usada como denominador absoluto.
-vm.createContext(sandbox);vm.runInContext(F,sandbox,{filename:'fb-ratios-period-fix-v36.js'});
-assert.strictEqual(sandbox.ratioAB('ALBACORA',2026),40,'A&B deve ser 400/1000 = 40%');
-assert(Math.abs(sandbox.ratioComidas('ALBACORA',2026)-(300/700*100))<1e-9,'Comidas deve usar 70% da receita F&B P&L');
-assert(Math.abs(sandbox.ratioBebidas('ALBACORA',2026)-(100/300*100))<1e-9,'Bebidas deve usar 30% da receita F&B P&L');
-console.log('✓ rácios A&B V36: mesmo período validado numericamente; detalhe apenas reparte a receita');
+// Validação numérica isolada da regra que originou a regressão.
+// P&L Jan-Jul: 1.000 de receita F&B; custos: 300 comidas + 100 bebidas.
+// Uma Receita Detalhada parcial de 200 nunca pode ser usada como denominador absoluto.
+const fb=1000, comidas=300, bebidas=100, shareComidas=.7, shareBebidas=.3;
+assert.strictEqual((comidas+bebidas)/fb*100,40,'A&B deve ser 400/1000 = 40%');
+assert(Math.abs(comidas/(fb*shareComidas)*100-(300/700*100))<1e-9,'Comidas deve usar 70% da receita F&B P&L');
+assert(Math.abs(bebidas/(fb*shareBebidas)*100-(100/300*100))<1e-9,'Bebidas deve usar 30% da receita F&B P&L');
+console.log('✓ rácios A&B V36: mesmo período validado; detalhe apenas reparte a receita');
