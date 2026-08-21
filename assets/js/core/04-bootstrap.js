@@ -8,6 +8,16 @@
   document.head.appendChild(s);
 })();
 
+// Rácios A&B: custos e receitas têm de usar exatamente a mesma seleção temporal.
+(function(){
+  if(document.querySelector('script[data-vg-module="fb-ratios-period-fix"]'))return;
+  const s=document.createElement('script');
+  s.src='assets/js/core/fb-ratios-period-fix-v36.js';
+  s.async=false;
+  s.dataset.vgModule='fb-ratios-period-fix';
+  document.head.appendChild(s);
+})();
+
 // ==========================================================
 // MÓDULOS NATIVOS ADICIONAIS
 // ==========================================================
@@ -17,6 +27,13 @@
     w.src='assets/js/modules/workflow-approvals-v36.js';
     w.async=false;
     w.dataset.vgModule='workflow-v36';
+    w.onload=()=>{
+      try{
+        if(window.VG?.approvals?.version>=36 && (window.location.hash==='#approvals' || document.getElementById('view-approvals')?.classList.contains('active'))){
+          window.VG.approvals.render?.();
+        }
+      }catch(e){console.warn('Workflow V36: render inicial falhou',e);}
+    };
     document.head.appendChild(w);
   }
   if(!document.querySelector('script[data-vg-module="hotel-access-sanitizer"]')){
@@ -225,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
     applyMesSelection();
   }
   const hash = window.location.hash.replace('#', '');
-  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','lostfound','complaints','refunds','unbilled','budgets','energy','hrbalances','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas'];
+  const validViews = ['resumo','receitas','recdet','receitasdet','ab','housekeeping','custos','kpis','pl','costanalysis','cua','reputacao','lostfound','complaints','refunds','unbilled','budgets','energy','hrbalances','ocupacao','instagram','agenda','hoteis','upload','alertas','compare','ranking','sazonalidade','simulador','notas','approvals','governance','backup','datacenter','automaticreports','analyticalassistant','documents','scenariocompare'];
   setView(hash && validViews.includes(hash) ? hash : 'resumo');
   window.addEventListener('popstate', () => {
     const h = window.location.hash.replace('#', '');
