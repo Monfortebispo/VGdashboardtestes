@@ -95,11 +95,20 @@
 
 // Contas por Faturar: aging, diligências e seguimento até faturação/recebimento.
 (function(){
-  if(document.querySelector('script[data-vg-module="unbilled"]'))return;
+  function loadUnbilledFix(){
+    if(document.querySelector('script[data-vg-module="unbilled-import-layout-fix"]'))return;
+    const f=document.createElement('script');
+    f.src='assets/js/modules/unbilled-import-layout-fix-v36.js';
+    f.async=false;
+    f.dataset.vgModule='unbilled-import-layout-fix';
+    document.head.appendChild(f);
+  }
+  if(document.querySelector('script[data-vg-module="unbilled"]')){loadUnbilledFix();return;}
   const s=document.createElement('script');
   s.src='assets/js/modules/unbilled-v36.js';
   s.async=false;
   s.dataset.vgModule='unbilled';
+  s.onload=loadUnbilledFix;
   document.head.appendChild(s);
 })();
 
