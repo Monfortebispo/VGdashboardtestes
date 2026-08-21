@@ -87,9 +87,20 @@
     (document.head||document.documentElement).appendChild(s);
   }
 
+  function ensureCommunicationsFix(){
+    if(window.__VG_COMMUNICATIONS_FIX_V38_2__ || document.querySelector('script[data-vg-module="communications-v38-2"]'))return;
+    const s=document.createElement('script');
+    s.src='assets/js/modules/communications-v38_2.js';
+    s.async=false;
+    s.dataset.vgModule='communications-v38-2';
+    s.onerror=()=>console.error('VG Dashboard: correção de destinatários/alertas V38.2 não carregou.');
+    (document.head||document.documentElement).appendChild(s);
+  }
+
   ensureV36Script();
   ensureCommunications();
   ensureCommunicationsStability();
+  ensureCommunicationsFix();
 
   if(typeof window.approvalsRender!=='function'){
     window.approvalsRender=function approvalsV36BootProxy(){
