@@ -86,14 +86,23 @@
   document.head.appendChild(s);
 })();
 
-// Energia & Consumos: faturas, persistência, análise e múltiplos PDFs.
+// Energia & Consumos: faturas, persistência, análise, documentos e gestão do registo.
 (function(){
+  function loadEnergyRecordManagement(){
+    if(document.querySelector('script[data-vg-module="energy-record-management"]'))return;
+    const r=document.createElement('script');
+    r.src='assets/js/modules/energy-record-management-v36.js';
+    r.async=false;
+    r.dataset.vgModule='energy-record-management';
+    document.head.appendChild(r);
+  }
   function loadEnergyDocumentDelete(){
-    if(document.querySelector('script[data-vg-module="energy-document-delete-ui"]'))return;
+    if(document.querySelector('script[data-vg-module="energy-document-delete-ui"]')){loadEnergyRecordManagement();return;}
     const d=document.createElement('script');
     d.src='assets/js/modules/energy-document-delete-ui-v36.js';
     d.async=false;
     d.dataset.vgModule='energy-document-delete-ui';
+    d.onload=loadEnergyRecordManagement;
     document.head.appendChild(d);
   }
   function loadEnergyMultiPdf(){
