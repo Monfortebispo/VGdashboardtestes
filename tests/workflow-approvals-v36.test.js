@@ -16,6 +16,7 @@ assert(F.includes('data-decision="clarify"'),'DO deve poder pedir esclarecimento
 assert(S.includes('workflow-approvals-v36.js'),'bootstrap deve carregar Workflow V36');
 assert(S.includes("'approvals'"),'approvals deve ser uma vista válida no routing do bootstrap');
 assert(S.includes("w.onload=()=>"),'bootstrap deve re-renderizar V36 quando o módulo termina de carregar');
-assert(L.includes('approvalsLegacy')&&L.includes('disabled:true'),'V27 deve estar apenas em modo legado');
-assert(!L.includes('window.VG.approvals={version:27'),'V27 não pode sobrescrever V36');
-console.log('✓ workflow V36: renderer único, motor operacional, conversa, decisão DO, estados, anexos, routing e arquivo');
+assert(L.includes('approvalsLegacy')&&L.includes('disabledRenderer:true'),'V27 deve manter apenas compatibilidade sem renderer');
+assert(!L.includes('window.approvalsRender=renderPage'),'V27 não pode controlar o render global');
+assert(F.includes('window.VG.approvals={version:36'),'V36 deve substituir qualquer API transitória V27');
+console.log('✓ workflow V36: renderer único, motor operacional, conversa, decisão DO, estados, anexos, routing e compatibilidade V27');
