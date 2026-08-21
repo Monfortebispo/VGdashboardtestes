@@ -51,6 +51,16 @@
     window.VG.approvals={version:27,state,all,searchItems,ensureLoaded,open,legacy:true};
   }
 
+  // Compatibilidade para a referência STATUS existente no Workflow V36.
+  // O V36 define localmente STATES, mas no objeto público referencia STATUS.
+  // Em scripts clássicos do browser esta propriedade global é resolvida como
+  // identificador global, evitando o ReferenceError que bloqueava o arranque.
+  window.STATUS=window.STATUS||{
+    complaint:['Em preparação','A aguardar DO','Esclarecimentos solicitados','Aprovada','Recusada','Resposta ao cliente','Concluída','Arquivada'],
+    refund:['Em preparação','A aguardar DO','Esclarecimentos solicitados','A aguardar DAF','Recusada','Processada','Concluída','Arquivada'],
+    budget:['Em preparação','A aguardar DO','Esclarecimentos solicitados','Aprovado','Recusado','Adjudicado','Em execução','Concluído','Arquivado']
+  };
+
   function ensureV36Script(){
     if(Number(window.VG?.approvals?.version||0)>=36 || window.__VG_APPROVALS_V36__)return;
     if(document.querySelector('script[data-vg-module="workflow-v36"],script[src*="workflow-approvals-v36.js"]'))return;
