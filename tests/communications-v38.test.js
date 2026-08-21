@@ -1,0 +1,27 @@
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const cp=require('child_process');
+const ROOT=path.resolve(__dirname,'..');
+const front=path.join(ROOT,'assets/js/modules/communications-v38.js');
+const back=path.join(ROOT,'netlify/functions/communications-v38.js');
+const sw=path.join(ROOT,'service-worker.js');
+const legacy=path.join(ROOT,'assets/js/modules/workflow-approvals-v27.js');
+const pkg=path.join(ROOT,'netlify/functions/package.json');
+for(const f of [front,back,sw,legacy]){assert(fs.existsSync(f),'Ficheiro em falta: '+f);const r=cp.spawnSync(process.execPath,['--check',f],{encoding:'utf8'});assert.strictEqual(r.status,0,`Sintaxe inválida em ${path.basename(f)}: ${r.stderr}`)}
+const F=fs.readFileSync(front,'utf8'),B=fs.readFileSync(back,'utf8'),S=fs.readFileSync(sw,'utf8'),L=fs.readFileSync(legacy,'utf8'),P=JSON.parse(fs.readFileSync(pkg,'utf8'));
+assert(F.includes('version:38')&&F.includes("VG Dashboard · comunicação interna"),'frontend V38/nome oficial em falta');
+assert(!F.toLowerCase().includes('resend')&&!B.toLowerCase().includes('resend'),'Resend não pode fazer parte da implementação');
+assert(B.includes("if(!member(c,u.user))return forbid('Não tem acesso a esta conversa.')"),'backend tem de bloquear terceiros, incluindo Direção');
+assert(B.includes('x.createdAt>=m.joinedAt'),'novo participante só pode ver mensagens posteriores à entrada');
+assert(B.includes('DELETE_MS=120000')&&B.includes('A mensagem só pode ser eliminada nos primeiros 2 minutos.'),'eliminação tem de ficar limitada a 2 minutos');
+assert(B.includes('MAX_FILE=5*1024*1024')&&F.includes('5*1024*1024'),'limite de anexos de 5 MB tem de existir no backend e frontend');
+assert(B.includes("ops-msg-chat/")&&B.includes("ops-msg-message/")&&B.includes("ops-msg-push/"),'mensagens e push devem persistir server-side');
+assert(B.includes("['complaint','ops-complaint-record/']")&&B.includes("['refund','ops-refund/']")&&B.includes("['budget','ops-budget-record/']"),'alertas devem integrar Reclamações, Devoluções e Orçamentos');
+assert(B.includes('syncProcessNotices')&&B.includes('pushUser'),'processos devem gerar notificações/push automáticos');
+assert(S.includes("self.addEventListener('push'")&&S.includes("self.addEventListener('notificationclick'")&&S.includes('vibrate:[180,80,180]'),'service worker deve suportar push, clique e vibração');
+assert(S.includes('NETWORK-FIRST'),'contrato network-first do service worker deve ser preservado');
+assert(F.includes('Notification.requestPermission')&&F.includes('navigator.vibrate')&&F.includes('AudioContext'),'frontend deve suportar notificação nativa, vibração e som');
+assert(P.dependencies&&P.dependencies['web-push'],'dependência web-push em falta');
+assert(L.includes('communications-v38.js')&&L.includes('communications-v38.css'),'shell deve carregar o sistema de comunicações e CSS');
+console.log('✓ comunicações V38: privacidade, grupos, 2 minutos, 5 MB, alertas de processos, push, vibração e som');
