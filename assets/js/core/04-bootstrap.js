@@ -1,3 +1,13 @@
+// Login prioritário: associa o botão Entrar antes do DOMContentLoaded.
+(function(){
+  if(document.querySelector('script[data-vg-module="early-login"]'))return;
+  const s=document.createElement('script');
+  s.src='assets/js/auth/early-login-v36.js';
+  s.async=false;
+  s.dataset.vgModule='early-login';
+  document.head.appendChild(s);
+})();
+
 // ==========================================================
 // MÓDULOS NATIVOS ADICIONAIS
 // ==========================================================
