@@ -19,6 +19,13 @@
     h.dataset.vgModule='hotel-access-sanitizer';
     document.head.appendChild(h);
   }
+  if(!document.querySelector('script[data-vg-module="operations-modules-catalog"]')){
+    const c=document.createElement('script');
+    c.src='assets/js/auth/operations-modules-catalog-v36.js';
+    c.async=false;
+    c.dataset.vgModule='operations-modules-catalog';
+    document.head.appendChild(c);
+  }
 
   function loadGovernantaFix(){
     if(document.querySelector('script[data-vg-module="governanta-mobile-fix"]'))return;
