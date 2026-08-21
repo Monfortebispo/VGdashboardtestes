@@ -12,6 +12,13 @@
 // MÓDULOS NATIVOS ADICIONAIS
 // ==========================================================
 (function(){
+  if(!document.querySelector('script[data-vg-module="workflow-v36"]')){
+    const w=document.createElement('script');
+    w.src='assets/js/modules/workflow-approvals-v36.js';
+    w.async=false;
+    w.dataset.vgModule='workflow-v36';
+    document.head.appendChild(w);
+  }
   if(!document.querySelector('script[data-vg-module="hotel-access-sanitizer"]')){
     const h=document.createElement('script');
     h.src='assets/js/auth/hotel-access-sanitizer-v36.js';
