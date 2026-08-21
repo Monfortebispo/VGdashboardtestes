@@ -179,6 +179,7 @@ self.addEventListener('fetch', event => {
   const url=new URL(req.url);
   if (isSensitive(req,url)) return;
 
+  // NETWORK-FIRST: rede primeiro; Cache Storage é apenas fallback offline.
   if (req.mode==='navigate') {
     event.respondWith((async()=>{
       try {
