@@ -9,10 +9,11 @@ const sw=fs.readFileSync(path.join(ROOT,'service-worker.js'),'utf8');
 const mobile=fs.readFileSync(path.join(ROOT,'assets/js/ui/mobile-pwa.js'),'utf8');
 const guard=fs.readFileSync(path.join(ROOT,'assets/js/core/06-version-guard-v29_1.js'),'utf8');
 const docs=fs.readFileSync(path.join(ROOT,'assets/js/modules/document-management-v26.js'),'utf8');
-const approvals=fs.readFileSync(path.join(ROOT,'assets/js/modules/workflow-approvals-v27.js'),'utf8');
+const approvalsV27=fs.readFileSync(path.join(ROOT,'assets/js/modules/workflow-approvals-v27.js'),'utf8');
+const approvalsV36=fs.readFileSync(path.join(ROOT,'assets/js/modules/workflow-approvals-v36.js'),'utf8');
 const scenarios=fs.readFileSync(path.join(ROOT,'assets/js/modules/scenario-comparison-v29.js'),'utf8');
 
-for(const f of ['service-worker.js','assets/js/ui/mobile-pwa.js','assets/js/core/06-version-guard-v29_1.js','assets/js/modules/document-management-v26.js','assets/js/modules/workflow-approvals-v27.js','assets/js/modules/scenario-comparison-v29.js']){
+for(const f of ['service-worker.js','assets/js/ui/mobile-pwa.js','assets/js/core/06-version-guard-v29_1.js','assets/js/modules/document-management-v26.js','assets/js/modules/workflow-approvals-v27.js','assets/js/modules/workflow-approvals-v36.js','assets/js/modules/scenario-comparison-v29.js']){
   cp.execFileSync(process.execPath,['--check',path.join(ROOT,f)],{stdio:'pipe'});
 }
 
@@ -28,6 +29,8 @@ assert(!sw.includes('const cached=await caches.match(req, {ignoreSearch:true});\
 assert(sw.includes("caches.match(req,{ignoreSearch:true})")&&sw.indexOf("caches.match(req,{ignoreSearch:true})")>sw.indexOf('catch (e)'),'cache deve ser apenas fallback offline');
 assert(/service-worker\.js\?vg=(?:32\.[3-9]|(?:3[3-9]|[4-9]\d)\.\d+)/.test(mobile)&&mobile.includes("updateViaCache:'none'"),'cliente PWA deve manter URL/versionamento do guard');
 assert(docs.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Documentos deve mostrar shell antes da rede');
-assert(approvals.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Aprovações deve mostrar shell antes da rede');
+// Desde V36, o Workflow tem renderer próprio e o V27 é apenas uma ponte de compatibilidade.
+assert(approvalsV27.includes('Compatibility bridge')&&!approvalsV27.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'V27 não deve voltar a renderizar a página de Aprovações');
+assert(approvalsV36.includes('async function renderPage()')&&approvalsV36.includes('renderShell();'),'Aprovações V36 deve mostrar shell antes da rede');
 assert(scenarios.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Cenários deve mostrar shell antes da rede');
 console.log('✓ v29.1: coerência HTML/JS/SW, atualização automática e módulos sem placeholder infinito');
