@@ -3,8 +3,8 @@
 // ==========================================================
 // O motor visual V27 foi substituído pelo Workflow V36.
 // Este ficheiro mantém apenas a API histórica necessária a pesquisa,
-// notificações e integrações antigas. NÃO renderiza #approvalsRoot e NÃO
-// cria o alias global approvalsRender; o V36 é o único renderer da página.
+// notificações e integrações antigas. O alias approvalsRender abaixo é apenas
+// um proxy de arranque: nunca desenha a interface V27 e é substituído pelo V36.
 (function(){
   'use strict';
   window.VG=window.VG||{};
@@ -51,5 +51,21 @@
     window.VG.approvals={version:27,state,all,searchItems,ensureLoaded,open,legacy:true};
   }
 
-  // Intencionalmente sem approvalsRender / renderPage / DOMContentLoaded.
+  // Proxy de arranque. Existe para o version guard não classificar o módulo
+  // como ausente enquanto workflow-approvals-v36.js ainda está a carregar.
+  // Nunca renderiza a interface V27.
+  if(typeof window.approvalsRender!=='function'){
+    window.approvalsRender=function approvalsV36BootProxy(){
+      const api=window.VG?.approvals;
+      if(Number(api?.version||0)>=36 && typeof api?.render==='function'){
+        return api.render();
+      }
+      const root=document.getElementById('approvalsRoot');
+      if(root && !root.dataset.vgWorkflowWaiting){
+        root.dataset.vgWorkflowWaiting='1';
+        root.innerHTML='<div style="padding:22px;text-align:center"><strong>A carregar Workflow de Aprovações…</strong><div style="margin-top:6px;opacity:.65">A iniciar o módulo operacional.</div></div>';
+      }
+      return null;
+    };
+  }
 })();
