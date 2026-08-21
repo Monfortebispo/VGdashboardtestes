@@ -1,0 +1,18 @@
+(function(){
+'use strict';
+if(window.__VG_ENERGY_DOC_DELETE_UI_V36__)return;window.__VG_ENERGY_DOC_DELETE_UI_V36__=true;
+const API='/.netlify/functions/energy',FILES='/.netlify/functions/energy-files',DEL='/.netlify/functions/energy-document-delete';
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let currentId=null;
+const token=()=>window.vgAuthToken?.()||'';
+async function api(base,action,method='GET',payload,qs){const h={'Content-Type':'application/json'},t=token();if(t)h.Authorization='Bearer '+t;const q=new URLSearchParams({action});Object.entries(qs||{}).forEach(([k,v])=>q.set(k,v));const r=await fetch(base+'?'+q.toString(),{method,headers:h,cache:'no-store',body:payload===undefined?undefined:JSON.stringify(payload)}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d}
+async function freshInvoice(id){const d=await api(API,'list');return (Array.isArray(d.data)?d.data:[]).find(r=>r.id===id)||null}
+async function paintPrimary(){if(!currentId||!$('venDocsPrimary'))return;try{const r=await freshInvoice(currentId);if(!r?.file){$('venDocsPrimary').innerHTML='<span class="ven-sub">Sem PDF principal.</span>';return}$('venDocsPrimary').innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px;border:1px solid var(--border-2);border-radius:7px"><span>${esc(r.file.name)} <small class="ven-sub">PDF principal</small></span><span><button class="ven-btn" id="venOpenPrimarySafe">Abrir</button> <button class="ven-btn" id="venDeletePrimary">Remover</button></span></div>`;$('venOpenPrimarySafe').onclick=()=>openPrimary(currentId);$('venDeletePrimary').onclick=deletePrimary}catch(e){window.showToast?.(e.message,true)}}
+async function openPrimary(id){try{const d=await api(API,'file','GET',undefined,{id}),x=d.data;if(!x?.base64)return;const b=await (await fetch(`data:${x.type||'application/pdf'};base64,${x.base64}`)).blob(),u=URL.createObjectURL(b);window.open(u,'_blank','noopener')}catch(e){window.showToast?.(e.message,true)}}
+async function deletePrimary(){if(!currentId||!confirm('Remover o PDF principal desta fatura?'))return;try{await api(DEL,'delete','POST',{id:currentId,kind:'primary'});await paintPrimary();window.showToast?.('PDF removido da fatura.')}catch(e){window.showToast?.(e.message,true)}}
+async function deleteExtra(fid,button){if(!currentId||!fid||!confirm('Remover este PDF da fatura?'))return;try{await api(DEL,'delete','POST',{id:currentId,kind:'extra',file:fid});button?.closest('div')?.remove();if($('venDocsList')&&!$('venDocsList').querySelector('[data-del-extra]'))$('venDocsList').innerHTML='<span class="ven-sub">Sem PDFs adicionais.</span>';window.showToast?.('PDF removido da fatura.')}catch(e){window.showToast?.(e.message,true)}}
+function onCapture(e){const del=e.target.closest?.('[data-del-extra]');if(!del)return;e.preventDefault();e.stopImmediatePropagation();deleteExtra(del.dataset.delExtra,del)}
+function onBubble(e){const docs=e.target.closest?.('[data-docs]');if(!docs)return;currentId=docs.dataset.docs;queueMicrotask(paintPrimary)}
+function boot(){document.addEventListener('click',onCapture,true);document.addEventListener('click',onBubble,false)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
