@@ -40,7 +40,6 @@
     window.VG.approvals={version:27,state,all,searchItems,ensureLoaded,open,legacy:true};
   }
 
-  // Mantido para retrocompatibilidade com o V36 e respetivos testes.
   window.STATUS=window.STATUS||{
     complaint:['Em preparação','A aguardar DO','Esclarecimentos solicitados','Aprovada','Recusada','Resposta ao cliente','Concluída','Arquivada'],
     refund:['Em preparação','A aguardar DO','Esclarecimentos solicitados','A aguardar DAF','Recusada','Processada','Concluída','Arquivada'],
@@ -78,8 +77,19 @@
     (document.head||document.documentElement).appendChild(s);
   }
 
+  function ensureCommunicationsStability(){
+    if(window.__VG_COMMUNICATIONS_STABILITY_V38_1__ || document.querySelector('script[data-vg-module="communications-stability-v38-1"]'))return;
+    const s=document.createElement('script');
+    s.src='assets/js/modules/communications-stability-v38_1.js';
+    s.async=false;
+    s.dataset.vgModule='communications-stability-v38-1';
+    s.onerror=()=>console.error('VG Dashboard: hotfix de estabilidade das Mensagens V38.1 não carregou.');
+    (document.head||document.documentElement).appendChild(s);
+  }
+
   ensureV36Script();
   ensureCommunications();
+  ensureCommunicationsStability();
 
   if(typeof window.approvalsRender!=='function'){
     window.approvalsRender=function approvalsV36BootProxy(){
