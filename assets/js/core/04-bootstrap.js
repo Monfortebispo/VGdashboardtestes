@@ -88,12 +88,21 @@
 
 // Energia & Consumos: faturas, persistência, análise e múltiplos PDFs.
 (function(){
+  function loadEnergyDocumentDelete(){
+    if(document.querySelector('script[data-vg-module="energy-document-delete-ui"]'))return;
+    const d=document.createElement('script');
+    d.src='assets/js/modules/energy-document-delete-ui-v36.js';
+    d.async=false;
+    d.dataset.vgModule='energy-document-delete-ui';
+    document.head.appendChild(d);
+  }
   function loadEnergyMultiPdf(){
-    if(document.querySelector('script[data-vg-module="energy-multi-pdf"]'))return;
+    if(document.querySelector('script[data-vg-module="energy-multi-pdf"]')){loadEnergyDocumentDelete();return;}
     const x=document.createElement('script');
     x.src='assets/js/modules/energy-multi-pdf-v36.js';
     x.async=false;
     x.dataset.vgModule='energy-multi-pdf';
+    x.onload=loadEnergyDocumentDelete;
     document.head.appendChild(x);
   }
   function loadEnergyMenuFix(){
