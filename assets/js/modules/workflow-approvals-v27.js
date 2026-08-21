@@ -66,6 +66,9 @@
   }
 
   function ensureCommunications(){
+    if(!document.querySelector('link[data-vg-module="communications-v38-css"]')){
+      const l=document.createElement('link');l.rel='stylesheet';l.href='assets/css/communications-v38.css';l.dataset.vgModule='communications-v38-css';document.head.appendChild(l);
+    }
     if(window.__VG_COMMUNICATIONS_V38__ || document.querySelector('script[data-vg-module="communications-v38"]'))return;
     const s=document.createElement('script');
     s.src='assets/js/modules/communications-v38.js';
