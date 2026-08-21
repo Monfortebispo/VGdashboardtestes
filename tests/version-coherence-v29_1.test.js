@@ -32,7 +32,7 @@ assert(docs.includes('async function renderPage(){render();await ensureLoaded(fa
 // Desde V36, o Workflow tem renderer próprio e o V27 é apenas compatibilidade sem DOM.
 assert(approvalsV27.includes('approvalsLegacy')&&approvalsV27.includes('disabledRenderer:true'),'V27 deve permanecer apenas como compatibilidade com renderer desativado');
 assert(!approvalsV27.includes('window.approvalsRender=renderPage')&&!approvalsV27.includes('V27 · Governação de decisões'),'V27 não deve voltar a renderizar a página de Aprovações');
-assert(approvalsV36.includes('async function renderPage()')&&approvalsV36.includes('renderShell();'),'Aprovações V36 deve mostrar shell antes da rede');
+assert(approvalsV36.includes('async function renderPage(){render();await load(false)}'),'Aprovações V36 deve renderizar o shell antes da leitura da rede');
 assert(approvalsV36.includes('window.VG.approvals={version:36'),'V36 deve ser o proprietário final do Workflow');
 assert(scenarios.includes('async function renderPage(){render();await ensureLoaded(false);render();}'),'Cenários deve mostrar shell antes da rede');
 console.log('✓ v29.1: coerência HTML/JS/SW, atualização automática e módulos sem placeholder infinito');
