@@ -86,14 +86,23 @@
   document.head.appendChild(s);
 })();
 
-// Energia & Consumos: faturas, persistência e análise operacional.
+// Energia & Consumos: faturas, persistência, análise e múltiplos PDFs.
 (function(){
+  function loadEnergyMultiPdf(){
+    if(document.querySelector('script[data-vg-module="energy-multi-pdf"]'))return;
+    const x=document.createElement('script');
+    x.src='assets/js/modules/energy-multi-pdf-v36.js';
+    x.async=false;
+    x.dataset.vgModule='energy-multi-pdf';
+    document.head.appendChild(x);
+  }
   function loadEnergyMenuFix(){
-    if(document.querySelector('script[data-vg-module="energy-menu-fix"]'))return;
+    if(document.querySelector('script[data-vg-module="energy-menu-fix"]')){loadEnergyMultiPdf();return;}
     const f=document.createElement('script');
     f.src='assets/js/modules/energy-menu-fix-v36.js';
     f.async=false;
     f.dataset.vgModule='energy-menu-fix';
+    f.onload=loadEnergyMultiPdf;
     document.head.appendChild(f);
   }
   if(document.querySelector('script[data-vg-module="energy"]')){loadEnergyMenuFix();return;}
