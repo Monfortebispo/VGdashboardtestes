@@ -20,8 +20,6 @@ const { createSandbox, load } = require('./helpers/browser-sandbox');
 
   load('assets/js/core/00-runtime.js',s);
 
-  // Contrato canónico de rotas críticas — evita listas divergentes entre
-  // bootstrap, autenticação e shell de navegação.
   const critical=[
     'resumo','hotel360','actions','approvals','cityledger','messages',
     'complaints','refunds','unbilled','budgets','energy','hrbalances',
@@ -33,22 +31,23 @@ const { createSandbox, load } = require('./helpers/browser-sandbox');
   assert.strictEqual(s.window.VG.routes.canonical('#kpis'),'resumo');
   assert.strictEqual(s.window.VG.routes.isKnown('rota-inexistente'),false);
 
-  // Instala explicitamente o coordenador (no browser real isto acontece antes
-  // da primeira chamada do bootstrap, em DOMContentLoaded).
   assert.strictEqual(s.window.VG.startup.installRestoreCoordinator(),true);
 
-  // Duas chamadas locais simultâneas representam bootstrap + fallback de
-  // arranque. O motor real deve executar apenas uma vez.
   await Promise.all([s.window.idbAutoRestore(),s.window.idbAutoRestore()]);
   assert.strictEqual(calls,1,'fase local deve executar uma única vez');
   assert.strictEqual(s.window.VG.startup.status.local,'done');
 
-  // Depois do login existe uma segunda fase legítima, agora autenticada.
-  token='token';
+  token='token-A';
   await Promise.all([s.window.idbAutoRestore(),s.window.idbAutoRestore()]);
   assert.strictEqual(calls,2,'fase autenticada deve executar uma única vez');
   assert.strictEqual(s.window.VG.startup.status.authenticated,'done');
-  assert.strictEqual(maxActive,1,'restauros local e autenticado nunca podem concorrer');
 
-  console.log('✓ P0 runtime: rotas canónicas e restauro local/autenticado coordenado');
+  // Nova conta/sessão: um token diferente tem de permitir nova sincronização.
+  token='token-B';
+  await Promise.all([s.window.idbAutoRestore(),s.window.idbAutoRestore()]);
+  assert.strictEqual(calls,3,'nova sessão autenticada deve voltar a sincronizar uma vez');
+  assert.strictEqual(s.window.VG.startup.status.authenticated,'done');
+  assert.strictEqual(maxActive,1,'restauros de fases/sessões diferentes nunca podem concorrer');
+
+  console.log('✓ P0 runtime: rotas canónicas e restauro coordenado por fase/sessão');
 })().catch(err=>{console.error(err.stack||err);process.exit(1);});
