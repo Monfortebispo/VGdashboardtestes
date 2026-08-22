@@ -2,15 +2,22 @@
   "name": "vg-dashboard-operacoes",
   "version": "35.6.0",
   "private": true,
-  "description": "VG Operations v35.6: correções Hotel 360, Pesquisa Global e acesso direto da Governanta, mantendo responsividade 125%/150%",
+  "description": "VG Operations v35.6: aplicação operacional com migração arquitetural progressiva",
   "scripts": {
     "test": "node tests/run-tests.js",
-    "validate": "node tests/run-tests.js"
+    "validate": "node tests/run-tests.js",
+    "modern:dev": "vite --config vite.config.ts",
+    "modern:build": "tsc --noEmit && vite build --config vite.config.ts",
+    "modern:preview": "vite preview --config vite.config.ts"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.10"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
   }
 }
