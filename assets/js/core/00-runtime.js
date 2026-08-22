@@ -90,9 +90,9 @@
   // Problema anterior: idbAutoRestore() podia arrancar pelo bootstrap,
   // pelo restore-after-auth e pelo pós-login em simultâneo.
   // O coordenador mantém duas fases legítimas:
-  //   1) local       — antes de existir sessão/token;
+  //   1) local         — antes de existir sessão/token;
   //   2) authenticated — depois do login, com acesso aos dados partilhados.
-  // Cada fase corre no máximo uma vez e nunca concorre com a outra.
+  // Cada fase corre no máximo uma vez por sessão e nunca concorre com a outra.
   // ----------------------------------------------------------
   const startup = VG.startup = VG.startup || {};
   startup.status = startup.status || {
@@ -103,11 +103,12 @@
   };
   let localPromise = null;
   let authenticatedPromise = null;
+  let authenticatedToken = '';
   let serial = Promise.resolve();
 
-  function hasAuthToken(){
-    try { return !!(typeof window.vgAuthToken === 'function' && window.vgAuthToken()); }
-    catch(e){ return false; }
+  function authToken(){
+    try { return (typeof window.vgAuthToken === 'function' && window.vgAuthToken()) || ''; }
+    catch(e){ return ''; }
   }
 
   function installRestoreCoordinator(){
@@ -117,15 +118,28 @@
     if(original.__vgStartupCoordinated){ startup.status.installed = true; return true; }
 
     async function coordinatedRestore(){
-      const phase = hasAuthToken() ? 'authenticated' : 'local';
+      const token = authToken();
+      const phase = token ? 'authenticated' : 'local';
+
+      // Um token diferente representa uma nova sessão autenticada. Não reutilizar
+      // a Promise da conta anterior, caso contrário o novo utilizador poderia
+      // ficar sem sincronizar os dados partilhados após login.
+      if(phase === 'authenticated' && token !== authenticatedToken){
+        authenticatedToken = token;
+        authenticatedPromise = null;
+        startup.status.authenticated = 'pending';
+      }
+
       if(phase === 'local' && localPromise) return localPromise;
       if(phase === 'authenticated' && authenticatedPromise) return authenticatedPromise;
 
+      const args = arguments;
+      const self = this;
       const run = async function(){
         startup.status[phase] = 'running';
         VG.events.emit('startup:restore-start', {phase});
         try {
-          const result = await original.apply(this, arguments);
+          const result = await original.apply(self, args);
           startup.status[phase] = 'done';
           startup.status.lastError = null;
           VG.events.emit('startup:restore-done', {phase});
@@ -157,8 +171,8 @@
 
   startup.installRestoreCoordinator = installRestoreCoordinator;
   startup.resetAuthenticatedPhase = function(){
-    // Reservado para mudança explícita de utilizador/sessão.
     authenticatedPromise = null;
+    authenticatedToken = '';
     startup.status.authenticated = 'pending';
   };
 
