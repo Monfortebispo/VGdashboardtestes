@@ -1,4 +1,4 @@
-import { registerModule } from './core/module-registry';
+import { loadModule, registerModule } from './core/module-registry';
 
 /**
  * Entrada da arquitetura moderna.
@@ -18,7 +18,18 @@ registerModule('shell', async () => ({
   }
 }));
 
+registerModule('portfolio', async () => (await import('./modules/portfolio')).default);
+registerModule('occupancy', async () => (await import('./modules/occupancy')).default);
+registerModule('reputation', async () => (await import('./modules/reputation')).default);
+registerModule('revenue', async () => (await import('./modules/revenue')).default);
+
+export async function openModernModule(id: 'portfolio'|'occupancy'|'reputation'|'revenue'): Promise<void> {
+  const mod = await loadModule(id);
+  await mod.mount?.(document.body);
+}
+
 export const modernArchitecture = Object.freeze({
   status: 'isolated',
-  version: 1
+  version: 1,
+  lazyModules: ['portfolio','occupancy','reputation','revenue'] as const
 });
