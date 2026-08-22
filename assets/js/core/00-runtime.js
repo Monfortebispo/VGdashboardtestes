@@ -1,6 +1,6 @@
 // ==========================================================
-// VG DASHBOARD — RUNTIME INTERNO v13
-// Namespace mínimo para eventos e utilitários transversais.
+// VG DASHBOARD — RUNTIME INTERNO v14 (Fase 1 / P0)
+// Namespace transversal para eventos, rotas e coordenação de arranque.
 // Mantém compatibilidade com as funções globais existentes.
 // ==========================================================
 (function(){
@@ -8,7 +8,7 @@
   const VG = window.VG = window.VG || {};
   const bus = new EventTarget();
 
-  VG.version = '13.0';
+  VG.version = '14.0';
   window.SHARED_API_URL = window.SHARED_API_URL || '/.netlify/functions/dashboard-sessao';
   VG.shared = VG.shared || { endpoint: window.SHARED_API_URL };
   VG.events = VG.events || {
@@ -16,6 +16,45 @@
     once(name, handler){ bus.addEventListener(name, handler, {once:true}); },
     emit(name, detail){ bus.dispatchEvent(new CustomEvent(name, {detail: detail || {}})); }
   };
+
+  // ----------------------------------------------------------
+  // REGISTO CANÓNICO DE ROTAS
+  // Uma única fonte de verdade para os IDs de módulos/vistas.
+  // Nesta primeira etapa não substitui setView(); serve de contrato
+  // transversal e permite eliminar listas divergentes progressivamente.
+  // ----------------------------------------------------------
+  const ROUTES = [
+    'resumo','hotel360','hoteis','fichahotel',
+    'agenda','actions','approvals','cityledger','messages',
+    'receitas','receitasdet','custos','pl','unitEconomics','revenuehub','benchmark','anomalies',
+    'ab','housekeeping','compras','reputacao','instagram',
+    'lostfound','complaints','refunds','unbilled','budgets','energy','hrbalances',
+    'documents','automaticreports','analyticalassistant',
+    'ocupacao','costanalysis','cua','compare','ranking','sazonalidade','simulador','orcamento','alertas','notas',
+    'datacenter','governance','backup','upload'
+  ];
+  const ROUTE_ALIASES = Object.freeze({
+    recdet:'receitasdet',
+    kpis:'resumo',
+    hotelperformance:'hotel360',
+    revenueint:'revenuehub',
+    forecast:'revenuehub',
+    scenariocompare:'revenuehub',
+    'actions-v30':'actions'
+  });
+  const routeSet = new Set(ROUTES);
+  VG.routes = Object.assign(VG.routes || {}, {
+    all(){ return ROUTES.slice(); },
+    aliases(){ return Object.assign({}, ROUTE_ALIASES); },
+    canonical(id){
+      const key = String(id || '').replace(/^#/, '');
+      return ROUTE_ALIASES[key] || key;
+    },
+    isKnown(id){
+      const key = String(id || '').replace(/^#/, '');
+      return routeSet.has(key) || routeSet.has(ROUTE_ALIASES[key]);
+    }
+  });
 
   VG.state = VG.state || {
     changed(reason, detail){
@@ -45,4 +84,89 @@
       return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
   };
+
+  // ----------------------------------------------------------
+  // COORDENADOR DE ARRANQUE
+  // Problema anterior: idbAutoRestore() podia arrancar pelo bootstrap,
+  // pelo restore-after-auth e pelo pós-login em simultâneo.
+  // O coordenador mantém duas fases legítimas:
+  //   1) local       — antes de existir sessão/token;
+  //   2) authenticated — depois do login, com acesso aos dados partilhados.
+  // Cada fase corre no máximo uma vez e nunca concorre com a outra.
+  // ----------------------------------------------------------
+  const startup = VG.startup = VG.startup || {};
+  startup.status = startup.status || {
+    installed:false,
+    local:'pending',
+    authenticated:'pending',
+    lastError:null
+  };
+  let localPromise = null;
+  let authenticatedPromise = null;
+  let serial = Promise.resolve();
+
+  function hasAuthToken(){
+    try { return !!(typeof window.vgAuthToken === 'function' && window.vgAuthToken()); }
+    catch(e){ return false; }
+  }
+
+  function installRestoreCoordinator(){
+    if(startup.status.installed) return true;
+    const original = window.idbAutoRestore;
+    if(typeof original !== 'function') return false;
+    if(original.__vgStartupCoordinated){ startup.status.installed = true; return true; }
+
+    async function coordinatedRestore(){
+      const phase = hasAuthToken() ? 'authenticated' : 'local';
+      if(phase === 'local' && localPromise) return localPromise;
+      if(phase === 'authenticated' && authenticatedPromise) return authenticatedPromise;
+
+      const run = async function(){
+        startup.status[phase] = 'running';
+        VG.events.emit('startup:restore-start', {phase});
+        try {
+          const result = await original.apply(this, arguments);
+          startup.status[phase] = 'done';
+          startup.status.lastError = null;
+          VG.events.emit('startup:restore-done', {phase});
+          return result;
+        } catch(err) {
+          startup.status[phase] = 'error';
+          startup.status.lastError = String(err?.message || err || 'Erro desconhecido');
+          VG.events.emit('startup:restore-error', {phase,error:startup.status.lastError});
+          throw err;
+        }
+      };
+
+      // Serializa as duas fases. Se o login ocorrer enquanto o restauro local
+      // ainda decorre, a sincronização autenticada espera pela conclusão local.
+      const queued = serial.then(run, run);
+      serial = queued.catch(()=>{});
+      if(phase === 'local') localPromise = queued;
+      else authenticatedPromise = queued;
+      return queued;
+    }
+
+    coordinatedRestore.__vgStartupCoordinated = true;
+    coordinatedRestore.__vgOriginal = original;
+    window.idbAutoRestore = coordinatedRestore;
+    startup.status.installed = true;
+    startup.restore = coordinatedRestore;
+    return true;
+  }
+
+  startup.installRestoreCoordinator = installRestoreCoordinator;
+  startup.resetAuthenticatedPhase = function(){
+    // Reservado para mudança explícita de utilizador/sessão.
+    authenticatedPromise = null;
+    startup.status.authenticated = 'pending';
+  };
+
+  // Como este ficheiro é o primeiro script defer do runtime, este listener é
+  // registado antes do bootstrap. Quando DOMContentLoaded dispara, o módulo de
+  // persistência já definiu idbAutoRestore(), permitindo embrulhá-lo antes da
+  // primeira chamada do bootstrap.
+  document.addEventListener('DOMContentLoaded', function(){
+    installRestoreCoordinator();
+  }, {once:true});
 })();
