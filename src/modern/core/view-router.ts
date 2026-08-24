@@ -16,13 +16,14 @@ export interface ViewRuntime {
   activateLegacyView(viewId: string): void;
   setHash(viewId: string): void;
   closeDrawer?(): void;
+  refreshView?(viewId:string): boolean | Promise<boolean>;
   refresh?(): void | Promise<void>;
   resizeVisibleCharts?(): void;
   showToast?(message: string, error?: boolean): void;
 }
 
 export type NavigateResult =
-  | { ok:true; view:ViewDefinition; lazyModuleLoaded:boolean; dataSourcesPrepared:number }
+  | { ok:true; view:ViewDefinition; lazyModuleLoaded:boolean; dataSourcesPrepared:number; targetedRefresh:boolean }
   | { ok:false; requested:string; redirectedTo?:string; reason:'unknown'|'forbidden' };
 
 function roleOf(auth: AuthSnapshot | null): string {
@@ -72,30 +73,26 @@ export class ModernViewRouter {
       return { ok:false, requested:requestedId, redirectedTo:fallback.id, reason:'forbidden' };
     }
 
-    // Chunk e dados são preparados em paralelo. Quando as fontes deixarem de ser
-    // snapshots do legado, cada vista poderá pedir só a sua API sem alterar o router.
     const [lazyModuleLoaded, dataSourcesPrepared] = await Promise.all([
       preloadViewModule(requested),
       prepareViewData(requested)
     ]);
 
-    // O chunk/dados podem chegar depois de outro clique. O token impede que uma
-    // navegação antiga volte a ganhar prioridade visual.
     if (token !== this.navigationToken) {
-      return { ok:true, view:requested, lazyModuleLoaded, dataSourcesPrepared };
+      return { ok:true, view:requested, lazyModuleLoaded, dataSourcesPrepared, targetedRefresh:false };
     }
 
     this.runtime.activateLegacyView(requested.legacyViewId);
     this.runtime.setHash(requested.id);
     this.runtime.closeDrawer?.();
 
-    // Compatibilidade temporária: enquanto os módulos ainda renderizam pela camada
-    // antiga, mantém-se refreshAll através do adaptador. Esta chamada será removida
-    // módulo a módulo à medida que cada vista consumir diretamente o data registry.
-    await this.runtime.refresh?.();
+    // Uma vista migrada pode atualizar apenas o seu próprio domínio. Se ainda não
+    // tiver refresh seletivo, mantém-se o refreshAll legado como fallback seguro.
+    const targetedRefresh = await this.runtime.refreshView?.(requested.legacyViewId) === true;
+    if (!targetedRefresh) await this.runtime.refresh?.();
     requestAnimationFrame(() => this.runtime.resizeVisibleCharts?.());
 
-    return { ok:true, view:requested, lazyModuleLoaded, dataSourcesPrepared };
+    return { ok:true, view:requested, lazyModuleLoaded, dataSourcesPrepared, targetedRefresh };
   }
 
   cancelPendingNavigation(): void {
