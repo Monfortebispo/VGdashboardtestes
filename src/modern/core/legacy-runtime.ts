@@ -10,6 +10,9 @@ declare global {
     showToast?: (message: string, error?: boolean) => void;
     VG?: {
       performance?: { resizeVisibleCharts?: () => void };
+      occupancyModernBridge?: {
+        refresh?: () => { ok:boolean; method:string; elapsedMs:number; error?:string };
+      };
     };
   }
 }
@@ -54,6 +57,13 @@ export function createLegacyRuntime(): ViewRuntime {
     },
     closeDrawer() {
       if (window.innerWidth <= 960) window.drawerClose?.();
+    },
+    refreshView(viewId) {
+      if (viewId === 'ocupacao') {
+        const result = window.VG?.occupancyModernBridge?.refresh?.();
+        if (result?.ok) return true;
+      }
+      return false;
     },
     refresh() {
       window.refreshAll?.();
