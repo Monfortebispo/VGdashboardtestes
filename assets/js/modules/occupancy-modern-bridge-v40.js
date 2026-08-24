@@ -18,6 +18,21 @@
     const snap=document.getElementById('occSnapSel')?.value||'__latest__';
     return {hotel,snapshot:snap};
   }
+  function setSelectValue(id,value){
+    const el=document.getElementById(id);
+    if(!el||value==null)return false;
+    const wanted=String(value);
+    const hasOption=!el.options||Array.from(el.options).some(o=>String(o.value)===wanted);
+    if(!hasOption)return false;
+    if(String(el.value)!==wanted)el.value=wanted;
+    return true;
+  }
+  function applySelection(next){
+    const result={hotel:false,snapshot:false};
+    if(next&&Object.prototype.hasOwnProperty.call(next,'hotel'))result.hotel=setSelectValue('occHotelSel',next.hotel);
+    if(next&&Object.prototype.hasOwnProperty.call(next,'snapshot'))result.snapshot=setSelectValue('occSnapSel',next.snapshot);
+    return result;
+  }
   function stats(){
     const list=snapshots();
     const latest=list[list.length-1]||null;
@@ -47,9 +62,10 @@
     }
   }
   window.VG.occupancyModernBridge=Object.freeze({
-    version:2,
+    version:3,
     read(){return cloneLite(snapshots())||[];},
     selection,
+    applySelection,
     stats,
     refresh
   });
