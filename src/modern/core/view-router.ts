@@ -1,5 +1,7 @@
 import { loadModule } from './module-registry';
 import { defaultView, viewDefinition, type ViewDefinition } from './view-catalog';
+import { ensureDataSources } from '../data/data-registry';
+import { dataSourcesForView } from '../data/view-data-plan';
 
 export interface AuthSnapshot {
   role?: string;
@@ -20,7 +22,7 @@ export interface ViewRuntime {
 }
 
 export type NavigateResult =
-  | { ok:true; view:ViewDefinition; lazyModuleLoaded:boolean }
+  | { ok:true; view:ViewDefinition; lazyModuleLoaded:boolean; dataSourcesPrepared:number }
   | { ok:false; requested:string; redirectedTo?:string; reason:'unknown'|'forbidden' };
 
 function roleOf(auth: AuthSnapshot | null): string {
@@ -40,6 +42,12 @@ async function preloadViewModule(view: ViewDefinition): Promise<boolean> {
   if (!view.moduleId) return false;
   await loadModule(view.moduleId);
   return true;
+}
+
+async function prepareViewData(view: ViewDefinition): Promise<number> {
+  const sources = dataSourcesForView(view.id);
+  await ensureDataSources(sources);
+  return sources.length;
 }
 
 export class ModernViewRouter {
@@ -64,20 +72,30 @@ export class ModernViewRouter {
       return { ok:false, requested:requestedId, redirectedTo:fallback.id, reason:'forbidden' };
     }
 
-    // O chunk pode chegar depois de outro clique. O token impede que uma
+    // Chunk e dados são preparados em paralelo. Quando as fontes deixarem de ser
+    // snapshots do legado, cada vista poderá pedir só a sua API sem alterar o router.
+    const [lazyModuleLoaded, dataSourcesPrepared] = await Promise.all([
+      preloadViewModule(requested),
+      prepareViewData(requested)
+    ]);
+
+    // O chunk/dados podem chegar depois de outro clique. O token impede que uma
     // navegação antiga volte a ganhar prioridade visual.
-    const lazyModuleLoaded = await preloadViewModule(requested);
     if (token !== this.navigationToken) {
-      return { ok:true, view:requested, lazyModuleLoaded };
+      return { ok:true, view:requested, lazyModuleLoaded, dataSourcesPrepared };
     }
 
     this.runtime.activateLegacyView(requested.legacyViewId);
     this.runtime.setHash(requested.id);
     this.runtime.closeDrawer?.();
+
+    // Compatibilidade temporária: enquanto os módulos ainda renderizam pela camada
+    // antiga, mantém-se refreshAll através do adaptador. Esta chamada será removida
+    // módulo a módulo à medida que cada vista consumir diretamente o data registry.
     await this.runtime.refresh?.();
     requestAnimationFrame(() => this.runtime.resizeVisibleCharts?.());
 
-    return { ok:true, view:requested, lazyModuleLoaded };
+    return { ok:true, view:requested, lazyModuleLoaded, dataSourcesPrepared };
   }
 
   cancelPendingNavigation(): void {
