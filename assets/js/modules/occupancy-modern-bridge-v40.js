@@ -30,10 +30,27 @@
       latestTs:latest?.ts??null
     };
   }
+  function refresh(){
+    const started=performance.now();
+    try{
+      if(typeof occUpdateUI==='function'){
+        occUpdateUI();
+        return {ok:true,method:'occUpdateUI',elapsedMs:+(performance.now()-started).toFixed(2)};
+      }
+      if(typeof occRender==='function'){
+        occRender();
+        return {ok:true,method:'occRender',elapsedMs:+(performance.now()-started).toFixed(2)};
+      }
+      return {ok:false,method:'none',elapsedMs:+(performance.now()-started).toFixed(2)};
+    }catch(e){
+      return {ok:false,method:'error',elapsedMs:+(performance.now()-started).toFixed(2),error:String(e&&e.message||e)};
+    }
+  }
   window.VG.occupancyModernBridge=Object.freeze({
-    version:1,
+    version:2,
     read(){return cloneLite(snapshots())||[];},
     selection,
-    stats
+    stats,
+    refresh
   });
 })();
