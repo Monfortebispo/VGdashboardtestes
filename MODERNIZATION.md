@@ -41,14 +41,18 @@ Iniciada através de adaptadores lazy:
 - Revenue & Forecast
 - Custos
 
-Estes adaptadores ainda encaminham para o runtime legado; servem para criar fronteiras de carregamento antes da reescrita interna.
+Portefólio, Reputação, Revenue e Custos continuam como adaptadores de compatibilidade. Ocupação já avançou para um controlador próprio e deixou de chamar diretamente `setView()`/`refreshAll()` no seu módulo moderno.
 
-Ocupação é o primeiro domínio com corte real de dependência de dados:
+Ocupação é o primeiro domínio com corte real de dependência de dados e navegação:
 - `occupancy-modern-bridge-v40.js` fornece acesso somente de leitura a `OCC_SNAPSHOTS` sem alterar `ocupacao.js`;
+- a bridge sincroniza hotel e snapshot com os controlos legados, mas não controla a navegação;
 - a fonte moderna `occupancy` deixou de devolver `RAW` e passa a devolver apenas snapshots, seleção e estatísticas do domínio;
 - `occupancy-model.ts` contém médias e cálculo de pickup fora do módulo legado;
 - `occupancy-service.ts` usa a cache seletiva e mede tempo de preparação, quantidade de snapshots/hotéis e volume aproximado;
-- o bridge permanece desligado do `index.html`, portanto não afeta a aplicação atual.
+- `occupancy-state.ts` mantém a seleção fora do DOM;
+- `occupancy-controller.ts` coordena estado, dados e atualização seletiva;
+- `modules/occupancy.ts` já não chama `legacyView`, `setView` nem `refreshAll`;
+- toda esta camada permanece desligada do `index.html`, portanto não afeta a aplicação atual.
 
 ### Fase 3 — Módulos operacionais
 Preparação iniciada com adaptador de Aprovações. City Ledger, Energia, Housekeeping e restantes módulos de escrita continuam no runtime atual.
@@ -63,10 +67,10 @@ Iniciada na branch com uma camada isolada de carregamento seletivo:
 - preparação de chunk e dados em paralelo no router moderno
 - adaptadores atuais sem chamadas de rede, lendo apenas dados já presentes em memória
 
-O `refreshAll()` legado ainda é chamado pelo adaptador do router para manter paridade funcional. A sua remoção será gradual: cada módulo deixa de depender dele apenas quando passar a consumir diretamente as respetivas fontes modernas.
+O `refreshAll()` legado continua disponível no adaptador do router para módulos que ainda não foram isolados. Para Ocupação, o runtime moderno já tenta atualização seletiva e usa o refresh global apenas como fallback de compatibilidade.
 
 Próxima etapa da Fase 4:
-1. completar Ocupação até conseguir renderização de leitura sem `refreshAll()`;
+1. completar a renderização de leitura da Ocupação através do controlador moderno;
 2. repetir o padrão em Reputação e Revenue;
 3. substituir uma fonte de cada vez por carregamento específico quando existir API adequada;
 4. medir tamanho transferido, tempo até conteúdo e quantidade de trabalho executado por mudança de vista.
@@ -80,7 +84,7 @@ Só depois de paridade funcional, testes e validação visual é que o `index.ht
 - `tests/modern-architecture-isolation.test.js` impede ligação prematura do bundle moderno.
 - `tests/modern-navigation-router.test.js` valida catálogo, router, lazy loading e coexistência com `setView()`.
 - `tests/modern-data-loading.test.js` valida planos por vista, cache, deduplicação e ausência de novas chamadas de rede nesta fase.
-- `tests/modern-occupancy-source.test.js` valida bridge read-only, fonte seletiva, modelo e diagnóstico de Ocupação.
+- `tests/modern-occupancy-source.test.js` valida estado, controlador, bridge, fonte seletiva e ausência de navegação/refresh global no módulo moderno de Ocupação.
 - Ficha Hotel permanece no módulo legado e não é modificada por esta fase.
 - Não existe PR aberto desta branch.
 - Nenhum merge para `main` é feito nesta fase.
