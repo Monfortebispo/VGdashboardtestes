@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'node:path';
 
 export default defineConfig({
   root: '.',
@@ -9,7 +8,7 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
-      input: resolve(__dirname, 'src/modern/main.ts'),
+      input: 'src/modern/main.ts',
       output: {
         entryFileNames: 'assets/modern-main.js',
         chunkFileNames: 'assets/[name]-[hash].js'
