@@ -1,6 +1,7 @@
 export type DataSourceId =
   | 'core'
   | 'financials'
+  | 'portfolio'
   | 'occupancy'
   | 'reputation'
   | 'revenue'
