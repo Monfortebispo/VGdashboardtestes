@@ -11,7 +11,7 @@ export default defineConfig({
     rollupOptions: {
       input: resolve(__dirname, 'src/modern/main.ts'),
       output: {
-        entryFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/modern-main.js',
         chunkFileNames: 'assets/[name]-[hash].js'
       }
     }
