@@ -9,9 +9,9 @@ import { viewDataPlan } from './data/view-data-plan';
 /**
  * Entrada da arquitetura moderna.
  *
- * IMPORTANTE: este ficheiro ainda não é carregado pelo index.html de produção.
- * Serve para permitir migração incremental e builds isolados sem alterar o
- * runtime legado atual.
+ * IMPORTANTE: este ficheiro continua desligado do index.html versionado.
+ * No Deploy Preview é injetado apenas durante o build Netlify para permitir
+ * testes reais sem alterar o main.
  */
 
 registerModule('shell', async () => ({
@@ -31,9 +31,6 @@ registerModule('revenue', async () => (await import('./modules/revenue')).defaul
 registerModule('costs', async () => (await import('./modules/costs')).default);
 registerModule('approvals', async () => (await import('./modules/approvals')).default);
 
-// As fontes atuais são adaptadores de memória sobre o runtime legado. Não geram
-// tráfego de rede; apenas estabelecem a fronteira que permitirá substituir RAW /
-// STORE por APIs específicas módulo a módulo.
 registerLegacyDataSources();
 
 const runtime = createLegacyRuntime();
@@ -51,7 +48,7 @@ export function resetModernDataCache(): void {
 
 export const modernArchitecture = Object.freeze({
   status: 'isolated',
-  version: 4,
+  version: 5,
   lazyModules: ['portfolio','occupancy','reputation','revenue','costs','approvals'] as const,
   navigationGroups: navigationGroups().map(group => ({
     name: group.name,
@@ -61,3 +58,24 @@ export const modernArchitecture = Object.freeze({
   dataStats: dataRegistryStats,
   navigationMetrics: () => modernViewRouter.navigationMetrics()
 });
+
+type PreviewWindow = Window & {
+  VG?: Record<string, unknown> & {
+    modernPreview?: {
+      router:ModernViewRouter;
+      navigation:typeof modernNavigation;
+      architecture:typeof modernArchitecture;
+      resetDataCache:typeof resetModernDataCache;
+    };
+  };
+};
+
+const previewWindow=window as PreviewWindow;
+previewWindow.VG=previewWindow.VG||{};
+previewWindow.VG.modernPreview={
+  router:modernViewRouter,
+  navigation:modernNavigation,
+  architecture:modernArchitecture,
+  resetDataCache:resetModernDataCache
+};
+window.dispatchEvent(new CustomEvent('vg-modern-preview-ready'));
