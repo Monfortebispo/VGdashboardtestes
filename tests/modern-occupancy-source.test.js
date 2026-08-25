@@ -12,6 +12,7 @@ const model=read('src/modern/data/occupancy-model.ts');
 const service=read('src/modern/data/occupancy-service.ts');
 const state=read('src/modern/occupancy/occupancy-state.ts');
 const controller=read('src/modern/occupancy/occupancy-controller.ts');
+const renderer=read('src/modern/occupancy/occupancy-renderer.ts');
 const moduleCode=read('src/modern/modules/occupancy.ts');
 
 assert(!html.includes('occupancy-modern-bridge-v40.js'),'bridge de Ocupação moderna deve permanecer desligado do index.html');
@@ -23,7 +24,10 @@ assert(model.includes('occupancyPickup')&&model.includes('averageOccupancy'),'mo
 assert(service.includes("ensureDataSource<OccupancySourceSnapshot>('occupancy'")&&service.includes('occupancyDiagnostics'),'serviço deve consumir cache seletiva e expor diagnóstico');
 assert(state.includes('class OccupancyStateStore')&&state.includes('subscribe('),'estado de seleção deve estar desacoplado do DOM');
 assert(controller.includes('class OccupancyController')&&controller.includes('syncFromLegacy')&&controller.includes('refresh()'),'controlador deve coordenar estado/dados sem navegar');
+assert(renderer.includes('renderOccupancyReadOnly')&&renderer.includes('data-modern-occupancy-readonly')===false,'renderer deve expor renderização própria sem depender de markup legado fixo');
+assert(renderer.includes("host.dataset.modernOccupancyReadonly='true'")&&renderer.includes("table.dataset.modernOccupancyTable='true'"),'renderer deve criar uma vista moderna identificável e tabela própria');
 assert(!moduleCode.includes('legacyView(')&&!moduleCode.includes('setView(')&&!moduleCode.includes('refreshAll'),'módulo moderno de Ocupação não pode reintroduzir navegação/refresh global');
-assert(moduleCode.includes('occupancyController.prepare()')&&moduleCode.includes('modernOccupancySnapshots'),'módulo deve preparar apenas a sua fonte e expor diagnóstico local');
+assert(moduleCode.includes('occupancyController.prepare()')&&moduleCode.includes('renderOccupancyReadOnly(root,prepared.selection)'),'módulo deve preparar a fonte e renderizar leitura moderna');
+assert(!moduleCode.includes('bridge()?.refresh?.()'),'mount moderno não deve pedir renderização à vista legada');
 cp.execFileSync(process.execPath,['--check',path.join(ROOT,'assets/js/modules/occupancy-modern-bridge-v40.js')],{stdio:'pipe'});
-console.log('✓ modern occupancy: estado, controlador, bridge, fonte seletiva e módulo desacoplados do refresh global');
+console.log('✓ modern occupancy: dados seletivos, estado, controlador e renderização de leitura desacoplados do refresh global');
