@@ -1,5 +1,6 @@
 import type { ModernModule } from '../core/module-registry';
 import { OccupancyController, type OccupancyLegacyAdapter } from '../occupancy/occupancy-controller';
+import { clearOccupancyReadOnly, renderOccupancyReadOnly } from '../occupancy/occupancy-renderer';
 import type { OccupancySelection } from '../occupancy/occupancy-state';
 
 type OccupancyBridge = {
@@ -29,20 +30,21 @@ const legacyAdapter:OccupancyLegacyAdapter = {
 };
 
 export const occupancyController = new OccupancyController(legacyAdapter);
+let mountedRoot:HTMLElement|undefined;
 
 const occupancy:ModernModule = {
   id:'occupancy',
   async mount(root){
-    // Navegação/ativação do painel pertence ao router. Este módulo apenas prepara
-    // os seus dados e atualiza a própria vista, evitando chamar setView/refreshAll.
     const prepared=await occupancyController.prepare();
+    mountedRoot=root;
     root.dataset.modernOccupancy='ready';
     root.dataset.modernOccupancySnapshots=String(prepared.diagnostics.snapshots);
     root.dataset.modernOccupancyHotels=String(prepared.diagnostics.hotels);
-    bridge()?.refresh?.();
+    renderOccupancyReadOnly(root,prepared.selection);
   },
   unmount(){
-    // Não destrói o DOM legado: durante a migração ele continua a ser a camada visual.
+    if(mountedRoot)clearOccupancyReadOnly(mountedRoot);
+    mountedRoot=undefined;
   }
 };
 
