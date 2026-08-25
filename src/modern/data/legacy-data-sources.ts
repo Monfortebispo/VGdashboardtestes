@@ -2,6 +2,7 @@ import { registerDataSource, type DataSourceId } from './data-registry';
 import type { OccupancySourceSnapshot } from './occupancy-model';
 import type { ReputationSourceSnapshot } from './reputation-model';
 import type { RevenueSourceSnapshot } from './revenue-model';
+import type { PortfolioSourceSnapshot } from './portfolio-model';
 
 type OccupancyBridge = {
   version:number;
@@ -22,6 +23,12 @@ type RevenueBridge = {
   stats:()=>RevenueSourceSnapshot['stats'];
 };
 
+type PortfolioBridge = {
+  version:number;
+  read:()=>unknown;
+  stats:()=>PortfolioSourceSnapshot['stats'];
+};
+
 type LegacyWindow = Window & {
   RAW?: unknown;
   STORE?: unknown;
@@ -29,6 +36,7 @@ type LegacyWindow = Window & {
     occupancyModernBridge?:OccupancyBridge;
     reputationModernBridge?:ReputationBridge;
     revenueModernBridge?:RevenueBridge;
+    portfolioModernBridge?:PortfolioBridge;
   };
 };
 
@@ -60,6 +68,12 @@ function revenueSnapshot(w:LegacyWindow):RevenueSourceSnapshot {
   return {data:null,stats:{records:0,available:false}};
 }
 
+function portfolioSnapshot(w:LegacyWindow):PortfolioSourceSnapshot {
+  const bridge=w.VG?.portfolioModernBridge;
+  if(bridge)return {data:bridge.read(),stats:bridge.stats()};
+  return {data:null,stats:{available:false,sections:0,approxRecords:0}};
+}
+
 function snapshot(id: DataSourceId): unknown {
   const w = window as LegacyWindow;
   switch (id) {
@@ -67,6 +81,8 @@ function snapshot(id: DataSourceId): unknown {
       return { RAW:w.RAW, STORE:w.STORE, VG:w.VG };
     case 'financials':
       return w.RAW;
+    case 'portfolio':
+      return portfolioSnapshot(w);
     case 'occupancy':
       return occupancySnapshot(w);
     case 'reputation':
@@ -87,6 +103,7 @@ function snapshot(id: DataSourceId): unknown {
 const TTL: Readonly<Record<DataSourceId, number>> = Object.freeze({
   core: 15_000,
   financials: 60_000,
+  portfolio: 30_000,
   occupancy: 30_000,
   reputation: 120_000,
   revenue: 30_000,
@@ -98,7 +115,7 @@ const TTL: Readonly<Record<DataSourceId, number>> = Object.freeze({
 
 /**
  * Adaptadores temporários: nesta fase não criam tráfego de rede.
- * Ocupação, Reputação e Revenue já usam contratos read-only específicos em vez de RAW.
+ * Portefólio, Ocupação, Reputação e Revenue já usam contratos read-only específicos em vez de RAW.
  * As restantes fontes continuam a expor os dados que o runtime antigo já
  * carregou, até serem migradas uma a uma.
  */
