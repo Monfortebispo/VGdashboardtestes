@@ -1,20 +1,22 @@
 import type { ModernModule } from '../core/module-registry';
-import { reputationDiagnostics, reputationData } from '../data/reputation-service';
+import { reputationController } from '../reputation/reputation-controller';
 import { clearReputationReadOnly, renderReputationReadOnly } from '../reputation/reputation-renderer';
+
+let mountedRoot:HTMLElement|undefined;
 
 const reputation:ModernModule = {
   id:'reputation',
   async mount(root){
-    await reputationData();
-    const diagnostics=await reputationDiagnostics(false);
+    mountedRoot=root;
+    const prepared=await reputationController.prepare();
     root.dataset.modernReputation='ready';
-    root.dataset.modernReputationRecords=String(diagnostics.records);
-    root.dataset.modernReputationAvailable=String(diagnostics.available);
+    root.dataset.modernReputationRecords=String(prepared.diagnostics.records);
+    root.dataset.modernReputationAvailable=String(prepared.diagnostics.available);
     renderReputationReadOnly(root);
   },
   unmount(){
-    const root=document.querySelector<HTMLElement>('[data-modern-reputation="ready"]');
-    if(root)clearReputationReadOnly(root);
+    if(mountedRoot)clearReputationReadOnly(mountedRoot);
+    mountedRoot=undefined;
   }
 };
 
