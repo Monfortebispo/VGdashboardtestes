@@ -2,6 +2,12 @@
   command = "npm test"
   functions = "netlify/functions"
 
+[context.deploy-preview]
+  command = "npm run modern:deploy-preview"
+
+[context.branch-deploy]
+  command = "npm run modern:deploy-preview"
+
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
 
