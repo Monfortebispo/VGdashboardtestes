@@ -15,5 +15,5 @@ export function countSections(value:unknown):number{
 export function countApproxRecords(value:unknown):number{
   if(Array.isArray(value))return value.length;
   if(!value||typeof value!=='object')return 0;
-  return Object.values(value as Record<string,unknown>).reduce((sum,item)=>sum+(Array.isArray(item)?item.length:1),0);
+  return Object.values(value as Record<string,unknown>).reduce<number>((sum,item)=>sum+(Array.isArray(item)?item.length:1),0);
 }
