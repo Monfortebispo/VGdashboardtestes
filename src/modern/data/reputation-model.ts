@@ -6,7 +6,7 @@ export interface ReputationSourceSnapshot {
 export function reputationRecordCount(value:unknown):number {
   if(Array.isArray(value))return value.length;
   if(!value||typeof value!=='object')return 0;
-  return Object.values(value as Record<string,unknown>).reduce((sum,item)=>{
+  return Object.values(value as Record<string,unknown>).reduce<number>((sum,item)=>{
     if(Array.isArray(item))return sum+item.length;
     if(item&&typeof item==='object')return sum+reputationRecordCount(item);
     return sum;
