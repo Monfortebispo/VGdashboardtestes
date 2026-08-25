@@ -52,6 +52,9 @@ export function createLegacyRuntime(): ViewRuntime {
       localCurrent = viewId;
       activateLegacyView(viewId);
     },
+    viewRoot(viewId) {
+      return document.getElementById(`view-${viewId}`) || document.body;
+    },
     setHash(viewId) {
       history.replaceState(null, '', `#${viewId}`);
     },
