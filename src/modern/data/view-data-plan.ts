@@ -1,7 +1,7 @@
 import type { DataSourceId } from './data-registry';
 
 const PLAN: Readonly<Record<string, readonly DataSourceId[]>> = Object.freeze({
-  resumo: ['core','financials','occupancy','reputation'],
+  resumo: ['core','portfolio'],
   hotel360: ['core','financials','occupancy','reputation','revenue'],
   fichahotel: ['core','financials','occupancy','reputation'],
   receitas: ['core','financials'],
