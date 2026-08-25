@@ -13,7 +13,7 @@ const html=read('index.html');
 
 assert(registry.includes('const inflight = new Map')&&registry.includes('isFresh')&&registry.includes('invalidateData'),'data registry deve ter cache, deduplicação e invalidação');
 assert(registry.includes('Promise.all(ids.map'),'fontes independentes devem poder carregar em paralelo');
-assert(plan.includes("resumo: ['core','financials','occupancy','reputation']"),'Portefólio deve declarar apenas as fontes necessárias');
+assert(plan.includes("resumo: ['core','portfolio']"),'Portefólio deve declarar apenas core e a fonte portfolio dedicada');
 assert(plan.includes("revenuehub: ['core','revenue','occupancy']"),'Revenue deve ter plano de dados próprio');
 assert(plan.includes("reputacao: ['core','reputation']"),'Reputação não deve depender do pacote financeiro');
 assert(plan.includes("ocupacao: ['core','occupancy']"),'Ocupação deve ter fonte dedicada');
