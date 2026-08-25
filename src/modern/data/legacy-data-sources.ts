@@ -1,5 +1,6 @@
 import { registerDataSource, type DataSourceId } from './data-registry';
 import type { OccupancySourceSnapshot } from './occupancy-model';
+import type { ReputationSourceSnapshot } from './reputation-model';
 
 type OccupancyBridge = {
   version:number;
@@ -8,10 +9,19 @@ type OccupancyBridge = {
   stats:()=>OccupancySourceSnapshot['stats'];
 };
 
+type ReputationBridge = {
+  version:number;
+  read:()=>unknown;
+  stats:()=>ReputationSourceSnapshot['stats'];
+};
+
 type LegacyWindow = Window & {
   RAW?: unknown;
   STORE?: unknown;
-  VG?: Record<string, unknown> & { occupancyModernBridge?:OccupancyBridge };
+  VG?: Record<string, unknown> & {
+    occupancyModernBridge?:OccupancyBridge;
+    reputationModernBridge?:ReputationBridge;
+  };
 };
 
 function occupancySnapshot(w:LegacyWindow): OccupancySourceSnapshot {
@@ -30,6 +40,12 @@ function occupancySnapshot(w:LegacyWindow): OccupancySourceSnapshot {
   };
 }
 
+function reputationSnapshot(w:LegacyWindow):ReputationSourceSnapshot {
+  const bridge=w.VG?.reputationModernBridge;
+  if(bridge)return {data:bridge.read(),stats:bridge.stats()};
+  return {data:null,stats:{records:0,available:false}};
+}
+
 function snapshot(id: DataSourceId): unknown {
   const w = window as LegacyWindow;
   switch (id) {
@@ -40,7 +56,7 @@ function snapshot(id: DataSourceId): unknown {
     case 'occupancy':
       return occupancySnapshot(w);
     case 'reputation':
-      return { RAW:w.RAW, reputation:w.VG?.reputation };
+      return reputationSnapshot(w);
     case 'revenue':
       return { RAW:w.RAW, revenueHub:w.VG?.revenueHub };
     case 'approvals':
@@ -68,7 +84,7 @@ const TTL: Readonly<Record<DataSourceId, number>> = Object.freeze({
 
 /**
  * Adaptadores temporários: nesta fase não criam tráfego de rede.
- * A fonte occupancy já usa um contrato read-only específico em vez de RAW.
+ * Ocupação e Reputação já usam contratos read-only específicos em vez de RAW.
  * As restantes fontes continuam a expor os dados que o runtime antigo já
  * carregou, até serem migradas uma a uma.
  */
