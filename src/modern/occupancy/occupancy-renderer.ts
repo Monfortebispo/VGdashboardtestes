@@ -40,7 +40,7 @@ export function renderOccupancyReadOnly(root:HTMLElement,selection:Readonly<Occu
   const title=document.createElement('h2');
   title.textContent='Ocupação';
   const meta=document.createElement('p');
-  meta.textContent=`Snapshot: ${snapshot.label||snapshot.id} · ${hotels.length} hotel${hotels.length===1?'':'éis'}`;
+  meta.textContent=`Snapshot: ${snapshot.label||snapshot.id} · ${hotels.length} ${hotels.length===1?'hotel':'hotéis'}`;
 
   const table=document.createElement('table');
   table.dataset.modernOccupancyTable='true';
