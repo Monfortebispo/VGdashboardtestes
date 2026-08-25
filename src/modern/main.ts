@@ -51,12 +51,13 @@ export function resetModernDataCache(): void {
 
 export const modernArchitecture = Object.freeze({
   status: 'isolated',
-  version: 3,
+  version: 4,
   lazyModules: ['portfolio','occupancy','reputation','revenue','costs','approvals'] as const,
   navigationGroups: navigationGroups().map(group => ({
     name: group.name,
     views: group.items.map(item => item.id)
   })),
   dataPlan: viewDataPlan(),
-  dataStats: dataRegistryStats
+  dataStats: dataRegistryStats,
+  navigationMetrics: () => modernViewRouter.navigationMetrics()
 });
