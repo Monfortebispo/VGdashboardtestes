@@ -1,6 +1,7 @@
 import { registerDataSource, type DataSourceId } from './data-registry';
 import type { OccupancySourceSnapshot } from './occupancy-model';
 import type { ReputationSourceSnapshot } from './reputation-model';
+import type { RevenueSourceSnapshot } from './revenue-model';
 
 type OccupancyBridge = {
   version:number;
@@ -15,12 +16,19 @@ type ReputationBridge = {
   stats:()=>ReputationSourceSnapshot['stats'];
 };
 
+type RevenueBridge = {
+  version:number;
+  read:()=>unknown;
+  stats:()=>RevenueSourceSnapshot['stats'];
+};
+
 type LegacyWindow = Window & {
   RAW?: unknown;
   STORE?: unknown;
   VG?: Record<string, unknown> & {
     occupancyModernBridge?:OccupancyBridge;
     reputationModernBridge?:ReputationBridge;
+    revenueModernBridge?:RevenueBridge;
   };
 };
 
@@ -46,6 +54,12 @@ function reputationSnapshot(w:LegacyWindow):ReputationSourceSnapshot {
   return {data:null,stats:{records:0,available:false}};
 }
 
+function revenueSnapshot(w:LegacyWindow):RevenueSourceSnapshot {
+  const bridge=w.VG?.revenueModernBridge;
+  if(bridge)return {data:bridge.read(),stats:bridge.stats()};
+  return {data:null,stats:{records:0,available:false}};
+}
+
 function snapshot(id: DataSourceId): unknown {
   const w = window as LegacyWindow;
   switch (id) {
@@ -58,7 +72,7 @@ function snapshot(id: DataSourceId): unknown {
     case 'reputation':
       return reputationSnapshot(w);
     case 'revenue':
-      return { RAW:w.RAW, revenueHub:w.VG?.revenueHub };
+      return revenueSnapshot(w);
     case 'approvals':
       return w.VG?.approvals;
     case 'hotels':
@@ -84,7 +98,7 @@ const TTL: Readonly<Record<DataSourceId, number>> = Object.freeze({
 
 /**
  * Adaptadores temporários: nesta fase não criam tráfego de rede.
- * Ocupação e Reputação já usam contratos read-only específicos em vez de RAW.
+ * Ocupação, Reputação e Revenue já usam contratos read-only específicos em vez de RAW.
  * As restantes fontes continuam a expor os dados que o runtime antigo já
  * carregou, até serem migradas uma a uma.
  */
