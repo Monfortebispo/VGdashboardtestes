@@ -61,6 +61,31 @@
       return false;
     }
   }
+
+  function abEvalWithPreMountRoot(source){
+    // O módulo A&B legado contém bindings de drag&drop executados no topo do
+    // ficheiro e usa window.AB35Root antes de mount() criar o ShadowRoot. Isso
+    // fazia a própria avaliação abortar com "getElementById of undefined".
+    // Durante a avaliação fornecemos apenas um root neutro; mount() substitui-o
+    // pelo ShadowRoot real antes de iniciar a interface.
+    const hadOwnRoot=Object.prototype.hasOwnProperty.call(window,'AB35Root');
+    const previousRoot=window.AB35Root;
+    if(!previousRoot){
+      window.AB35Root={
+        getElementById:function(){return null;},
+        querySelector:function(){return null;},
+        querySelectorAll:function(){return [];}
+      };
+    }
+    try{
+      (0,eval)(source+'\n//# sourceURL=compras-ab-native-v35-preview-repair.js');
+    }finally{
+      if(previousRoot)window.AB35Root=previousRoot;
+      else if(hadOwnRoot)window.AB35Root=previousRoot;
+      else delete window.AB35Root;
+    }
+  }
+
   async function abRepair(){
     if(abRepairPromise)return abRepairPromise;
     abRepairPromise=(async function(){
@@ -72,7 +97,7 @@
         const response=await fetch('/assets/js/modules/compras-ab-native-v35.js?preview-repair='+Date.now(),{cache:'no-store'});
         if(!response.ok)throw new Error('HTTP '+response.status+' ao obter compras-ab-native-v35.js');
         const source=await response.text();
-        try{(0,eval)(source+'\n//# sourceURL=compras-ab-native-v35-preview-repair.js');}
+        try{abEvalWithPreMountRoot(source);}
         catch(err){abShowError(err,'avaliação do módulo');return false;}
         if(!window.VG?.comprasNative35){
           abShowError(new Error('O ficheiro foi executado, mas window.VG.comprasNative35 não ficou registado.'),'registo do módulo');
@@ -104,9 +129,6 @@
       },true);
     }
 
-    // Compras & A&B fica no runtime legado. Se o lazy-loader normal não concluir,
-    // o preview faz uma tentativa direta e, em vez de ficar eternamente em
-    // "A carregar...", apresenta a etapa e a exceção exatas que bloquearam o módulo.
     document.addEventListener('click',function(event){
       if(viewFromNav(event.target)==='ab')scheduleABRepair();
     },false);
