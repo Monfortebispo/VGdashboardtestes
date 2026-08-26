@@ -101,7 +101,7 @@
       sel.addEventListener('change',function(event){
         event.stopPropagation();
         const btn=oldNav.querySelector('.nav-btn[data-view="'+sel.value+'"]');
-        if(btn&&typeof window.setView==='function')window.setView(sel.value,btn);
+        if(btn)btn.click();
       });
       wrap.append(lab,sel);
       scope.insertAdjacentElement('afterend',wrap);
@@ -160,9 +160,87 @@
     [150,500,1200].forEach(function(ms){setTimeout(function(){if(abIsMounted())abIntegrate();else void abRepair();},ms);});
   }
 
+  function waitFor(fn,timeout){
+    const start=Date.now();
+    return new Promise(function(resolve){
+      (function tick(){
+        const value=fn();
+        if(value)return resolve(value);
+        if(Date.now()-start>timeout)return resolve(null);
+        setTimeout(tick,120);
+      })();
+    });
+  }
+
+  async function prepareABUpload(status){
+    if(status)status.textContent='A preparar módulo Compras & A&B…';
+    if(!abIsMounted())await abRepair();
+    const root=await waitFor(abRoot,5000);
+    if(!root)throw new Error('O módulo Compras & A&B não ficou disponível.');
+    return root;
+  }
+
+  function installABUploadCard(){
+    const view=document.getElementById('view-upload');
+    if(!view||document.getElementById('vgUploadABCard'))return false;
+    const grid=Array.from(view.children).find(function(el){return el.tagName==='DIV'&&String(el.getAttribute('style')||'').includes('grid-template-columns');});
+    if(!grid)return false;
+
+    const card=document.createElement('div');
+    card.className='ht-card';
+    card.id='vgUploadABCard';
+    card.innerHTML='<div class="ht-card-head"><div><div class="ht-hotel-name">🍽️ Compras &amp; A&amp;B — Dados Operacionais</div><div class="ht-regiao">Food Cost · Beverage Cost · inventário · receitas · roomnights</div></div></div>'+
+      '<div class="ht-card-body"><div style="font-size:11px;color:var(--text-2);line-height:1.6;border-left:2px solid var(--gold);padding-left:10px">Ficheiro mensal acumulado <b>Custos_A_B_PT_MMYYYY.xlsx</b>. Alimenta diretamente o módulo Custos &amp; Compras A&amp;B.</div>'+
+      '<div style="font-size:10px;color:var(--text-3);font-family:var(--mono)">Formato: .xlsx · .xlsm</div>'+
+      '<input id="vgUploadABInput" type="file" accept=".xlsx,.xlsm" style="display:none">'+
+      '<div id="vgUploadABStatus" style="font-size:10px;color:var(--text-3);font-family:var(--mono);margin-top:4px;min-height:14px"></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn primary" id="vgUploadABChoose">Carregar Excel A&amp;B</button><button type="button" class="btn ghost" id="vgUploadABPublish" disabled>Publicar para todos</button></div></div>';
+    grid.appendChild(card);
+
+    const input=card.querySelector('#vgUploadABInput');
+    const choose=card.querySelector('#vgUploadABChoose');
+    const publish=card.querySelector('#vgUploadABPublish');
+    const status=card.querySelector('#vgUploadABStatus');
+
+    choose.addEventListener('click',function(){input.click();});
+    input.addEventListener('change',async function(){
+      const file=input.files&&input.files[0];if(!file)return;
+      choose.disabled=true;publish.disabled=true;
+      try{
+        const root=await prepareABUpload(status);
+        const nativeInput=root.getElementById('fileInput');
+        if(!nativeInput)throw new Error('O carregador A&B não foi encontrado.');
+        const dt=new DataTransfer();dt.items.add(file);nativeInput.files=dt.files;
+        nativeInput.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
+        const nativePublish=await waitFor(function(){const b=root.getElementById('btnPublicar');return b&&!b.disabled?b:null;},30000);
+        if(!nativePublish)throw new Error('O ficheiro não terminou a validação A&B.');
+        status.textContent='✓ '+file.name+' carregado e validado. Falta publicar para partilhar.';
+        publish.disabled=false;
+      }catch(err){
+        console.error('[VG preview] upload A&B',err);
+        status.textContent='✖ '+((err&&err.message)||err);
+      }finally{choose.disabled=false;input.value='';}
+    });
+
+    publish.addEventListener('click',async function(){
+      publish.disabled=true;
+      try{
+        const root=await prepareABUpload(status);
+        const nativePublish=root.getElementById('btnPublicar');
+        if(!nativePublish)throw new Error('A publicação A&B não está disponível.');
+        status.textContent='A publicar dados A&B…';
+        nativePublish.click();
+        await new Promise(function(resolve){setTimeout(resolve,1500);});
+        status.textContent='✓ Publicação A&B iniciada/concluída. Os dados ficam disponíveis no módulo Custos & Compras.';
+      }catch(err){status.textContent='✖ '+((err&&err.message)||err);publish.disabled=false;}
+    });
+    return true;
+  }
+
   function install(){
     if(!api())return false;
     showBadge();
+    installABUploadCard();
     if(modernMode){
       document.addEventListener('click',function(event){
         const view=viewFromNav(event.target);
@@ -170,8 +248,15 @@
         event.preventDefault();event.stopImmediatePropagation();void go(view);
       },true);
     }
-    document.addEventListener('click',function(event){if(viewFromNav(event.target)==='ab')scheduleABRepair();},false);
-    window.addEventListener('hashchange',function(){if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();});
+    document.addEventListener('click',function(event){
+      const view=viewFromNav(event.target);
+      if(view==='ab')scheduleABRepair();
+      if(view==='upload')setTimeout(installABUploadCard,50);
+    },false);
+    window.addEventListener('hashchange',function(){
+      if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();
+      if(location.hash.replace(/^#/,'')==='upload')setTimeout(installABUploadCard,50);
+    });
     if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();
     window.VG.modernPreview.enabled=modernMode;
     window.VG.modernPreview.compatibilityMode=!modernMode;
