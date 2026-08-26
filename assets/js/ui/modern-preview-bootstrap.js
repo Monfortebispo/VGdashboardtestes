@@ -38,31 +38,9 @@
     catch(err){console.error('[VG modern preview] navigation failed',err);return false;}
   }
 
-  // Compras & A&B continua a usar integralmente o módulo legado/nativo V35.
-  // No preview carregamo-lo uma única vez logo no arranque. Assim evitamos a
-  // corrida entre o lazy-loader do domínio e os reloads de scripts do Deploy
-  // Preview, que podia deixar o ecrã em "Módulo ab não se registou".
-  function preloadABNative(){
-    window.VG=window.VG||{};
-    if(window.VG.comprasNative35)return;
-    let sc=document.querySelector('script[data-vg-native35="ab"]');
-    if(sc)return;
-    sc=document.createElement('script');
-    sc.src='/assets/js/modules/compras-ab-native-v35.js';
-    sc.async=true;
-    sc.dataset.vgNative35='ab';
-    sc.onload=function(){
-      if(!window.VG?.comprasNative35)console.error('[VG preview] Compras & A&B carregou mas não registou comprasNative35');
-      else console.info('[VG preview] Compras & A&B nativo preparado');
-    };
-    sc.onerror=function(){console.error('[VG preview] Falha ao carregar Compras & A&B nativo');};
-    document.head.appendChild(sc);
-  }
-
   function install(){
     if(!api())return false;
     showBadge();
-    preloadABNative();
 
     // Regra de segurança do preview:
     // - por defeito, toda a dashboard mantém a navegação legada integral;
