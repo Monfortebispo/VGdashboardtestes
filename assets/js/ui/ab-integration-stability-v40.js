@@ -1,90 +1,113 @@
 (function(){
   'use strict';
-  if(window.__VG_AB_INTEGRATION_STABILITY_V41__)return;
-  window.__VG_AB_INTEGRATION_STABILITY_V41__=true;
+  if(window.__VG_AB_INTEGRATION_STABILITY_V43__)return;
+  window.__VG_AB_INTEGRATION_STABILITY_V43__=true;
 
-  let observedRoot=null;
-  let observer=null;
-  let retryTimer=null;
+  const labels={
+    resumo:'Resumo',evolucao:'Evolução Mensal',subfam:'Sub-Famílias',artigos:'Detalhe Artigos',hotel:'Análise Hotel',
+    invart:'Inventário Artigos',recbeb:'Receitas',stock:'Stock & Internos',comentarios:'Comentários',
+    encomenda:'Sugestão de Encomenda',excessos:'Excessos de Stock',previsao:'Previsão',acomp:'Previsto vs. Real',roomnights:'Roomnights'
+  };
+  let observer=null,timer=null,lastRoot=null;
 
+  function hub(){return document.getElementById('abHubRoot');}
   function mount(){return document.getElementById('ab35NativeMount');}
   function moduleRef(){return window.VG&&window.VG.comprasNative35;}
   function root(){try{return moduleRef()?.getRoot?.()||window.AB35Root||null;}catch(e){return null;}}
-  function inAB(){return location.hash.replace(/^#/,'')==='ab'||!!mount();}
+  function isExact(){return !!(hub()&&hub().dataset.tab==='exact'&&mount());}
 
-  function installStyle(r){
-    let old=r.getElementById&&r.getElementById('vgAbEmbeddedStyleStable');
-    if(old)old.remove();
-    let oldNav=r.getElementById&&r.getElementById('vgAbEmbeddedNav');
-    if(oldNav)oldNav.remove();
-    let bridge=r.getElementById&&r.getElementById('vgAbDispatchBridge');
-    if(bridge)bridge.remove();
-    if(r.getElementById&&r.getElementById('vgAbNativeWrappedStyle'))return;
-
-    const style=document.createElement('style');
-    style.id='vgAbNativeWrappedStyle';
+  function ensureShadowStyle(r){
+    if(!r||!r.querySelector)return;
+    let style=r.getElementById&&r.getElementById('vgAbEmbeddedStyleV43');
+    if(!style){style=document.createElement('style');style.id='vgAbEmbeddedStyleV43';r.appendChild(style);}
     style.textContent=`
       :host{display:block!important;max-width:100%!important;overflow:hidden!important}
       .ab35-shell{min-height:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important;max-width:100%!important}
       .ab35-top{display:none!important}
-      .ab35-scopebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;gap:10px!important;padding:12px 16px!important;background:transparent!important}
-      .ab35-filterbuttons{display:flex!important;gap:6px!important;flex-wrap:wrap!important}
+      .ab35-scopebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;gap:10px!important;padding:12px 16px!important;background:transparent!important;max-width:100%!important}
+      .ab35-filterbuttons{display:flex!important;gap:6px!important;flex-wrap:wrap!important;min-width:0!important}
       .ab35-filterbuttons .reg-btn{display:inline-flex!important;width:auto!important;margin:0!important;padding:6px 10px!important;white-space:nowrap!important}
-      .ab35-nav{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:5px!important;overflow:visible!important;white-space:normal!important;width:100%!important;max-width:100%!important;padding:8px 12px!important;box-sizing:border-box!important}
-      .ab35-nav .nav-btn{flex:0 0 auto!important;width:auto!important;max-width:100%!important;white-space:nowrap!important;padding:6px 9px!important;font-size:10px!important;margin:0!important}
-      .ab35-nav .ab35-nav-section{flex:0 0 100%!important;font-size:8px!important;line-height:1.2!important;margin:3px 0 0!important;opacity:.62!important}
-      #navCarregar,#navSetup,#adminCap{display:none!important}
-      #main{padding:14px 16px!important;min-height:0!important;width:100%!important;max-width:100%!important;overflow:visible!important;box-sizing:border-box!important}
-      .view,.panel,.cards,.grid2,.tbl-wrap{max-width:100%!important;box-sizing:border-box!important}
-      .view{overflow:hidden!important}
-      @media(max-width:900px){.ab35-scopebar{grid-template-columns:1fr!important}.ab35-nav .nav-btn{font-size:9px!important;padding:5px 7px!important}}
+      .ab35-nav{display:none!important}
+      #main{padding:14px 16px!important;min-height:0!important;width:100%!important;max-width:100%!important;overflow:hidden!important;box-sizing:border-box!important}
+      .view,.panel,.cards,.grid2,.tbl-wrap{max-width:100%!important;min-width:0!important}.view{overflow:hidden!important}
+      @media(max-width:900px){.ab35-scopebar{grid-template-columns:1fr!important}}
     `;
-    r.appendChild(style);
+    const oldNav=r.querySelector('.ab35-nav');
+    if(oldNav&&!oldNav.dataset.vgAbStopBubble){
+      oldNav.dataset.vgAbStopBubble='1';
+      oldNav.addEventListener('click',function(e){
+        if(e.target&&e.target.closest&&e.target.closest('.nav-btn[data-view]'))e.stopPropagation();
+      },false);
+    }
   }
 
-  function isolateNativeButtons(r){
-    r.querySelectorAll('.ab35-nav .nav-btn[data-view]').forEach(function(btn){
-      if(btn.dataset.vgNativeIsolated==='1')return;
-      btn.dataset.vgNativeIsolated='1';
-      // O onclick original do botão continua a executar. Apenas impedimos que o clique
-      // atravesse o ShadowRoot e seja interpretado como navegação da dashboard principal.
-      btn.addEventListener('click',function(event){event.stopPropagation();},true);
-    });
+  function currentView(r){
+    const b=r?.querySelector?.('.ab35-nav .nav-btn.on[data-view]');
+    return b?.dataset?.view||'resumo';
+  }
+
+  function navigate(v){
+    const r=root();
+    const btn=r?.querySelector?.('.ab35-nav .nav-btn[data-view="'+v+'"]');
+    if(!btn)return false;
+    btn.click();
+    setTimeout(()=>syncSelector(r),0);
+    return true;
+  }
+
+  function syncSelector(r){
+    const sel=document.getElementById('vgAbAnalysisSelect');
+    if(!sel)return;
+    const v=currentView(r||root());
+    if([...sel.options].some(o=>o.value===v))sel.value=v;
+  }
+
+  function ensureToolbar(r){
+    const m=mount();if(!m)return;
+    let bar=document.getElementById('vgAbAnalysisBar');
+    if(!bar){
+      bar=document.createElement('div');bar.id='vgAbAnalysisBar';bar.className='od-toolbar';
+      bar.style.cssText='margin:0 0 10px 0;display:flex;align-items:end;gap:10px;flex-wrap:wrap';
+      const label=document.createElement('label');label.textContent='Análise';
+      const sel=document.createElement('select');sel.id='vgAbAnalysisSelect';sel.style.minWidth='280px';
+      Object.entries(labels).forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.appendChild(o);});
+      sel.addEventListener('change',function(){
+        const wanted=this.value;
+        if(!navigate(wanted)){
+          this.value=currentView(root());
+          console.warn('[VG A&B] vista nativa ainda indisponível:',wanted);
+        }
+      });
+      label.appendChild(sel);bar.appendChild(label);m.parentNode.insertBefore(bar,m);
+    }
+    syncSelector(r);
   }
 
   function integrate(){
-    if(!inAB())return false;
+    if(!isExact()){
+      document.getElementById('vgAbAnalysisBar')?.remove();
+      return false;
+    }
     const r=root();
     if(!r||!r.querySelector)return false;
-    try{
-      installStyle(r);
-      isolateNativeButtons(r);
-      const m=mount();if(m)m.dataset.vgAbIntegrated='native-wrapped-v41';
-      watch(r);
-      return true;
-    }catch(err){console.warn('[VG A&B integration v41]',err);return false;}
+    lastRoot=r;ensureShadowStyle(r);ensureToolbar(r);syncSelector(r);return true;
   }
 
-  function watch(r){
-    if(observedRoot===r&&observer)return;
-    if(observer)observer.disconnect();
-    observedRoot=r;
-    observer=new MutationObserver(function(mutations){
-      if(!mutations.some(m=>m.type==='childList'))return;
-      clearTimeout(retryTimer);
-      retryTimer=setTimeout(integrate,80);
+  function schedule(){clearTimeout(timer);timer=setTimeout(integrate,60);}
+  function installObserver(){
+    if(observer)return;
+    observer=new MutationObserver(function(){
+      if(isExact()||document.getElementById('vgAbAnalysisBar'))schedule();
     });
-    try{observer.observe(r,{childList:true,subtree:true});}catch(e){}
+    observer.observe(document.documentElement,{childList:true,subtree:true});
   }
 
-  function burst(){[0,100,300,700,1400,3000].forEach(ms=>setTimeout(function(){
-    if(!integrate()&&window.VG?.modernPreview?.repairAB&&ms>=700){
-      try{void window.VG.modernPreview.repairAB().then(integrate);}catch(e){}
-    }
-  },ms));}
-
-  document.addEventListener('click',function(e){if(e.target?.closest?.('#nav-ab'))burst();},false);
-  window.addEventListener('hashchange',function(){if(inAB())burst();});
-  window.addEventListener('vg-modern-preview-ready',burst);
-  burst();
+  document.addEventListener('click',function(e){
+    const t=e.target;
+    if(t&&t.closest&&t.closest('[data-abtab="exact"],#nav-ab'))setTimeout(schedule,0);
+  },false);
+  window.addEventListener('hashchange',schedule);
+  window.addEventListener('vg-modern-preview-ready',schedule);
+  installObserver();
+  [0,100,300,800,1600,3200,6000].forEach(ms=>setTimeout(integrate,ms));
 })();
