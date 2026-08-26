@@ -38,6 +38,8 @@
   }
 
   function abMount(){return document.getElementById('ab35NativeMount');}
+  function abModule(){return window.VG&&window.VG.comprasNative35;}
+  function abRoot(){try{return abModule()?.getRoot?.()||window.AB35Root||null;}catch(e){return null;}}
   function abIsMounted(){
     const mount=abMount();
     return !!(mount&&mount.querySelector('.vg-compras-native-v35'));
@@ -49,92 +51,125 @@
     if(!mount)return;
     mount.innerHTML='<section class="od-card od-empty" style="text-align:left"><h3>Falha ao iniciar Custos &amp; Compras</h3><p><b>Etapa:</b> '+stage+'</p><p style="white-space:pre-wrap">'+msg.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];})+'</p></section>';
   }
-  function abEmbeddedRoot(){
-    const mod=window.VG&&window.VG.comprasNative35;
-    try{return mod&&typeof mod.getRoot==='function'?mod.getRoot():null;}catch(e){return null;}
-  }
-  function abActivateEmbeddedView(view,control){
-    const root=abEmbeddedRoot();
-    if(!root)return;
-    root.querySelectorAll('.view').forEach(function(el){el.classList.remove('on');});
-    const target=root.getElementById('view-'+view);
-    if(target)target.classList.add('on');
-    try{
-      if(typeof window.setView==='function')window.setView(view,control||null);
-      else if(typeof window.renderView==='function')window.renderView(view);
-    }catch(err){console.error('[VG preview] A&B view '+view,err);}
-  }
-  function abNormalizeEmbeddedUI(){
-    const root=abEmbeddedRoot();
-    if(!root)return false;
-    const app=root.getElementById('app');
-    if(!app)return false;
-    const top=root.querySelector('.ab35-top');
-    if(top)top.style.display='none';
-    const carregar=root.getElementById('view-carregar');
-    const setup=root.getElementById('view-setup');
-    if(carregar)carregar.remove();
-    if(setup)setup.remove();
-    let style=root.getElementById('vgAbEmbeddedStyle');
-    if(!style){
-      style=document.createElement('style');
-      style.id='vgAbEmbeddedStyle';
-      style.textContent=':host{display:block;width:100%;max-width:100%;overflow:hidden}#app.ab35-shell{display:block!important;height:auto!important;min-width:0!important;width:100%!important;overflow:hidden!important}.ab35-top{display:none!important}.ab35-scopebar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;gap:14px!important;padding:10px 14px!important}.ab35-nav{display:block!important;padding:10px 14px!important;overflow:visible!important;white-space:normal!important;border-bottom:1px solid var(--line)!important}#main{overflow:visible!important;padding:14px!important;min-width:0!important}.view,.panel,.cards,.tbl-wrap,.chart-box{max-width:100%!important;min-width:0!important}.tbl-wrap{overflow:auto!important}#vgAbEmbeddedNav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#vgAbEmbeddedNav label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-3)}#vgAbEmbeddedNav select{min-width:240px;max-width:100%;background:var(--navy-0);border:1px solid var(--line-2);border-radius:8px;color:var(--text-1);padding:8px 10px;font-size:12px}#vgAbEmbeddedNav .vg-ab-source{margin-left:auto;font-size:10px;color:var(--text-3)}@media(max-width:900px){.ab35-scopebar{grid-template-columns:1fr!important}#vgAbEmbeddedNav .vg-ab-source{width:100%;margin-left:0}}';
-      root.appendChild(style);
+
+  function abIntegrate(){
+    const root=abRoot();
+    if(!root||!root.querySelector)return false;
+    if(root.getElementById('vgAbEmbeddedStyle'))return true;
+
+    const style=document.createElement('style');
+    style.id='vgAbEmbeddedStyle';
+    style.textContent=`
+      :host{display:block!important;max-width:100%!important;overflow:hidden!important}
+      .ab35-shell{min-height:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important}
+      .ab35-top{display:none!important}
+      .ab35-scopebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;gap:10px!important;padding:12px 16px!important;background:transparent!important}
+      .ab35-filterbuttons{display:flex!important;gap:6px!important;flex-wrap:wrap!important}
+      .ab35-filterbuttons .reg-btn{display:inline-flex!important;width:auto!important;margin:0!important;padding:6px 10px!important;white-space:nowrap!important}
+      .ab35-nav{display:none!important}
+      #main{padding:14px 16px!important;min-height:0!important;width:100%!important;max-width:100%!important;overflow:visible!important}
+      .view{max-width:100%!important;overflow:hidden!important}
+      .panel,.cards,.grid2{max-width:100%!important}
+      .tbl-wrap{max-width:100%!important}
+      .vg-ab-embedded-nav{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);background:rgba(8,26,43,.55)}
+      .vg-ab-embedded-nav label{font-size:9px;letter-spacing:.9px;text-transform:uppercase;color:#7991a7;white-space:nowrap}
+      .vg-ab-embedded-nav select{width:min(460px,100%);background:#0b1d30;border:1px solid rgba(201,162,75,.35);border-radius:8px;color:#eef2f8;padding:8px 10px;font-size:12px;outline:none}
+      @media(max-width:900px){.ab35-scopebar{grid-template-columns:1fr!important}.vg-ab-embedded-nav{align-items:stretch;flex-direction:column}.vg-ab-embedded-nav select{width:100%}}
+    `;
+    root.appendChild(style);
+
+    const oldNav=root.querySelector('.ab35-nav');
+    const scope=root.querySelector('.ab35-scopebar');
+    if(oldNav&&scope&&!root.getElementById('vgAbEmbeddedNav')){
+      const labels={
+        resumo:'Resumo',evolucao:'Evolução Mensal',subfam:'Sub-Famílias',artigos:'Detalhe Artigos',hotel:'Análise Hotel',
+        invart:'Inventário Artigos',recbeb:'Receitas',stock:'Stock & Internos',comentarios:'Comentários',
+        encomenda:'Sugestão de Encomenda',excessos:'Excessos de Stock',previsao:'Previsão',acomp:'Previsto vs. Real',roomnights:'Roomnights'
+      };
+      const allowed=Object.keys(labels);
+      const wrap=document.createElement('div');
+      wrap.id='vgAbEmbeddedNav';
+      wrap.className='vg-ab-embedded-nav';
+      const lab=document.createElement('label');lab.textContent='Análise';
+      const sel=document.createElement('select');sel.id='vgAbEmbeddedSelect';
+      allowed.forEach(function(v){
+        const btn=oldNav.querySelector('.nav-btn[data-view="'+v+'"]');
+        if(!btn)return;
+        const opt=document.createElement('option');opt.value=v;opt.textContent=labels[v];sel.appendChild(opt);
+      });
+      const active=oldNav.querySelector('.nav-btn.on[data-view]');if(active&&allowed.includes(active.dataset.view))sel.value=active.dataset.view;
+      sel.addEventListener('change',function(event){
+        event.stopPropagation();
+        const btn=oldNav.querySelector('.nav-btn[data-view="'+sel.value+'"]');
+        if(btn&&typeof window.setView==='function')window.setView(sel.value,btn);
+      });
+      wrap.append(lab,sel);
+      scope.insertAdjacentElement('afterend',wrap);
     }
-    const nav=root.querySelector('.ab35-nav');
-    if(nav&&!root.getElementById('vgAbEmbeddedNav')){
-      const options=[['resumo','Resumo'],['evolucao','Evolução mensal'],['subfam','Sub-famílias'],['artigos','Detalhe de artigos'],['hotel','Análise por hotel'],['invart','Inventário de artigos'],['recbeb','Receitas'],['stock','Stock & internos'],['comentarios','Comentários'],['encomenda','Sugestão de encomenda'],['excessos','Excessos de stock'],['previsao','Previsão'],['acomp','Previsto vs. real'],['roomnights','Roomnights']];
-      nav.innerHTML='<div id="vgAbEmbeddedNav"><label for="vgAbViewSelect">Análise</label><select id="vgAbViewSelect">'+options.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>';}).join('')+'</select><span class="vg-ab-source">Documentos: usar a área geral “Carregar doc”.</span></div>';
-      const select=root.getElementById('vgAbViewSelect');
-      if(select){
-        select.addEventListener('change',function(){abActivateEmbeddedView(this.value,this);});
-        const active=root.querySelector('.view.on');
-        if(active&&active.id)select.value=active.id.replace(/^view-/,'');
-      }
-    }
+
+    ['navCarregar','navSetup','adminCap'].forEach(function(id){const el=root.getElementById(id);if(el)el.remove();});
     return true;
   }
+
   async function abMountDirect(){
     const mount=abMount();
-    const mod=window.VG&&window.VG.comprasNative35;
+    const mod=abModule();
     if(!mount||!mod||typeof mod.mount!=='function')return false;
     try{
       await mod.mount(mount);
-      const ok=abIsMounted()||!!window.VG?.comprasNative35;
-      if(ok)abNormalizeEmbeddedUI();
-      return ok;
-    }catch(err){abShowError(err,'mount()');return false;}
+      abIntegrate();
+      return abIsMounted()||!!abModule();
+    }catch(err){
+      abShowError(err,'mount()');
+      return false;
+    }
   }
+
   function abEvalWithPreMountRoot(source){
     const hadOwnRoot=Object.prototype.hasOwnProperty.call(window,'AB35Root');
     const previousRoot=window.AB35Root;
-    if(!previousRoot){window.AB35Root={getElementById:function(){return null;},querySelector:function(){return null;},querySelectorAll:function(){return [];}};}
+    if(!previousRoot){
+      window.AB35Root={getElementById:function(){return null;},querySelector:function(){return null;},querySelectorAll:function(){return [];}};
+    }
     try{(0,eval)(source+'\n//# sourceURL=compras-ab-native-v35-preview-repair.js');}
-    finally{if(previousRoot)window.AB35Root=previousRoot;else if(hadOwnRoot)window.AB35Root=previousRoot;else delete window.AB35Root;}
+    finally{
+      if(previousRoot)window.AB35Root=previousRoot;
+      else if(hadOwnRoot)window.AB35Root=previousRoot;
+      else delete window.AB35Root;
+    }
   }
+
   async function abRepair(){
     if(abRepairPromise)return abRepairPromise;
     abRepairPromise=(async function(){
       await new Promise(function(resolve){setTimeout(resolve,700);});
-      if(abIsMounted()){abNormalizeEmbeddedUI();return true;}
+      if(abIsMounted()){abIntegrate();return true;}
       if(await abMountDirect())return true;
       try{
         const response=await fetch('/assets/js/modules/compras-ab-native-v35.js?preview-repair='+Date.now(),{cache:'no-store'});
         if(!response.ok)throw new Error('HTTP '+response.status+' ao obter compras-ab-native-v35.js');
         const source=await response.text();
         try{abEvalWithPreMountRoot(source);}catch(err){abShowError(err,'avaliação do módulo');return false;}
-        if(!window.VG?.comprasNative35){abShowError(new Error('O ficheiro foi executado, mas window.VG.comprasNative35 não ficou registado.'),'registo do módulo');return false;}
+        if(!abModule()){abShowError(new Error('O módulo não ficou registado.'),'registo do módulo');return false;}
         return await abMountDirect();
       }catch(err){abShowError(err,'carregamento do módulo');return false;}
     })().finally(function(){abRepairPromise=null;});
     return abRepairPromise;
   }
-  function scheduleABRepair(){setTimeout(function(){if(abIsMounted())abNormalizeEmbeddedUI();else void abRepair();},200);}
+  function scheduleABRepair(){
+    [150,500,1200].forEach(function(ms){setTimeout(function(){if(abIsMounted())abIntegrate();else void abRepair();},ms);});
+  }
+
   function install(){
     if(!api())return false;
     showBadge();
-    if(modernMode){document.addEventListener('click',function(event){const view=viewFromNav(event.target);if(!view||!MODERN_VIEWS.has(view))return;event.preventDefault();event.stopImmediatePropagation();void go(view);},true);}
+    if(modernMode){
+      document.addEventListener('click',function(event){
+        const view=viewFromNav(event.target);
+        if(!view||!MODERN_VIEWS.has(view))return;
+        event.preventDefault();event.stopImmediatePropagation();void go(view);
+      },true);
+    }
     document.addEventListener('click',function(event){if(viewFromNav(event.target)==='ab')scheduleABRepair();},false);
     window.addEventListener('hashchange',function(){if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();});
     if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();
@@ -142,8 +177,10 @@
     window.VG.modernPreview.compatibilityMode=!modernMode;
     window.VG.modernPreview.migratedViews=Array.from(MODERN_VIEWS);
     window.VG.modernPreview.repairAB=abRepair;
+    console.info('[VG modern preview]',modernMode?'modern selective mode':'compatibility mode',window.VG.modernPreview.architecture);
     return true;
   }
+
   if(!install()){
     window.addEventListener('vg-modern-preview-ready',install,{once:true});
     let tries=0;
