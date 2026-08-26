@@ -1,14 +1,14 @@
 (function(){
   'use strict';
-  if(window.__VG_AB_INTEGRATION_STABILITY_V43__)return;
-  window.__VG_AB_INTEGRATION_STABILITY_V43__=true;
+  if(window.__VG_AB_INTEGRATION_STABILITY_V44__)return;
+  window.__VG_AB_INTEGRATION_STABILITY_V44__=true;
 
   const labels={
     resumo:'Resumo',evolucao:'Evolução Mensal',subfam:'Sub-Famílias',artigos:'Detalhe Artigos',hotel:'Análise Hotel',
     invart:'Inventário Artigos',recbeb:'Receitas',stock:'Stock & Internos',comentarios:'Comentários',
     encomenda:'Sugestão de Encomenda',excessos:'Excessos de Stock',previsao:'Previsão',acomp:'Previsto vs. Real',roomnights:'Roomnights'
   };
-  let observer=null,timer=null,lastRoot=null;
+  let observer=null,timer=null;
 
   function hub(){return document.getElementById('abHubRoot');}
   function mount(){return document.getElementById('ab35NativeMount');}
@@ -18,8 +18,8 @@
 
   function ensureShadowStyle(r){
     if(!r||!r.querySelector)return;
-    let style=r.getElementById&&r.getElementById('vgAbEmbeddedStyleV43');
-    if(!style){style=document.createElement('style');style.id='vgAbEmbeddedStyleV43';r.appendChild(style);}
+    let style=r.getElementById&&r.getElementById('vgAbEmbeddedStyleV44');
+    if(!style){style=document.createElement('style');style.id='vgAbEmbeddedStyleV44';r.appendChild(style);}
     style.textContent=`
       :host{display:block!important;max-width:100%!important;overflow:hidden!important}
       .ab35-shell{min-height:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important;max-width:100%!important}
@@ -32,34 +32,52 @@
       .view,.panel,.cards,.grid2,.tbl-wrap{max-width:100%!important;min-width:0!important}.view{overflow:hidden!important}
       @media(max-width:900px){.ab35-scopebar{grid-template-columns:1fr!important}}
     `;
-    const oldNav=r.querySelector('.ab35-nav');
-    if(oldNav&&!oldNav.dataset.vgAbStopBubble){
-      oldNav.dataset.vgAbStopBubble='1';
-      oldNav.addEventListener('click',function(e){
-        if(e.target&&e.target.closest&&e.target.closest('.nav-btn[data-view]'))e.stopPropagation();
-      },false);
-    }
   }
 
   function currentView(r){
+    const active=r?.querySelector?.('.view.on[id^="view-"]');
+    if(active)return active.id.replace(/^view-/,'');
     const b=r?.querySelector?.('.ab35-nav .nav-btn.on[data-view]');
     return b?.dataset?.view||'resumo';
   }
 
+  /*
+    Não usamos btn.click() nem window.setView() a partir do select exterior.
+    O módulo A&B tem dispatchers que distinguem chamadas vindas de dentro do Shadow DOM;
+    quando o evento nasce no select exterior pode cair no setView da Dashboard e regressar a Resumo.
+    Aqui criamos um evento PRIVADO no próprio botão nativo. Durante esse evento, window.event.target
+    pertence ao ShadowRoot e os dispatchers chamam obrigatoriamente o renderizador A&B correto.
+  */
   function navigate(v){
     const r=root();
-    const btn=r?.querySelector?.('.ab35-nav .nav-btn[data-view="'+v+'"]');
-    if(!btn)return false;
-    btn.click();
-    setTimeout(()=>syncSelector(r),0);
-    return true;
+    if(!r||!labels[v])return false;
+    const btn=r.querySelector('.ab35-nav .nav-btn[data-view="'+v+'"]');
+    const view=r.getElementById?r.getElementById('view-'+v):r.querySelector('#view-'+v);
+    if(!btn||!view)return false;
+
+    const type='vg-ab-native-nav-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    const handler=function(){
+      r.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+      view.classList.add('on');
+      r.querySelectorAll('.ab35-nav .nav-btn[data-view]').forEach(b=>b.classList.toggle('on',b===btn));
+      try{
+        if(typeof window.renderView==='function')window.renderView(v);
+        else if(typeof window.setView==='function')window.setView(v,btn);
+      }catch(e){console.error('[VG A&B] erro ao renderizar '+v,e);}
+    };
+    btn.addEventListener(type,handler,{once:true});
+    btn.dispatchEvent(new CustomEvent(type,{bubbles:false,composed:false,cancelable:false}));
+
+    const ok=currentView(r)===v;
+    syncSelector(r);
+    return ok;
   }
 
   function syncSelector(r){
     const sel=document.getElementById('vgAbAnalysisSelect');
     if(!sel)return;
     const v=currentView(r||root());
-    if([...sel.options].some(o=>o.value===v))sel.value=v;
+    if([...sel.options].some(o=>o.value===v)&&sel.value!==v)sel.value=v;
   }
 
   function ensureToolbar(r){
@@ -73,10 +91,12 @@
       Object.entries(labels).forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.appendChild(o);});
       sel.addEventListener('change',function(){
         const wanted=this.value;
-        if(!navigate(wanted)){
-          this.value=currentView(root());
-          console.warn('[VG A&B] vista nativa ainda indisponível:',wanted);
-        }
+        requestAnimationFrame(()=>{
+          if(!navigate(wanted)){
+            this.value=currentView(root());
+            console.warn('[VG A&B] não foi possível abrir a vista:',wanted);
+          }
+        });
       });
       label.appendChild(sel);bar.appendChild(label);m.parentNode.insertBefore(bar,m);
     }
@@ -90,7 +110,7 @@
     }
     const r=root();
     if(!r||!r.querySelector)return false;
-    lastRoot=r;ensureShadowStyle(r);ensureToolbar(r);syncSelector(r);return true;
+    ensureShadowStyle(r);ensureToolbar(r);syncSelector(r);return true;
   }
 
   function schedule(){clearTimeout(timer);timer=setTimeout(integrate,60);}
