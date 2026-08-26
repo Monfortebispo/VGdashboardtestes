@@ -101,7 +101,7 @@
       sel.addEventListener('change',function(event){
         event.stopPropagation();
         const btn=oldNav.querySelector('.nav-btn[data-view="'+sel.value+'"]');
-        if(btn)btn.click();
+        if(btn)btn.dispatchEvent(new MouseEvent('click',{bubbles:false,cancelable:true,composed:false}));
       });
       wrap.append(lab,sel);
       scope.insertAdjacentElement('afterend',wrap);
