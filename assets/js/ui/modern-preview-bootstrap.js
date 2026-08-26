@@ -38,40 +38,36 @@
     catch(err){console.error('[VG modern preview] navigation failed',err);return false;}
   }
 
-  function abMount(){return document.getElementById('ab35NativeMount');}
-  function abMounted(){const mount=abMount();return !!(mount&&mount.querySelector('.vg-compras-native-v35'));}
-  function mountAB(){
-    const mount=abMount();
-    const mod=window.VG&&window.VG.comprasNative35;
-    if(!mount||!mod||typeof mod.mount!=='function')return false;
-    Promise.resolve(mod.mount(mount)).catch(function(err){console.error('[VG preview] A&B mount failed',err);});
-    return true;
-  }
-  function repairAB(){
-    if(abMounted()||mountAB())return;
-    const old=document.querySelector('script[data-vg-native35="ab"]');
-    if(old&&old.parentNode)old.parentNode.removeChild(old);
-    const sc=document.createElement('script');
-    sc.src='assets/js/modules/compras-ab-native-v35.js?preview='+Date.now();
+  // Compras & A&B continua a usar integralmente o módulo legado/nativo V35.
+  // No preview carregamo-lo uma única vez logo no arranque. Assim evitamos a
+  // corrida entre o lazy-loader do domínio e os reloads de scripts do Deploy
+  // Preview, que podia deixar o ecrã em "Módulo ab não se registou".
+  function preloadABNative(){
+    window.VG=window.VG||{};
+    if(window.VG.comprasNative35)return;
+    let sc=document.querySelector('script[data-vg-native35="ab"]');
+    if(sc)return;
+    sc=document.createElement('script');
+    sc.src='/assets/js/modules/compras-ab-native-v35.js';
     sc.async=true;
     sc.dataset.vgNative35='ab';
-    sc.onload=function(){if(!mountAB())console.error('[VG preview] A&B carregou sem registar comprasNative35');};
-    sc.onerror=function(){console.error('[VG preview] Falha ao recarregar módulo A&B');};
+    sc.onload=function(){
+      if(!window.VG?.comprasNative35)console.error('[VG preview] Compras & A&B carregou mas não registou comprasNative35');
+      else console.info('[VG preview] Compras & A&B nativo preparado');
+    };
+    sc.onerror=function(){console.error('[VG preview] Falha ao carregar Compras & A&B nativo');};
     document.head.appendChild(sc);
-  }
-  function scheduleABRepair(){
-    setTimeout(function(){if(!abMounted())repairAB();},1800);
-    setTimeout(function(){if(!abMounted())repairAB();},4500);
   }
 
   function install(){
     if(!api())return false;
     showBadge();
+    preloadABNative();
 
     // Regra de segurança do preview:
     // - por defeito, toda a dashboard mantém a navegação legada integral;
     // - em ?modern=1, só vistas com paridade funcional comprovada são interceptadas;
-    // - Reputação e restantes vistas continuam a executar setView/initializers legados.
+    // - Reputação, Compras & A&B e restantes vistas continuam no runtime legado.
     if(modernMode){
       document.addEventListener('click',function(event){
         const view=viewFromNav(event.target);
@@ -81,14 +77,6 @@
         void go(view);
       },true);
     }
-
-    // O carregador A&B é lazy. Em alguns Deploy Previews pode ficar preso quando
-    // encontra uma tag <script> já resolvida mas sem o global registado. Este
-    // watchdog atua apenas no preview e só quando o utilizador abre Compras & A&B.
-    document.addEventListener('click',function(event){
-      if(viewFromNav(event.target)==='ab')scheduleABRepair();
-    },false);
-    if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();
 
     window.VG.modernPreview.enabled=modernMode;
     window.VG.modernPreview.compatibilityMode=!modernMode;
