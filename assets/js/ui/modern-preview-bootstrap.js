@@ -3,17 +3,30 @@
   if(window.__VG_MODERN_PREVIEW_BOOTSTRAP__)return;
   window.__VG_MODERN_PREVIEW_BOOTSTRAP__=true;
 
+  const MODERN_VIEWS=new Set(['resumo','ocupacao','reputacao','revenuehub']);
+  const params=new URLSearchParams(location.search);
+  const modernMode=params.get('modern')==='1';
+
   function api(){return window.VG&&window.VG.modernPreview;}
   function viewFromNav(el){
     const node=el&&el.closest&&el.closest('[id^="nav-"]');
     return node?String(node.id).replace(/^nav-/,''):'';
   }
+  function setMode(next){
+    const url=new URL(location.href);
+    if(next)url.searchParams.set('modern','1');
+    else url.searchParams.delete('modern');
+    location.href=url.toString();
+  }
   function showBadge(){
     if(document.getElementById('vgModernPreviewBadge'))return;
-    const badge=document.createElement('div');
+    const badge=document.createElement('button');
     badge.id='vgModernPreviewBadge';
-    badge.textContent='TESTE · arquitetura moderna';
-    badge.style.cssText='position:fixed;right:12px;bottom:12px;z-index:99999;background:#111827;color:#fff;border:1px solid #64748b;border-radius:999px;padding:7px 11px;font:600 11px/1.2 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.92';
+    badge.type='button';
+    badge.textContent=modernMode?'TESTE · moderno ativo':'TESTE · compatibilidade';
+    badge.title=modernMode?'Clique para voltar ao comportamento legado completo':'Clique para testar apenas os módulos já migrados';
+    badge.style.cssText='position:fixed;right:12px;bottom:12px;z-index:99999;background:#111827;color:#fff;border:1px solid #64748b;border-radius:999px;padding:7px 11px;font:600 11px/1.2 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.92;cursor:pointer';
+    badge.addEventListener('click',function(){setMode(!modernMode);});
     document.body.appendChild(badge);
   }
   async function go(view){
@@ -25,15 +38,25 @@
   function install(){
     if(!api())return false;
     showBadge();
-    document.addEventListener('click',function(event){
-      const view=viewFromNav(event.target);
-      if(!view)return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      void go(view);
-    },true);
-    window.VG.modernPreview.enabled=true;
-    console.info('[VG modern preview] enabled',window.VG.modernPreview.architecture);
+
+    // Regra de segurança do preview:
+    // - por defeito, toda a dashboard mantém a navegação legada integral;
+    // - em ?modern=1, apenas as quatro vistas já migradas são interceptadas;
+    // - todas as restantes vistas continuam a executar o setView/initializers legados.
+    if(modernMode){
+      document.addEventListener('click',function(event){
+        const view=viewFromNav(event.target);
+        if(!view||!MODERN_VIEWS.has(view))return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        void go(view);
+      },true);
+    }
+
+    window.VG.modernPreview.enabled=modernMode;
+    window.VG.modernPreview.compatibilityMode=!modernMode;
+    window.VG.modernPreview.migratedViews=Array.from(MODERN_VIEWS);
+    console.info('[VG modern preview]',modernMode?'modern selective mode':'compatibility mode',window.VG.modernPreview.architecture);
     return true;
   }
 
