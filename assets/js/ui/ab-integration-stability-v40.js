@@ -7,8 +7,6 @@
   let observedRoot=null;
   let docObserver=null;
   let retryTimer=null;
-  let nativeSetView=null;
-  let nativeRenderView=null;
 
   const labels={
     resumo:'Resumo',evolucao:'Evolução Mensal',subfam:'Sub-Famílias',artigos:'Detalhe Artigos',hotel:'Análise Hotel',
@@ -20,11 +18,6 @@
   function moduleRef(){return window.VG&&window.VG.comprasNative35;}
   function root(){try{return moduleRef()?.getRoot?.()||window.AB35Root||null;}catch(e){return null;}}
   function inAB(){return location.hash.replace(/^#/,'')==='ab'||!!mount();}
-  function looksNative(fn){try{return typeof fn==='function'&&(/AB35Root|renderView\(v\)|view-/.test(String(fn)));}catch(e){return false;}}
-  function captureNativeDispatchers(){
-    if(looksNative(window.setView))nativeSetView=window.setView;
-    if(looksNative(window.renderView))nativeRenderView=window.renderView;
-  }
 
   function ensureStyle(r){
     if(r.getElementById&&r.getElementById('vgAbEmbeddedStyleStable'))return;
@@ -45,19 +38,15 @@
     `;r.appendChild(style);
   }
 
-  function activateView(r,v,btn){
-    captureNativeDispatchers();
-    if(nativeSetView){
-      try{nativeSetView(v,btn||null);return true;}catch(err){console.warn('[VG A&B stability] native setView',err);}
-    }
-    try{
-      r.querySelectorAll('.view').forEach(function(x){x.classList.remove('on');});
-      const el=r.getElementById&&r.getElementById('view-'+v);if(el)el.classList.add('on');
-      r.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('on',b===btn||b.dataset.view===v);});
-      captureNativeDispatchers();
-      if(nativeRenderView)nativeRenderView(v);
-      return !!el;
-    }catch(err){console.warn('[VG A&B stability] activate view',err);return false;}
+  function dispatchNativeView(r,v){
+    const btn=r.querySelector('.ab35-nav .nav-btn[data-view="'+v+'"]');
+    if(!btn)return false;
+    // Importante: o dispatcher nativo decide entre o setView A&B e o setView global
+    // através de window.event.target. Por isso usamos um clique REAL dentro do ShadowRoot,
+    // não chamamos window.setView() diretamente. composed:false impede o evento de sair
+    // do módulo e chegar à navegação geral da Dashboard.
+    btn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,composed:false,view:window}));
+    return true;
   }
 
   function ensureEmbeddedNav(r){
@@ -67,29 +56,39 @@
       wrap=document.createElement('div');wrap.id='vgAbEmbeddedNav';wrap.className='vg-ab-embedded-nav';
       const lab=document.createElement('label');lab.textContent='Análise';sel=document.createElement('select');sel.id='vgAbEmbeddedSelect';
       Object.keys(labels).forEach(function(v){const btn=oldNav.querySelector('.nav-btn[data-view="'+v+'"]');if(!btn)return;const opt=document.createElement('option');opt.value=v;opt.textContent=labels[v];sel.appendChild(opt);});
-      sel.addEventListener('change',function(event){event.preventDefault();event.stopPropagation();const btn=oldNav.querySelector('.nav-btn[data-view="'+sel.value+'"]');activateView(r,sel.value,btn);});
+      sel.addEventListener('change',function(event){
+        event.preventDefault();event.stopPropagation();
+        const wanted=sel.value;
+        if(!dispatchNativeView(r,wanted))sel.value='resumo';
+        setTimeout(function(){const active=oldNav.querySelector('.nav-btn.on[data-view]');if(active&&labels[active.dataset.view])sel.value=active.dataset.view;},0);
+      });
       wrap.append(lab,sel);scope.insertAdjacentElement('afterend',wrap);
     }
     const active=oldNav.querySelector('.nav-btn.on[data-view]');if(sel&&active&&labels[active.dataset.view])sel.value=active.dataset.view;
   }
 
-  function installRootGuard(r){
-    if(r.__vgAbGuardInstalled)return;r.__vgAbGuardInstalled=true;
-    r.addEventListener('click',function(event){
-      const btn=event.target&&event.target.closest&&event.target.closest('.ab35-nav .nav-btn[data-view]');
-      if(!btn||!labels[btn.dataset.view])return;
-      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      activateView(r,btn.dataset.view,btn);
-    },true);
-  }
-
   function integrate(){
     if(!inAB())return false;const r=root();if(!r||!r.querySelector)return false;
-    try{captureNativeDispatchers();ensureStyle(r);installRootGuard(r);ensureEmbeddedNav(r);['navCarregar','navSetup','adminCap'].forEach(function(id){const el=r.getElementById&&r.getElementById(id);if(el)el.remove();});const m=mount();if(m)m.dataset.vgAbIntegrated='1';watchRoot(r);return true;}catch(err){console.warn('[VG A&B stability] integração',err);return false;}
+    try{
+      ensureStyle(r);ensureEmbeddedNav(r);
+      ['navCarregar','navSetup','adminCap'].forEach(function(id){const el=r.getElementById&&r.getElementById(id);if(el)el.remove();});
+      const m=mount();if(m)m.dataset.vgAbIntegrated='1';
+      watchRoot(r);return true;
+    }catch(err){console.warn('[VG A&B stability] integração',err);return false;}
   }
 
-  function watchRoot(r){if(observedRoot===r&&rootObserver)return;if(rootObserver)rootObserver.disconnect();observedRoot=r;rootObserver=new MutationObserver(function(){clearTimeout(retryTimer);retryTimer=setTimeout(integrate,20);});try{rootObserver.observe(r,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});}catch(e){}}
-  function retryBurst(){[0,30,80,160,320,650,1200,2200,4000,7000].forEach(function(ms){setTimeout(function(){if(!integrate()&&window.VG?.modernPreview?.repairAB&&ms>=320){try{void window.VG.modernPreview.repairAB().then(function(){captureNativeDispatchers();integrate();});}catch(e){}}},ms);});}
+  function watchRoot(r){
+    if(observedRoot===r&&rootObserver)return;
+    if(rootObserver)rootObserver.disconnect();observedRoot=r;
+    rootObserver=new MutationObserver(function(mutations){
+      // Reintegra apenas quando a estrutura é reconstruída. Ignorar mudanças de classe
+      // evita ciclos e trabalho contínuo ao trocar filtros/vistas.
+      if(!mutations.some(function(m){return m.type==='childList';}))return;
+      clearTimeout(retryTimer);retryTimer=setTimeout(integrate,40);
+    });
+    try{rootObserver.observe(r,{childList:true,subtree:true});}catch(e){}
+  }
+  function retryBurst(){[0,60,180,500,1200,3000].forEach(function(ms){setTimeout(function(){if(!integrate()&&window.VG?.modernPreview?.repairAB&&ms>=500){try{void window.VG.modernPreview.repairAB().then(integrate);}catch(e){}}},ms);});}
   function installDocObserver(){if(docObserver)return;docObserver=new MutationObserver(function(mutations){for(const m of mutations){if(m.type==='childList'&&(document.getElementById('ab35NativeMount')||inAB())){retryBurst();break;}}});docObserver.observe(document.documentElement,{childList:true,subtree:true});}
   document.addEventListener('click',function(e){const nav=e.target&&e.target.closest&&e.target.closest('#nav-ab');if(nav)retryBurst();},false);
   window.addEventListener('hashchange',function(){if(inAB())retryBurst();});window.addEventListener('vg-modern-preview-ready',retryBurst);installDocObserver();retryBurst();
