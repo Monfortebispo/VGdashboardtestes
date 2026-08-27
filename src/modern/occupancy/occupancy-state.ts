@@ -23,11 +23,14 @@ export class OccupancyStateStore {
   }
 
   replace(next:Partial<OccupancySelection>):Readonly<OccupancySelection> {
+    const hasYear=Object.prototype.hasOwnProperty.call(next,'year');
+    const hasMonth=Object.prototype.hasOwnProperty.call(next,'month');
+    const nextMonth=hasMonth?next.month:this.selection.month;
     const normalized:OccupancySelection = {
       hotel: String(next.hotel ?? this.selection.hotel ?? '__all__'),
       snapshot: String(next.snapshot ?? this.selection.snapshot ?? '__latest__'),
-      year: next.year == null ? this.selection.year : String(next.year),
-      month: next.month == null ? next.month ?? this.selection.month ?? null : Math.max(0,Math.min(11,Number(next.month)))
+      year: hasYear ? (next.year==null||next.year===''?undefined:String(next.year)) : this.selection.year,
+      month: nextMonth==null ? null : Math.max(0,Math.min(11,Number(nextMonth)))
     };
     const changed = JSON.stringify(normalized)!==JSON.stringify(this.selection);
     this.selection = normalized;
