@@ -8,7 +8,9 @@ export interface ReputationDiagnostics {
 }
 
 export async function reputationData(force=false):Promise<ReputationSourceSnapshot>{
-  return ensureDataSource<ReputationSourceSnapshot>('reputation',{force});
+  const cached=cachedData<ReputationSourceSnapshot>('reputation');
+  const mustRefresh=force||!cached||cached.stats.available===false||cached.stats.records===0;
+  return ensureDataSource<ReputationSourceSnapshot>('reputation',{force:mustRefresh});
 }
 
 export function currentReputationData():ReputationSourceSnapshot|undefined {
