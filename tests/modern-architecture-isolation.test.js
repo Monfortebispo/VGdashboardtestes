@@ -15,7 +15,7 @@ assert(!html.includes('src/modern/main.ts'),'arquitetura moderna não pode estar
 assert(!html.includes('dist-modern'),'bundle moderno não pode substituir o runtime atual nesta fase');
 assert(pkg.scripts['modern:build'],'package deve disponibilizar build moderno separado');
 assert(pkg.devDependencies?.typescript&&pkg.devDependencies?.vite,'TypeScript e Vite devem existir apenas como infraestrutura de desenvolvimento');
-assert(modernMain.includes("status: 'isolated'"),'entrada moderna deve declarar estado isolado');
+assert(/status\s*:\s*['"]isolated['"]/.test(modernMain),'entrada moderna deve declarar estado isolado');
 assert(registry.includes('loadModule')&&registry.includes('registerModule'),'registo lazy de módulos deve existir');
 assert(bridge.includes('legacyRuntime')&&bridge.includes('legacyView'),'ponte para runtime legado deve existir');
 assert(plan.includes('A Ficha Hotel não sofre alterações funcionais'),'plano deve preservar explicitamente a Ficha Hotel');
