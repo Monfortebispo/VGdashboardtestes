@@ -13,6 +13,7 @@ export interface OccupancySnapshot {
 export interface OccupancySourceSnapshot {
   snapshots: OccupancySnapshot[];
   selection: { hotel:string; snapshot:string };
+  eligibleHotels:string[];
   stats: {
     snapshots:number;
     hotels:number;
