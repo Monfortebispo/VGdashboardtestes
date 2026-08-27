@@ -1,23 +1,22 @@
 const fs=require('fs');
 const path=require('path');
+const assert=require('assert');
 
 function read(p){return fs.readFileSync(path.join(__dirname,'..',p),'utf8');}
 
-test('Portefólio moderno não depende da navegação legada',()=>{
-  const module=read('src/modern/modules/portfolio.ts');
-  expect(module).not.toMatch(/legacyView\s*\(/);
-  expect(module).not.toMatch(/setView\s*\(/);
-  expect(module).not.toMatch(/refreshAll\s*\(/);
-  expect(module).toMatch(/portfolioState\.subscribe/);
-  expect(module).toMatch(/portfolioController\.refresh/);
-});
+const moduleCode=read('src/modern/modules/portfolio.ts');
+const modelCode=read('src/modern/data/portfolio-model.ts');
+const rendererCode=read('src/modern/portfolio/portfolio-renderer.ts');
 
-test('Portefólio moderno tem normalização e filtros próprios',()=>{
-  const model=read('src/modern/data/portfolio-model.ts');
-  const renderer=read('src/modern/portfolio/portfolio-renderer.ts');
-  expect(model).toMatch(/normalizePortfolioRecords/);
-  expect(renderer).toMatch(/Geografia/);
-  expect(renderer).toMatch(/Hotel/);
-  expect(renderer).toMatch(/Período/);
-  expect(renderer).toMatch(/data-modern-portfolio-table|modernPortfolioTable/);
-});
+assert(!/legacyView\s*\(/.test(moduleCode),'Portefólio moderno não deve chamar legacyView');
+assert(!/setView\s*\(/.test(moduleCode),'Portefólio moderno não deve chamar setView');
+assert(!/refreshAll\s*\(/.test(moduleCode),'Portefólio moderno não deve chamar refreshAll');
+assert(/portfolioState\.subscribe/.test(moduleCode),'Portefólio moderno deve reagir ao estado próprio');
+assert(/portfolioController\.refresh/.test(moduleCode),'Portefólio moderno deve permitir refresh seletivo');
+assert(/normalizePortfolioRecords/.test(modelCode),'Portefólio moderno deve normalizar os dados');
+assert(/Geografia/.test(rendererCode),'Renderer deve disponibilizar filtro de geografia');
+assert(/Hotel/.test(rendererCode),'Renderer deve disponibilizar filtro de hotel');
+assert(/Período/.test(rendererCode),'Renderer deve disponibilizar filtro de período');
+assert(/data-modern-portfolio-table|modernPortfolioTable/.test(rendererCode),'Renderer deve ter tabela moderna própria');
+
+console.log('✓ modern portfolio source');
