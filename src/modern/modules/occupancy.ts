@@ -19,31 +19,21 @@ function bridge():OccupancyBridge|undefined {
 }
 
 const legacyAdapter:OccupancyLegacyAdapter = {
-  readSelection(){
-    return bridge()?.selection?.()||{};
-  },
-  applySelection(selection){
-    bridge()?.applySelection?.(selection);
-  },
-  refreshView(){
-    bridge()?.refresh?.();
-  }
+  readSelection(){return bridge()?.selection?.()||{};},
+  applySelection(selection){bridge()?.applySelection?.(selection);},
+  refreshView(){bridge()?.refresh?.();}
 };
 
 export const occupancyController = new OccupancyController(legacyAdapter);
 let mountedRoot:HTMLElement|undefined;
 let unsubscribe:(()=>void)|undefined;
+let regionListener:((event:Event)=>void)|undefined;
 
 function renderCurrent():void {
   if(!mountedRoot)return;
   renderOccupancyReadOnly(mountedRoot,occupancyState.current(),{
-    onSelectionChange(next){
-      occupancyController.setSelection(next);
-    },
-    async onRefresh(){
-      await occupancyController.refresh();
-      renderCurrent();
-    }
+    onSelectionChange(next){occupancyController.setSelection(next);},
+    async onRefresh(){await occupancyController.refresh();renderCurrent();}
   });
 }
 
@@ -57,11 +47,24 @@ const occupancy:ModernModule = {
     root.dataset.modernOccupancyHotels=String(prepared.diagnostics.hotels);
     unsubscribe?.();
     unsubscribe=occupancyState.subscribe(()=>renderCurrent());
+    if(regionListener)document.removeEventListener('click',regionListener,true);
+    regionListener=(event:Event)=>{
+      const target=event.target as Element|null;
+      if(!target?.closest?.('.pl-region-btn,[data-r]'))return;
+      setTimeout(async()=>{
+        if(!mountedRoot)return;
+        await occupancyController.refresh();
+        if(!occupancyState.current().hotel.startsWith('__'))occupancyController.setSelection({hotel:'__all__'});
+        renderCurrent();
+      },80);
+    };
+    document.addEventListener('click',regionListener,true);
     renderCurrent();
   },
   unmount(){
-    unsubscribe?.();
-    unsubscribe=undefined;
+    unsubscribe?.();unsubscribe=undefined;
+    if(regionListener)document.removeEventListener('click',regionListener,true);
+    regionListener=undefined;
     if(mountedRoot)clearOccupancyReadOnly(mountedRoot);
     mountedRoot=undefined;
   }
