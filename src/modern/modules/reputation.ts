@@ -6,6 +6,7 @@ import { clearReputationReadOnly, renderReputationReadOnly } from '../reputation
 let mountedRoot:HTMLElement|undefined;
 let unsubscribe:(()=>void)|undefined;
 let retryTimers:number[]=[];
+let hiddenLegacy:HTMLElement[]=[];
 
 function render():void{
   if(!mountedRoot)return;
@@ -29,6 +30,24 @@ function scheduleEmptyRetries(records:number){
   if(records>0)return;
   [300,1000,2500,5000,10000].forEach(ms=>retryTimers.push(window.setTimeout(()=>void refreshFromLegacy(),ms)));
 }
+function hideLegacyView(root:HTMLElement){
+  hiddenLegacy=[];
+  Array.from(root.children).forEach(node=>{
+    const el=node as HTMLElement;
+    if(el.dataset.modernReputationReadonly==='true')return;
+    if(el.style.display==='none')return;
+    el.dataset.modernReputationPrevDisplay=el.style.display||'';
+    el.style.display='none';
+    hiddenLegacy.push(el);
+  });
+}
+function restoreLegacyView(){
+  hiddenLegacy.forEach(el=>{
+    el.style.display=el.dataset.modernReputationPrevDisplay||'';
+    delete el.dataset.modernReputationPrevDisplay;
+  });
+  hiddenLegacy=[];
+}
 
 const reputation:ModernModule = {
   id:'reputation',
@@ -44,12 +63,14 @@ const reputation:ModernModule = {
     window.addEventListener('vg-reputation-data-changed',onLegacyChange);
     scheduleEmptyRetries(prepared.diagnostics.records);
     render();
+    hideLegacyView(root);
   },
   unmount(){
     unsubscribe?.();unsubscribe=undefined;
     clearRetries();
     window.removeEventListener('vg-reputation-data-changed',onLegacyChange);
     if(mountedRoot)clearReputationReadOnly(mountedRoot);
+    restoreLegacyView();
     mountedRoot=undefined;
   }
 };
