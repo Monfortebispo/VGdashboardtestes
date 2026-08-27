@@ -19,6 +19,7 @@ async function refreshFromLegacy():Promise<void>{
   const prepared=await reputationController.refresh();
   mountedRoot.dataset.modernReputationRecords=String(prepared.diagnostics.records);
   mountedRoot.dataset.modernReputationAvailable=String(prepared.diagnostics.available);
+  if(prepared.diagnostics.records>0)clearRetries();
   render();
 }
 function onLegacyChange(){void refreshFromLegacy();}
@@ -26,7 +27,7 @@ function clearRetries(){retryTimers.forEach(id=>window.clearTimeout(id));retryTi
 function scheduleEmptyRetries(records:number){
   clearRetries();
   if(records>0)return;
-  [300,1000,2500].forEach(ms=>retryTimers.push(window.setTimeout(()=>void refreshFromLegacy(),ms)));
+  [300,1000,2500,5000,10000].forEach(ms=>retryTimers.push(window.setTimeout(()=>void refreshFromLegacy(),ms)));
 }
 
 const reputation:ModernModule = {
