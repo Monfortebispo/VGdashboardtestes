@@ -8,6 +8,7 @@ type OccupancyBridge = {
   version:number;
   read:()=>unknown[];
   selection:()=>{hotel:string;snapshot:string};
+  eligibleHotels?:()=>string[];
   stats:()=>OccupancySourceSnapshot['stats'];
 };
 
@@ -46,12 +47,14 @@ function occupancySnapshot(w:LegacyWindow): OccupancySourceSnapshot {
     return {
       snapshots:bridge.read() as OccupancySourceSnapshot['snapshots'],
       selection:bridge.selection(),
+      eligibleHotels:bridge.eligibleHotels?.()||[],
       stats:bridge.stats()
     };
   }
   return {
     snapshots:[],
     selection:{hotel:'__all__',snapshot:'__latest__'},
+    eligibleHotels:[],
     stats:{snapshots:0,hotels:0,latestId:null,latestLabel:null,latestTs:null}
   };
 }
