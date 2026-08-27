@@ -24,11 +24,16 @@ assert(source.includes("case 'occupancy':")&&source.includes('return occupancySn
 assert(model.includes('occupancyPickup')&&model.includes('averageOccupancy'),'modelo deve calcular médias/pickup fora do módulo legado');
 assert(service.includes("ensureDataSource<OccupancySourceSnapshot>('occupancy'")&&service.includes('occupancyDiagnostics'),'serviço deve consumir cache seletiva e expor diagnóstico');
 assert(state.includes('class OccupancyStateStore')&&state.includes('subscribe('),'estado de seleção deve estar desacoplado do DOM');
+assert(state.includes("hasOwnProperty.call(next,'year')")&&state.includes("hasOwnProperty.call(next,'month')"),'estado moderno deve permitir limpar explicitamente filtros de ano e mês');
 assert(controller.includes('class OccupancyController')&&controller.includes('syncFromLegacy')&&controller.includes('refresh()'),'controlador deve coordenar estado/dados sem navegar');
 assert(renderer.includes('renderOccupancyReadOnly')&&!renderer.includes("getElementById('occHotelSel'")&&!renderer.includes("getElementById('occSnapSel'"),'renderer deve expor renderização própria sem depender dos controlos DOM legados');
 assert(renderer.includes("host.dataset.modernOccupancyReadonly='true'")&&renderer.includes("table.dataset.modernOccupancyTable='true'"),'renderer deve criar uma vista moderna identificável e tabela própria');
+assert(renderer.includes("controls.dataset.modernOccupancyControls='true'")&&renderer.includes("selectControl('Hotel'")&&renderer.includes("selectControl('Snapshot'")&&renderer.includes("selectControl('Ano'")&&renderer.includes("selectControl('Mês'"),'renderer moderno deve oferecer filtros próprios de hotel, snapshot, ano e mês');
+assert(renderer.includes("actions.onSelectionChange?.({hotel:hotelSelect.value})")&&renderer.includes("actions.onRefresh?.()"),'filtros e atualização devem comunicar por callbacks tipados e não por DOM legado');
+assert(renderer.includes("selection.month==null?MONTHS")&&renderer.includes('shownValues'),'filtro mensal deve limitar a visualização sem alterar os dados de origem');
 assert(!moduleCode.includes('legacyView(')&&!moduleCode.includes('setView(')&&!moduleCode.includes('refreshAll'),'módulo moderno de Ocupação não pode reintroduzir navegação/refresh global');
-assert(moduleCode.includes('occupancyController.prepare()')&&moduleCode.includes('renderOccupancyReadOnly(root,prepared.selection)'),'módulo deve preparar a fonte e renderizar leitura moderna');
+assert(moduleCode.includes('occupancyController.prepare()')&&moduleCode.includes('occupancyState.subscribe')&&moduleCode.includes('renderCurrent()'),'módulo deve preparar a fonte, reagir ao estado moderno e renderizar sem depender da vista legada');
+assert(moduleCode.includes('occupancyController.setSelection(next)')&&moduleCode.includes('occupancyController.refresh()'),'interações modernas devem passar pelo controlador');
 assert(mountCode&&!mountCode.includes('bridge()?.refresh?.()'),'mount moderno não deve pedir renderização à vista legada');
 cp.execFileSync(process.execPath,['--check',path.join(ROOT,'assets/js/modules/occupancy-modern-bridge-v40.js')],{stdio:'pipe'});
-console.log('✓ modern occupancy: dados seletivos, estado, controlador e renderização de leitura desacoplados do refresh global');
+console.log('✓ modern occupancy: filtros, estado, controlador, renderização e atualização seletiva validados');
