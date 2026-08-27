@@ -9,10 +9,11 @@
   }
   function legacyStore(){
     try{
-      if(typeof REP_STORE!=='undefined'&&REP_STORE&&typeof REP_STORE==='object')return REP_STORE;
+      if(window.VG?.reputationStore&&typeof window.VG.reputationStore==='object')return window.VG.reputationStore;
+      if(typeof window.VG?.reputation?.read==='function')return window.VG.reputation.read();
     }catch(e){}
     try{
-      if(window.VG&&window.VG.reputation&&typeof window.VG.reputation==='object')return window.VG.reputation;
+      if(typeof REP_STORE!=='undefined'&&REP_STORE&&typeof REP_STORE==='object')return REP_STORE;
     }catch(e){}
     return null;
   }
@@ -30,8 +31,9 @@
   }
   function stats(){
     var data=read();
-    return {records:countRecords(data),available:Boolean(data&&countRecords(data)>0)};
+    var records=countRecords(data);
+    return {records:records,available:records>0};
   }
 
-  window.VG.reputationModernBridge=Object.freeze({version:2,read:read,stats:stats});
+  window.VG.reputationModernBridge=Object.freeze({version:3,read:read,stats:stats});
 })();
