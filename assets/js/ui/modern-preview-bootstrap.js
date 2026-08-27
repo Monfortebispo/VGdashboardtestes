@@ -3,7 +3,7 @@
   if(window.__VG_MODERN_PREVIEW_BOOTSTRAP__)return;
   window.__VG_MODERN_PREVIEW_BOOTSTRAP__=true;
 
-  const MODERN_VIEWS=new Set(['resumo','ocupacao','revenuehub']);
+  const MODERN_VIEWS=new Set(['resumo','ocupacao','reputacao','revenuehub']);
   const params=new URLSearchParams(location.search);
   const modernMode=params.get('modern')==='1';
   let abRepairPromise=null;
@@ -269,6 +269,9 @@
   if(!install()){
     window.addEventListener('vg-modern-preview-ready',install,{once:true});
     let tries=0;
-    const timer=setInterval(function(){tries++;if(install()||tries>80)clearInterval(timer);},100);
+    const timer=setInterval(function(){
+      tries++;
+      if(install()||tries>80)clearInterval(timer);
+    },100);
   }
 })();
