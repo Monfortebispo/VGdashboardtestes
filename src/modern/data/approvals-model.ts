@@ -1,17 +1,9 @@
-export interface ApprovalRecord {
-  id:string;
-  hotel:string;
-  type:string;
-  status:string;
-  author:string;
-  createdAt:string;
-  amount:number|null;
-  raw:unknown;
-}
-
+export interface ApprovalRecord {id:string;code:string;hotel:string;type:string;typeLabel:string;status:string;title:string;description:string;author:string;createdAt:string;amount:number|null;priority:string;archived:boolean;raw:unknown;}
 export interface ApprovalsSourceSnapshot {data:unknown;stats:{available:boolean;records:number};}
 const text=(v:unknown)=>String(v??'').trim();
-const num=(v:unknown):number|null=>{if(typeof v==='number'&&Number.isFinite(v))return v;const n=Number(String(v??'').replace(/\s/g,'').replace(',','.'));return Number.isFinite(n)?n:null;};
+const num=(v:unknown):number|null=>{if(typeof v==='number'&&Number.isFinite(v))return v;const n=Number(String(v??'').replace(/[^0-9,.-]/g,'').replace(',','.'));return Number.isFinite(n)?n:null;};
 function pick(o:Record<string,unknown>,keys:string[]):unknown{for(const k of keys)if(o[k]!=null&&o[k]!=='')return o[k];return undefined;}
 function flatten(value:unknown):unknown[]{if(Array.isArray(value))return value;if(!value||typeof value!=='object')return[];const o=value as Record<string,unknown>;for(const k of ['records','items','approvals','processes','data'])if(Array.isArray(o[k]))return o[k] as unknown[];return Object.values(o).flatMap(v=>Array.isArray(v)?v:[]);}
-export function normalizeApprovals(value:unknown):ApprovalRecord[]{return flatten(value).map((item,i)=>{const o=(item&&typeof item==='object'?item:{}) as Record<string,unknown>;return{id:text(pick(o,['id','processId','numero','number','ref']))||String(i+1),hotel:text(pick(o,['hotel','hotelName','unidade','unit']))||'—',type:text(pick(o,['type','tipo','category','natureza']))||'—',status:text(pick(o,['status','estado','state']))||'—',author:text(pick(o,['author','autor','createdBy','user']))||'—',createdAt:text(pick(o,['createdAt','created_at','date','data','timestamp']))||'—',amount:num(pick(o,['amount','valor','value','total'])),raw:item};});}
+function authorOf(o:Record<string,unknown>):string{const c=o.createdBy;if(c&&typeof c==='object'){const x=c as Record<string,unknown>;return text(x.name||x.user)||'—';}return text(pick(o,['author','autor','user']))||'—';}
+function amountOf(o:Record<string,unknown>):number|null{const direct=pick(o,['amount','valor','value','total']);if(direct!=null)return num(direct);const m=o.meta;if(m&&typeof m==='object')return num((m as Record<string,unknown>).amount);return null;}
+export function normalizeApprovals(value:unknown):ApprovalRecord[]{return flatten(value).map((item,i)=>{const o=(item&&typeof item==='object'?item:{}) as Record<string,unknown>;const type=text(pick(o,['type','tipo','category','natureza']))||'—';const labels:Record<string,string>={complaint:'Reclamação',refund:'Devolução',budget:'Orçamento'};const id=text(pick(o,['id','processId','numero','number','ref']))||String(i+1);return{id,code:text(o.code)||id,hotel:text(pick(o,['hotel','hotelName','unidade','unit']))||'—',type,typeLabel:text(o.typeLabel)||labels[type]||type,status:text(pick(o,['status','estado','state']))||'—',title:text(pick(o,['title','assunto','subject']))||'—',description:text(pick(o,['description','descricao','detail']))||'',author:authorOf(o),createdAt:text(pick(o,['createdAt','created_at','date','data','timestamp']))||'—',amount:amountOf(o),priority:text(o.priority)||'normal',archived:Boolean(o.archived),raw:item};});}
