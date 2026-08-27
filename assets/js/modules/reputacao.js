@@ -3,6 +3,14 @@
 // Each entry has a unique (hotel, week) key — no duplicates.
 // ══════════════════════════════════════════════════════════
 const REP_STORE = {};
+window.VG = window.VG || {};
+window.VG.reputationStore = REP_STORE;
+window.VG.reputation = window.VG.reputation || {};
+window.VG.reputation.read = () => REP_STORE;
+window.VG.reputation.stats = () => ({
+  hotels: Object.keys(REP_STORE).length,
+  records: Object.values(REP_STORE).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0)
+});
 let rtSelected  = new Set(); // selected hotel keys for comparison
 let rtCharts    = {};
 
@@ -10,7 +18,7 @@ let rtCharts    = {};
 const rtKey = name => name.toLowerCase().replace(/[^a-z0-9\u00c0-\u017e\s]/gi,'').replace(/\s+/g,' ').trim();
 
 function rtEscape(v) {
-  return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[s]));
 }
 function rtCanon(v) {
   return String(v ?? '')
@@ -118,6 +126,7 @@ function rtClearAll() {
   rtSelected.clear();
   Object.values(rtCharts).forEach(c => c.destroy());
   rtCharts = {};
+  window.dispatchEvent(new CustomEvent('vg-reputation-data-changed'));
   rtRender();
   showToast('Dados de reputação limpos');
 }
@@ -145,6 +154,7 @@ async function rtLoadFiles(files) {
   }
   document.getElementById('rtFileInput').value = '';
   if (added + updated > 0) {
+    window.dispatchEvent(new CustomEvent('vg-reputation-data-changed'));
     showToast(`✓ ${added} entr${added===1?'ada':'adas'} adicionada${added===1?'':'s'}${updated?' · '+updated+' actualizada'+(updated===1?'':'s'):''}`);
     rtRender();
     if (typeof window.vgDataCenterRecord === 'function') window.vgDataCenterRecord({
@@ -359,7 +369,6 @@ function rtBuildPills() {
       return `<span class="rt-pill ${rtSelected.has(k)?'on':''}" data-key="${rtEscape(k)}" onclick="rtTogglePill(this)">${rtEscape(nm)}${weeks>1?` · ${weeks} sem.`:''}</span>`;
     }).join('');
 }
-
 function rtToggleAll(el) {
   const keys = rtKeysForRegion(activeRegion);
   const allOn = keys.length && keys.every(k => rtSelected.has(k));
@@ -451,352 +460,115 @@ function rtBuildRanking() {
     const gc = gClass(h.gri); const dc = (h.griDelta||0)>=0?'c-up':'c-dn';
     const goalBadge = h.griGoal
       ? `<span class="delta-badge ${h.gri>=h.griGoal?'pos':'neg'}">${h.griGoal}% ${h.gri>=h.griGoal?'✓':'✗'}</span>` : '—';
-    const d = h.depts; const wks = REP_STORE[k]?.length||1;
+    const delta = h.griDelta != null ? `<span class="delta-badge ${h.griDelta>=0?'pos':'neg'}">${h.griDelta>=0?'▲':'▼'} ${Math.abs(h.griDelta)}</span>` : '—';
     return `<tr>
-      <td style="text-align:left;font-weight:900;color:var(--rep-gold)">${i+1}</td>
-      <td style="text-align:left">${h.hotel}${wks>1?` <span style="font-size:10px;color:var(--rep-muted)">(${wks} sem.)</span>`:''}</td>
-      <td style="text-align:left;font-size:10px;font-family:var(--font-mono);color:var(--rep-muted)">${h.week}</td>
-      <td class="${gc}" style="font-family:var(--font-mono);font-weight:800">${h.gri}%</td>
-      <td class="${dc}" style="font-family:var(--font-mono)">${h.griDelta!=null?fmt2(h.griDelta)+'%':'—'}</td>
+      <td><span class="rank-num ${i===0?'top':''}">${i+1}</span></td>
+      <td style="font-weight:700;color:var(--text-1)">${rtEscape(h.hotel)}</td>
+      <td><strong class="${gc}">${h.gri}%</strong></td>
+      <td>${delta}</td>
       <td>${goalBadge}</td>
-      <td style="font-family:var(--font-mono)">${h.reviews??'—'}</td>
-      <td style="font-family:var(--font-mono)">${h.mgmtResp!=null?h.mgmtResp+'%':'—'}</td>
-      <td style="font-family:var(--font-mono)">${d.Service?.val!=null?d.Service.val+'%':'—'}</td>
-      <td style="font-family:var(--font-mono)">${d.Room?.val!=null?d.Room.val+'%':'—'}</td>
-      <td style="font-family:var(--font-mono)">${d.Cleanliness?.val!=null?d.Cleanliness.val+'%':'—'}</td>
-      <td style="font-family:var(--font-mono)">${d.Value?.val!=null?d.Value.val+'%':'—'}</td>
-      <td style="font-family:var(--font-mono);color:var(--rep-gold)">${h.cqi!=null?h.cqi+'%':'—'}</td>
-      <td style="font-family:var(--font-mono)">${h.rankVG||'—'}</td>
+      <td>${h.reviews ?? '—'}${h.reviewsDelta != null ? ` <span class="c-up" style="font-size:9px">(+${h.reviewsDelta})</span>` : ''}</td>
+      <td>${h.week || '—'}</td>
+      <td><button class="rt-remove-btn" onclick="rtRemove('${rtEscape(k)}','${rtEscape(h.week)}')" title="Remover esta semana">✕</button></td>
     </tr>`;
   }).join('');
 }
 
-// ── Card selector ─────────────────────────────────────────
-function rtBuildSelectors() {
-  const hotelSel = document.getElementById('rtSelHotel');
-  const weekSel  = document.getElementById('rtSelWeek');
-  const selKeys  = rtSelKeys();
-
-  // Hotels: one option per unique hotel (not key)
-  const hotels = selKeys.map(k => ({ k, nm: REP_STORE[k][0]?.hotel || k }));
-  hotelSel.innerHTML = hotels.map(h => `<option value="${rtEscape(h.k)}" selected>${rtEscape(h.nm)}</option>`).join('');
-
-  // Weeks: union of all weeks across selected hotels, sorted descending (latest first)
-  const weeks = [...new Set(selKeys.flatMap(k => REP_STORE[k].map(e=>e.week)))].sort(rtCmpWeek).reverse();
-  weekSel.innerHTML = weeks.map(w => `<option value="${rtEscape(w)}" selected>${rtEscape(w)}</option>`).join('');
-  rtUpdateFilterSummary();
+// ── Department comparison ─────────────────────────────────
+function rtBuildDepts() {
+  const sel = rtSelKeys();
+  const latest = sel.map(k=>({k,h:rtLatest(k)})).filter(x=>x.h);
+  if (!latest.length) return;
+  const deptNames = ['Service','Room','Cleanliness','Value','Location'];
+  const labels = {Service:'Serviço',Room:'Quartos',Cleanliness:'Limpeza',Value:'Valor',Location:'Localização'};
+  const wrap = document.getElementById('rtDeptGrid');
+  wrap.innerHTML = deptNames.map(d => {
+    const rows = latest.map(({h})=>({hotel:h.hotel,v:h.depts?.[d]?.val,delta:h.depts?.[d]?.delta})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v);
+    if (!rows.length) return '';
+    return `<div class="rt-dept-card">
+      <div class="rt-dept-name">${labels[d]}</div>
+      ${rows.map(r=>`<div class="rt-dept-row">
+        <div class="rt-dept-hotel">${rtEscape(r.hotel)}</div>
+        <div class="rt-dept-track"><div class="rt-dept-fill ${fillClass(r.v)}" style="width:${r.v}%"></div></div>
+        <div class="rt-dept-val ${gClass(r.v)}">${r.v}%</div>
+        <div class="rt-dept-delta ${r.delta>=0?'c-up':'c-dn'}">${fmt2(r.delta)}</div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
-function rtUpdateFilterSummary() {
-  const paint = (selId, sumId, label) => {
-    const sel = document.getElementById(selId);
-    const box = document.getElementById(sumId);
-    if (!sel || !box) return;
-    const total = sel.options.length;
-    const selected = [...sel.selectedOptions].map(o => o.textContent.trim()).filter(Boolean);
-    if (!total) { box.innerHTML = `<span>0</span> ${label}`; return; }
-    const preview = selected.slice(0, 4).map(rtEscape).join(' · ');
-    const extra = selected.length > 4 ? ` · +${selected.length - 4}` : '';
-    box.innerHTML = `<span>${selected.length}/${total}</span> ${label} selecionado(s)${selected.length ? `: ${preview}${extra}` : ''}`;
-  };
-  paint('rtSelHotel', 'rtSelHotelSummary', 'hotel');
-  paint('rtSelWeek', 'rtSelWeekSummary', 'semana');
-}
-
-function rtApplyCardFilter() {
-  const selH = [...document.getElementById('rtSelHotel').selectedOptions].map(o=>o.value);
-  const selW = [...document.getElementById('rtSelWeek').selectedOptions].map(o=>o.value);
-  rtBuildCardGrid(selH, selW);
-  rtUpdateFilterSummary();
-}
-
-function rtSelectAllCards() {
-  [...document.getElementById('rtSelHotel').options].forEach(o => o.selected = true);
-  [...document.getElementById('rtSelWeek').options].forEach(o => o.selected = true);
-  rtApplyCardFilter();
-}
-
-function rtBuildCardGrid(filterKeys, filterWeeks) {
-  const grid = document.getElementById('rtCards');
-  grid.innerHTML = '';
-  const keys = filterKeys || rtSelKeys();
-  const weeks = filterWeeks || null;
-  if (!keys.length) {
-    grid.innerHTML = `<div class="rt-empty-inline">Não existem unidades para mostrar com o filtro atual.</div>`;
-    return;
-  }
-  let rendered = 0;
-
-  keys.forEach(k => {
-    const entries = (REP_STORE[k] || []).filter(e => !weeks || weeks.includes(e.week));
-    entries.forEach(h => {
-      const gc = gClass(h.gri||0); const dc = (h.griDelta||0)>=0?'c-up':'c-dn';
-      const goalBadge = h.griGoal
-        ? `<span style="font-size:10px;font-weight:700;color:${h.gri>=h.griGoal?'var(--rep-green)':'var(--rep-red)'}">${h.gri>=h.griGoal?'✓':'✗'} Goal ${h.griGoal}%</span>` : '';
-
-      const dOrder = [{k:'Service',l:'Serviço'},{k:'Room',l:'Quarto'},{k:'Cleanliness',l:'Limpeza'},{k:'Value',l:'Valor'},{k:'Location',l:'Localiz.'}];
-      const depHtml = dOrder.map(({k:dk,l}) => {
-        const d = h.depts[dk]; if(!d) return '';
-        const fc = fillClass(d.val);
-        const ds = d.delta!=null ? `<span class="${d.delta>=0?'c-up':'c-dn'}">${d.delta>=0?'▲':'▼'}${Math.abs(d.delta)}</span>` : '';
-        return `<div class="rt-dept-row">
-          <div class="rt-dept-nm">${l}</div>
-          <div class="rt-dept-bar"><div class="rt-dept-fill ${fc}" style="width:${d.val}%"></div></div>
-          <div class="rt-dept-val">${d.val}%</div>
-          <div class="rt-dept-d">${ds}</div>
-        </div>`;
-      }).join('');
-
-      const srcHtml = h.srcList?.length ? `<div class="rt-sources">
-        <div class="rt-src-lbl">Fontes</div>
-        ${h.srcList.slice(0,4).map(s=>`<div class="rt-src-row"><span>${s.name}</span><span class="${gClass(s.score)}">${s.score}%</span></div>`).join('')}
-      </div>` : '';
-
-      const tagsHtml = (h.negCats?.length||h.posCats?.length) ? `<div class="rt-tags">
-        ${h.negCats?.length?`<div class="rt-tag-lbl" style="margin-bottom:3px">⬇ Impacto negativo</div>${h.negCats.map(t=>`<span class="rt-tag t-neg">${t.cat||t}</span>`).join('')}`:'' }
-        ${h.posCats?.length?`<div class="rt-tag-lbl" style="margin-top:8px;margin-bottom:3px">⬆ Impacto positivo</div>${h.posCats.map(t=>`<span class="rt-tag t-pos">${t.cat||t}</span>`).join('')}`:''}
-      </div>` : '';
-
-      const card = document.createElement('div');
-      card.className = 'rt-card';
-      card.innerHTML = `
-        <button class="rt-del" onclick="rtRemove('${k}','${h.week}')" title="Remover">✕</button>
-        <div class="rt-card-head">
-          <div>
-            <div class="rt-hotel-name">${h.hotel}</div>
-            <div class="rt-week-tag">📅 ${h.week}</div>
-            <div style="margin-top:6px">${goalBadge}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="rt-gri ${gc}">${h.gri!=null?h.gri+'%':'—'}</div>
-            <div class="rt-gri-d ${dc}">${h.griDelta!=null?(h.griDelta>=0?'▲':'▼')+Math.abs(h.griDelta)+'%':''}</div>
-          </div>
-        </div>
-        <div class="rt-card-body">
-          <div class="rt-chips">
-            ${h.reviews!=null?`<div class="rt-chip">Reviews <b>${h.reviews}${h.reviewsDelta!=null?` (${h.reviewsDelta>=0?'+':''}${h.reviewsDelta})`:''}</b></div>`:''}
-            ${h.mgmtResp!=null?`<div class="rt-chip">Resposta <b>${h.mgmtResp}%</b></div>`:''}
-            ${h.cqi!=null?`<div class="rt-chip">CQI™ <b>${h.cqi}%</b></div>`:''}
-            ${h.rankVG?`<div class="rt-chip">Rank VG <b>${h.rankVG}</b></div>`:''}
-          </div>
-          ${depHtml}
-          ${srcHtml}
-          ${tagsHtml}
-        </div>`;
-      grid.appendChild(card);
-      rendered++;
+// ── Source scores ─────────────────────────────────────────
+function rtBuildSources() {
+  const sel = rtSelKeys();
+  const allSrc = {};
+  sel.forEach(k => {
+    const h = rtLatest(k); if (!h) return;
+    (h.srcList||[]).forEach(s => {
+      if (!allSrc[s.name]) allSrc[s.name]=[];
+      allSrc[s.name].push({hotel:h.hotel,score:s.score});
     });
   });
-  if (!rendered) grid.innerHTML = `<div class="rt-empty-inline">Não existem semanas para mostrar com o filtro atual.</div>`;
+  const wrap = document.getElementById('rtSrcGrid');
+  if (!Object.keys(allSrc).length) { wrap.innerHTML='<div style="color:var(--text-3);font-size:11px">Sem dados de fontes disponíveis.</div>'; return; }
+  wrap.innerHTML = Object.entries(allSrc).map(([src,rows]) => `<div class="rt-src-card">
+    <div class="rt-src-title">${rtEscape(src)}</div>
+    ${rows.sort((a,b)=>b.score-a.score).map(r=>`<div class="rt-src-row">
+      <span>${rtEscape(r.hotel)}</span><strong class="${gClass(r.score)}">${r.score}%</strong>
+    </div>`).join('')}
+  </div>`).join('');
 }
 
-const RT_PAL = ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#64748b'];
-const RT_CD = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: {
-    legend: { labels: { color:'#94a3b8', font:{ family:'DM Mono', size:11 }, padding:10 } },
-    tooltip: {
-      backgroundColor:'#1e293b', borderColor:'rgba(245,158,11,.3)', borderWidth:1,
-      titleColor:'#f1f5f9', bodyColor:'#94a3b8', padding:10, cornerRadius:8,
-      callbacks: {
-        title: function(items) {
-          // Always show the full label from the chart's stored fullLabels if available
-          const chart = items[0]?.chart;
-          const idx = items[0]?.dataIndex;
-          if (chart?._fullLabels && chart._fullLabels[idx]) return chart._fullLabels[idx];
-          return items[0]?.label || '';
-        }
-      }
-    }
-  },
-  scales: {
-    x: {
-      ticks:{
-        color:'#64748b', font:{size:10},
-        maxRotation: 35, minRotation: 20,
-        autoSkip: false,
-        callback: function(val, idx) {
-          // Use full label stored on chart, wrap at ~16 chars
-          const lbl = this.chart._fullLabels?.[idx] || this.getLabelForValue(val);
-          if (lbl.length <= 16) return lbl;
-          // Break into two lines at a space near the middle
-          const mid = Math.floor(lbl.length / 2);
-          let sp = lbl.lastIndexOf(' ', mid + 6);
-          if (sp < 4) sp = lbl.indexOf(' ', mid - 6);
-          if (sp < 0) return lbl;
-          return [lbl.substring(0, sp), lbl.substring(sp + 1)];
-        }
-      },
-      grid:{ color:'rgba(255,255,255,.05)' }
-    },
-    y: { ticks:{ color:'#64748b', font:{size:10} }, grid:{ color:'rgba(255,255,255,.07)' } }
-  }
-};
-function rtDC(id, type, labels, datasets, opts={}, fullLabels=null) {
-  if (rtCharts[id]) { rtCharts[id].destroy(); delete rtCharts[id]; }
-  const ctx = document.getElementById(id); if (!ctx) return;
-  const cfg = JSON.parse(JSON.stringify(RT_CD));
-  // Re-attach callbacks (lost in JSON.parse/stringify)
-  cfg.plugins.tooltip.callbacks = RT_CD.plugins.tooltip.callbacks;
-  cfg.scales.x.ticks.callback = RT_CD.scales.x.ticks.callback;
-  if (opts.scales) Object.keys(opts.scales).forEach(k => { cfg.scales[k] = Object.assign(cfg.scales[k]||{}, opts.scales[k]); });
-  if (opts.plugins) Object.keys(opts.plugins).forEach(k => { cfg.plugins[k] = Object.assign(cfg.plugins[k]||{}, opts.plugins[k]); });
-  if (opts.indexAxis) cfg.indexAxis = opts.indexAxis;
-  if (opts.cutout) cfg.cutout = opts.cutout;
-  const chart = new Chart(ctx, { type, data:{ labels, datasets }, options: cfg });
-  // Store full labels on the chart instance for tooltip/tick callbacks
-  chart._fullLabels = fullLabels || labels;
-  rtCharts[id] = chart;
+// ── Trends ────────────────────────────────────────────────
+function rtBuildTrends() {
+  const sel = rtSelKeys();
+  const all = [];
+  sel.forEach(k => {
+    const h=rtLatest(k); if (!h) return;
+    (h.negCats||[]).forEach(c=>all.push({...c,hotel:h.hotel,type:'neg'}));
+    (h.posCats||[]).forEach(c=>all.push({...c,hotel:h.hotel,type:'pos'}));
+  });
+  const neg = all.filter(x=>x.type==='neg').sort((a,b)=>a.impact-b.impact).slice(0,12);
+  const pos = all.filter(x=>x.type==='pos').sort((a,b)=>b.impact-a.impact).slice(0,12);
+  document.getElementById('rtNegTrends').innerHTML = neg.length ? neg.map(x=>`<div class="rt-trend-row"><span>${rtEscape(x.cat)} <small>${rtEscape(x.hotel)}</small></span><strong class="c-dn">${x.impact}</strong></div>`).join('') : '<div class="rt-empty-inline">Sem tendências negativas.</div>';
+  document.getElementById('rtPosTrends').innerHTML = pos.length ? pos.map(x=>`<div class="rt-trend-row"><span>${rtEscape(x.cat)} <small>${rtEscape(x.hotel)}</small></span><strong class="c-up">+${x.impact}</strong></div>`).join('') : '<div class="rt-empty-inline">Sem tendências positivas.</div>';
 }
 
+// ── Charts ────────────────────────────────────────────────
 function rtBuildCharts() {
   const sel = rtSelKeys();
-  if (!sel.length) { document.getElementById('rtChartsWrap').style.display='none'; return; }
-  document.getElementById('rtChartsWrap').style.display = 'block';
-  const lats = sel.map(rtLatest).filter(Boolean);
-  const fullNames = lats.map(h => h.hotel);
-  const lbls = fullNames; // no truncation — callback handles wrapping
-
-  // 1. GRI bar
-  const gris = lats.map(h=>h.gri);
-  rtDC('rtChartGRI','bar',lbls,[
-    { label:'GRI™ %', data:gris,
-      backgroundColor: gris.map(v=>v>=90?'rgba(16,185,129,.75)':v>=80?'rgba(245,158,11,.75)':'rgba(239,68,68,.75)'),
-      borderColor:     gris.map(v=>v>=90?'#10b981':v>=80?'#f59e0b':'#ef4444'),
-      borderWidth:1.5, borderRadius:6 },
-    { label:'Goal', data:lats.map(h=>h.griGoal||null),
-      type:'line', borderColor:'rgba(255,255,255,.35)', borderDash:[5,4],
-      pointRadius:4, pointBackgroundColor:'rgba(255,255,255,.5)', borderWidth:1.5,
-      backgroundColor:'transparent' }
-  ],{ plugins:{legend:{position:'top'}}, scales:{y:{min:55,max:100,ticks:{callback:v=>v+'%'}}} }, fullNames);
-
-  // 2. Depts grouped bar — legend = hotel names (full)
-  const dKeys = ['Service','Room','Cleanliness','Value','Location'];
-  const dLabels = ['Serviço','Quarto','Limpeza','Valor','Localização'];
-  rtDC('rtChartDepts','bar',dLabels,
-    lats.map((h,i)=>({
-      label: h.hotel,
-      data: dKeys.map(k=>h.depts[k]?.val??null),
-      backgroundColor: RT_PAL[i%RT_PAL.length]+'88',
-      borderColor: RT_PAL[i%RT_PAL.length], borderWidth:1.5, borderRadius:4
-    })),
-    { plugins:{legend:{position:'right',labels:{padding:6,font:{size:10}}}}, scales:{y:{min:50,ticks:{callback:v=>v+'%'}}} }
-  );
-
-  // 3. Reviews + resp rate
-  rtDC('rtChartReviews','bar',lbls,[
-    { label:'Reviews', data:lats.map(h=>h.reviews||0),
-      backgroundColor:'rgba(59,130,246,.6)', borderColor:'#3b82f6', borderWidth:1.5, borderRadius:5, yAxisID:'y' },
-    { label:'Resp.%', data:lats.map(h=>h.mgmtResp||null),
-      type:'line', borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.1)',
-      pointRadius:5, pointBackgroundColor:'#10b981', borderWidth:2, fill:true, yAxisID:'y2' }
-  ],{
-    plugins:{legend:{position:'top'}},
-    scales:{
-      y:  { position:'left', grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#64748b',font:{size:10}} },
-      y2: { position:'right', min:0, max:100, ticks:{callback:v=>v+'%',color:'#64748b',font:{size:10}}, grid:{display:false} }
-    }
-  }, fullNames);
-
-  // 4. Sources
-  const srcNames = ['Booking.com','Google','Tripadvisor'];
-  const srcColors = [['rgba(0,112,243,.7)','#0070f3'],['rgba(234,67,53,.7)','#ea4335'],['rgba(0,167,157,.7)','#00a79d']];
-  rtDC('rtChartSources','bar',lbls,
-    srcNames.map((nm,i)=>({
-      label:nm,
-      data:lats.map(h=>h.srcList?.find(s=>s.name===nm)?.score??null),
-      backgroundColor:srcColors[i][0], borderColor:srcColors[i][1], borderWidth:1.5, borderRadius:4
-    })),
-    { plugins:{legend:{position:'top'}}, scales:{y:{min:50,ticks:{callback:v=>v+'%'}}} }, fullNames
-  );
-
-  // 5. Evolution (line)
-  const allWeeks = [...new Set(sel.flatMap(k=>REP_STORE[k].map(e=>e.week)))].sort(rtCmpWeek);
-  if (allWeeks.length > 1) {
-    rtDC('rtChartEvo','line',allWeeks,
-      sel.map((k,i)=>({
-        label: REP_STORE[k][0]?.hotel||k,
-        data: allWeeks.map(w=>REP_STORE[k].find(e=>e.week===w)?.gri??null),
-        borderColor: RT_PAL[i%RT_PAL.length],
-        backgroundColor: RT_PAL[i%RT_PAL.length]+'18',
-        tension:.35, borderWidth:2.5, pointRadius:5,
-        pointBackgroundColor: RT_PAL[i%RT_PAL.length], fill:false, spanGaps:true
-      })),
-      { plugins:{legend:{position:'right',labels:{padding:6}}}, scales:{y:{min:55,ticks:{callback:v=>v+'%'}}} }
-    );
-  } else {
-    if (rtCharts['rtChartEvo']) { rtCharts['rtChartEvo'].destroy(); delete rtCharts['rtChartEvo']; }
-    const ctx = document.getElementById('rtChartEvo');
-    if (ctx) {
-      const ct = ctx.getContext('2d');
-      ct.clearRect(0,0,ctx.width,ctx.height);
-      ct.fillStyle='#64748b'; ct.font='12px Syne,sans-serif'; ct.textAlign='center';
-      ct.fillText('Carregue múltiplas semanas do mesmo hotel para ver a evolução temporal', ctx.width/2, 80);
-    }
-  }
+  if (!sel.length) return;
+  const ctx = document.getElementById('rtTrendChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  if (rtCharts.trend) rtCharts.trend.destroy();
+  const labels = [...new Set(sel.flatMap(k => REP_STORE[k].map(e=>e.week)))].sort(rtCmpWeek);
+  const datasets = sel.map((k,i) => {
+    const color = ['#c9a84c','#38bdf8','#22c55e','#f97316','#a78bfa','#ef4444','#14b8a6','#f59e0b'][i%8];
+    return {
+      label: REP_STORE[k][0]?.hotel || k,
+      data: labels.map(w => REP_STORE[k].find(e=>e.week===w)?.gri ?? null),
+      borderColor: color, backgroundColor: color+'22', tension:.35, spanGaps:true,
+      pointRadius:3, pointHoverRadius:5, borderWidth:2
+    };
+  });
+  rtCharts.trend = new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}}},scales:{x:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'},suggestedMin:70,suggestedMax:100}}}});
 }
 
-// ── Main render ───────────────────────────────────────────
 function rtRender() {
-  const hasData = Object.keys(REP_STORE).length > 0;
-  document.getElementById('rtEmpty').style.display = hasData ? 'none' : 'block';
-  document.getElementById('rtRankWrap').style.display = hasData ? 'block' : 'none';
-  document.getElementById('rtCardControls').style.display = hasData ? 'block' : 'none';
-  document.getElementById('rtKpis').style.display = hasData ? 'grid' : 'none';
-  if (!hasData) {
-    document.getElementById('rtChartsWrap').style.display = 'none';
-    document.getElementById('rtFilterWrap').style.display = 'none';
-    Object.values(rtCharts).forEach(c=>c.destroy()); rtCharts={};
-    return;
-  }
+  rtNormalizeStore();
   rtBuildPills();
+  const hasData = rtSelKeys().length > 0;
+  document.getElementById('rtEmpty').style.display = Object.keys(REP_STORE).length ? 'none' : 'block';
+  document.getElementById('rtContent').style.display = Object.keys(REP_STORE).length ? 'block' : 'none';
+  if (!Object.keys(REP_STORE).length) return;
   rtBuildKPIs();
   rtBuildRanking();
-  rtBuildSelectors();
-  rtBuildCardGrid();
+  rtBuildDepts();
+  rtBuildSources();
+  rtBuildTrends();
   rtBuildCharts();
 }
 
-// ── Load PDF.js ───────────────────────────────────────────
-(function loadPdfJs() {
-  const s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  s.onload = () => {
-    window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  };
-  document.head.appendChild(s);
-})();
-
-
-
-
-// ── Theme switcher ────────────────────────────────────────
-function setTheme(name) {
-  document.body.className = document.body.className
-    .replace(/\btheme-\w+/g, '').trim();
-  if (name !== 'blue') document.body.classList.add('theme-' + name);
-  // Update active button state
-  document.querySelectorAll('.theme-dot').forEach(btn => {
-    btn.classList.toggle('active', btn.classList.contains('td-' + name));
-  });
-  // Update header gradient
-  const gradients = {
-    blue:     'linear-gradient(135deg,#0a1628 0%,#0f2040 50%,#0a1628 100%)',
-    erp:      'linear-gradient(135deg,#f5eded 0%,#ffffff 50%,#f5eded 100%)',
-    vilagale: 'linear-gradient(135deg,#d8f0ee 0%,#eef8f7 50%,#d8f0ee 100%)',
-  };
-  const header = document.querySelector('.header') || document.querySelector('.topbar');
-  if (header) header.style.background = gradients[name] || gradients.blue;
-  // Persist preference
-  try { localStorage.setItem('vg_theme', name); } catch(e) {}
-}
-
-// Restore saved theme on load
-(function() {
-  try {
-    const saved = localStorage.getItem('vg_theme');
-    if (saved && saved !== 'blue') setTheme(saved);
-  } catch(e) {}
-})();
-
+// initial render
+window.addEventListener('DOMContentLoaded', () => {
+  try { rtRender(); } catch(e) { console.warn('rtRender init:', e); }
+});
