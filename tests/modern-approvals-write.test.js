@@ -1,0 +1,15 @@
+const fs=require('fs');const assert=require('assert');
+const moduleCode=fs.readFileSync('src/modern/modules/approvals.ts','utf8');
+const controller=fs.readFileSync('src/modern/approvals/approvals-controller.ts','utf8');
+const renderer=fs.readFileSync('src/modern/approvals/approvals-renderer.ts','utf8');
+const service=fs.readFileSync('src/modern/data/approvals-service.ts','utf8');
+assert(!moduleCode.includes('legacyView('),'Aprovações modernas não devem chamar legacyView');
+assert(moduleCode.includes("modernApprovalsWrite='enabled'")||moduleCode.includes('modernApprovalsWrite'),'Módulo deve declarar escrita moderna ativa');
+['message','submit','decision','state','archive'].forEach(a=>assert(service.includes(`'${a}'`),`Serviço deve suportar ação ${a}`));
+assert(service.includes('/.netlify/functions/process-workflow-v36'),'Escrita moderna deve reutilizar backend de workflow existente');
+assert(service.includes('vgAuthToken'),'Pedidos de escrita devem preservar autenticação');
+assert(controller.includes('comentário')||controller.includes('comentario')||controller.includes('comment'),'Controlador deve validar comentários obrigatórios');
+assert(renderer.includes("r.status==='A aguardar DO'"),'Decisão DO só deve aparecer no estado correto');
+assert(renderer.includes('isDO()'),'Decisões devem ficar limitadas visualmente à Direção');
+assert(renderer.includes('confirm('),'Arquivo deve pedir confirmação explícita');
+console.log('✓ modern approvals write');
