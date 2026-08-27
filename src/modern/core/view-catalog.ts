@@ -1,60 +1,35 @@
 import type { ModernModuleId } from './module-registry';
-
-export type AccessPolicy = 'authenticated' | 'direction' | 'upload';
-
-export interface ViewDefinition {
-  id: string;
-  label: string;
-  group: string;
-  icon: string;
-  legacyViewId: string;
-  moduleId?: ModernModuleId;
-  access: AccessPolicy;
-  dataIndependent?: boolean;
-}
-
-/**
- * Catálogo único para a futura navegação moderna.
- * Não substitui ainda o menu legado; serve como fonte tipada para migração.
- */
-export const VIEW_CATALOG: readonly ViewDefinition[] = Object.freeze([
-  { id:'resumo', label:'Visão Executiva', group:'Início', icon:'◆', legacyViewId:'resumo', moduleId:'portfolio', access:'authenticated' },
-  { id:'hotel360', label:'Hotel 360º', group:'Hotéis', icon:'◉', legacyViewId:'hotel360', access:'authenticated' },
-  { id:'hoteis', label:'Hotéis', group:'Hotéis', icon:'🏨', legacyViewId:'hoteis', access:'authenticated', dataIndependent:true },
-  { id:'fichahotel', label:'Comentários Fecho do Mês', group:'Hotéis', icon:'📝', legacyViewId:'fichahotel', access:'authenticated' },
-  { id:'agenda', label:'Agenda Operacional', group:'Gestão', icon:'📅', legacyViewId:'agenda', access:'authenticated', dataIndependent:true },
-  { id:'approvals', label:'Aprovações', group:'Gestão', icon:'✓', legacyViewId:'approvals', moduleId:'approvals', access:'authenticated', dataIndependent:true },
-  { id:'receitas', label:'Receitas', group:'Análise', icon:'↗', legacyViewId:'receitas', access:'authenticated' },
-  { id:'custos', label:'Custos', group:'Análise', icon:'↘', legacyViewId:'custos', moduleId:'costs', access:'authenticated' },
-  { id:'pl', label:'P&L USALI', group:'Análise', icon:'▦', legacyViewId:'pl', access:'authenticated' },
-  { id:'revenuehub', label:'Revenue & Forecast', group:'Análise', icon:'◈', legacyViewId:'revenuehub', moduleId:'revenue', access:'authenticated' },
-  { id:'compras', label:'Compras & Artigos', group:'Análise', icon:'▤', legacyViewId:'compras', access:'authenticated', dataIndependent:true },
-  { id:'benchmark', label:'Benchmarking', group:'Análise', icon:'◎', legacyViewId:'benchmark', access:'authenticated' },
-  { id:'anomalies', label:'Deteção de Anomalias', group:'Análise', icon:'⚠', legacyViewId:'anomalies', access:'authenticated' },
-  { id:'ocupacao', label:'Ocupação', group:'Análise avançada', icon:'▥', legacyViewId:'ocupacao', moduleId:'occupancy', access:'authenticated' },
-  { id:'costanalysis', label:'Análise de Custos', group:'Análise avançada', icon:'⌁', legacyViewId:'costanalysis', access:'authenticated' },
-  { id:'cua', label:'Custo / Actividade', group:'Análise avançada', icon:'⚡', legacyViewId:'cua', access:'authenticated' },
-  { id:'compare', label:'Comparar Hotéis', group:'Análise avançada', icon:'⚖', legacyViewId:'compare', access:'authenticated' },
-  { id:'ranking', label:'Ranking Composto', group:'Análise avançada', icon:'🏆', legacyViewId:'ranking', access:'authenticated' },
-  { id:'sazonalidade', label:'Sazonalidade', group:'Análise avançada', icon:'◌', legacyViewId:'sazonalidade', access:'authenticated' },
-  { id:'simulador', label:'Simulador', group:'Análise avançada', icon:'🎛', legacyViewId:'simulador', access:'authenticated' },
-  { id:'orcamento', label:'Orçamento', group:'Análise avançada', icon:'▣', legacyViewId:'orcamento', access:'authenticated' },
-  { id:'reputacao', label:'Reputação', group:'Qualidade', icon:'★', legacyViewId:'reputacao', moduleId:'reputation', access:'authenticated', dataIndependent:true },
-  { id:'instagram', label:'Instagram', group:'Qualidade', icon:'▣', legacyViewId:'instagram', access:'authenticated' },
-  { id:'documents', label:'Gestão de Documentos', group:'Suporte', icon:'🗂', legacyViewId:'documents', access:'authenticated', dataIndependent:true },
-  { id:'automaticreports', label:'Relatórios Automáticos', group:'Suporte', icon:'📄', legacyViewId:'automaticreports', access:'authenticated', dataIndependent:true },
-  { id:'datacenter', label:'Centro de Dados', group:'Governação', icon:'▥', legacyViewId:'datacenter', access:'authenticated', dataIndependent:true },
-  { id:'governance', label:'Auditoria & Governação', group:'Governação', icon:'🛡', legacyViewId:'governance', access:'direction', dataIndependent:true },
-  { id:'backup', label:'Backup & Recuperação', group:'Governação', icon:'💾', legacyViewId:'backup', access:'direction', dataIndependent:true },
-  { id:'upload', label:'Carregar Docs', group:'Admin', icon:'⇧', legacyViewId:'upload', access:'upload' }
-]);
-
-const BY_ID = new Map(VIEW_CATALOG.map(view => [view.id, view] as const));
-
-export function viewDefinition(id: string): ViewDefinition | undefined {
-  return BY_ID.get(id);
-}
-
-export function defaultView(): ViewDefinition {
-  return BY_ID.get('resumo')!;
-}
+export type AccessPolicy='authenticated'|'direction'|'upload';
+export interface ViewDefinition{id:string;label:string;group:string;icon:string;legacyViewId:string;moduleId?:ModernModuleId;access:AccessPolicy;dataIndependent?:boolean;}
+export const VIEW_CATALOG:readonly ViewDefinition[]=Object.freeze([
+{id:'resumo',label:'Visão Executiva',group:'Início',icon:'◆',legacyViewId:'resumo',moduleId:'portfolio',access:'authenticated'},
+{id:'hotel360',label:'Hotel 360º',group:'Hotéis',icon:'◉',legacyViewId:'hotel360',access:'authenticated'},
+{id:'hoteis',label:'Hotéis',group:'Hotéis',icon:'🏨',legacyViewId:'hoteis',access:'authenticated',dataIndependent:true},
+{id:'fichahotel',label:'Comentários Fecho do Mês',group:'Hotéis',icon:'📝',legacyViewId:'fichahotel',access:'authenticated'},
+{id:'agenda',label:'Agenda Operacional',group:'Gestão',icon:'📅',legacyViewId:'agenda',access:'authenticated',dataIndependent:true},
+{id:'approvals',label:'Aprovações',group:'Gestão',icon:'✓',legacyViewId:'approvals',moduleId:'approvals',access:'authenticated',dataIndependent:true},
+{id:'cityledger',label:'City Ledger',group:'Gestão',icon:'▤',legacyViewId:'cityledger',moduleId:'city-ledger',access:'authenticated',dataIndependent:true},
+{id:'receitas',label:'Receitas',group:'Análise',icon:'↗',legacyViewId:'receitas',access:'authenticated'},
+{id:'custos',label:'Custos',group:'Análise',icon:'↘',legacyViewId:'custos',moduleId:'costs',access:'authenticated'},
+{id:'pl',label:'P&L USALI',group:'Análise',icon:'▦',legacyViewId:'pl',access:'authenticated'},
+{id:'revenuehub',label:'Revenue & Forecast',group:'Análise',icon:'◈',legacyViewId:'revenuehub',moduleId:'revenue',access:'authenticated'},
+{id:'compras',label:'Compras & Artigos',group:'Análise',icon:'▤',legacyViewId:'compras',access:'authenticated',dataIndependent:true},
+{id:'benchmark',label:'Benchmarking',group:'Análise',icon:'◎',legacyViewId:'benchmark',access:'authenticated'},
+{id:'anomalies',label:'Deteção de Anomalias',group:'Análise',icon:'⚠',legacyViewId:'anomalies',access:'authenticated'},
+{id:'ocupacao',label:'Ocupação',group:'Análise avançada',icon:'▥',legacyViewId:'ocupacao',moduleId:'occupancy',access:'authenticated'},
+{id:'costanalysis',label:'Análise de Custos',group:'Análise avançada',icon:'⌁',legacyViewId:'costanalysis',access:'authenticated'},
+{id:'cua',label:'Custo / Actividade',group:'Análise avançada',icon:'⚡',legacyViewId:'cua',access:'authenticated'},
+{id:'compare',label:'Comparar Hotéis',group:'Análise avançada',icon:'⚖',legacyViewId:'compare',access:'authenticated'},
+{id:'ranking',label:'Ranking Composto',group:'Análise avançada',icon:'🏆',legacyViewId:'ranking',access:'authenticated'},
+{id:'sazonalidade',label:'Sazonalidade',group:'Análise avançada',icon:'◌',legacyViewId:'sazonalidade',access:'authenticated'},
+{id:'simulador',label:'Simulador',group:'Análise avançada',icon:'🎛',legacyViewId:'simulador',access:'authenticated'},
+{id:'orcamento',label:'Orçamento',group:'Análise avançada',icon:'▣',legacyViewId:'orcamento',access:'authenticated'},
+{id:'reputacao',label:'Reputação',group:'Qualidade',icon:'★',legacyViewId:'reputacao',moduleId:'reputation',access:'authenticated',dataIndependent:true},
+{id:'instagram',label:'Instagram',group:'Qualidade',icon:'▣',legacyViewId:'instagram',access:'authenticated'},
+{id:'documents',label:'Gestão de Documentos',group:'Suporte',icon:'🗂',legacyViewId:'documents',access:'authenticated',dataIndependent:true},
+{id:'automaticreports',label:'Relatórios Automáticos',group:'Suporte',icon:'📄',legacyViewId:'automaticreports',access:'authenticated',dataIndependent:true},
+{id:'datacenter',label:'Centro de Dados',group:'Governação',icon:'▥',legacyViewId:'datacenter',access:'authenticated',dataIndependent:true},
+{id:'governance',label:'Auditoria & Governação',group:'Governação',icon:'🛡',legacyViewId:'governance',access:'direction',dataIndependent:true},
+{id:'backup',label:'Backup & Recuperação',group:'Governação',icon:'💾',legacyViewId:'backup',access:'direction',dataIndependent:true},
+{id:'upload',label:'Carregar Docs',group:'Admin',icon:'⇧',legacyViewId:'upload',access:'upload'}]);
+const BY_ID=new Map(VIEW_CATALOG.map(view=>[view.id,view] as const));export function viewDefinition(id:string):ViewDefinition|undefined{return BY_ID.get(id);}export function defaultView():ViewDefinition{return BY_ID.get('resumo')!;}
