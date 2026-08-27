@@ -3,7 +3,11 @@
   if(window.__VG_MODERN_PREVIEW_BOOTSTRAP__)return;
   window.__VG_MODERN_PREVIEW_BOOTSTRAP__=true;
 
-  const MODERN_VIEWS=new Set(['resumo','ocupacao','reputacao','revenuehub','custos','approvals','cityledger']);
+  // Reputação fica temporariamente fora da interceção moderna até existir
+  // paridade funcional total com a vista legado (gráficos, fontes, departamentos,
+  // evolução, metas e restantes análises). Assim o modo moderno não retira
+  // funcionalidades ao utilizador.
+  const MODERN_VIEWS=new Set(['resumo','ocupacao','revenuehub','custos','approvals','cityledger']);
   const params=new URLSearchParams(location.search);
   const modernMode=params.get('modern')==='1';
   let abRepairPromise=null;
