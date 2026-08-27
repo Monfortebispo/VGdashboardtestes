@@ -2,6 +2,7 @@ import type { ModernModule } from '../core/module-registry';
 import { OccupancyController, type OccupancyLegacyAdapter } from '../occupancy/occupancy-controller';
 import { clearOccupancyReadOnly, renderOccupancyReadOnly } from '../occupancy/occupancy-renderer';
 import type { OccupancySelection } from '../occupancy/occupancy-state';
+import { occupancyState } from '../occupancy/occupancy-state';
 
 type OccupancyBridge = {
   selection?:()=>Partial<OccupancySelection>;
@@ -31,6 +32,20 @@ const legacyAdapter:OccupancyLegacyAdapter = {
 
 export const occupancyController = new OccupancyController(legacyAdapter);
 let mountedRoot:HTMLElement|undefined;
+let unsubscribe:(()=>void)|undefined;
+
+function renderCurrent():void {
+  if(!mountedRoot)return;
+  renderOccupancyReadOnly(mountedRoot,occupancyState.current(),{
+    onSelectionChange(next){
+      occupancyController.setSelection(next);
+    },
+    async onRefresh(){
+      await occupancyController.refresh();
+      renderCurrent();
+    }
+  });
+}
 
 const occupancy:ModernModule = {
   id:'occupancy',
@@ -40,9 +55,13 @@ const occupancy:ModernModule = {
     root.dataset.modernOccupancy='ready';
     root.dataset.modernOccupancySnapshots=String(prepared.diagnostics.snapshots);
     root.dataset.modernOccupancyHotels=String(prepared.diagnostics.hotels);
-    renderOccupancyReadOnly(root,prepared.selection);
+    unsubscribe?.();
+    unsubscribe=occupancyState.subscribe(()=>renderCurrent());
+    renderCurrent();
   },
   unmount(){
+    unsubscribe?.();
+    unsubscribe=undefined;
     if(mountedRoot)clearOccupancyReadOnly(mountedRoot);
     mountedRoot=undefined;
   }
