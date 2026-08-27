@@ -57,20 +57,24 @@ export function renderOccupancyReadOnly(root:HTMLElement,selection:Readonly<Occu
     return host;
   }
 
-  const allHotels=Object.keys(snapshot.data).sort((a,b)=>a.localeCompare(b,'pt'));
-  const hotels=selection.hotel==='__all__'?allHotels:[selection.hotel].filter(h=>Boolean(snapshot.data[h]));
-  const allYears=[...new Set(allHotels.flatMap(h=>Object.keys(snapshot.data[h]||{})))].sort();
+  const snapshotHotels=Object.keys(snapshot.data).sort((a,b)=>a.localeCompare(b,'pt'));
+  const eligibleSet=new Set((source.eligibleHotels||[]).map(String));
+  const regionHotels=eligibleSet.size?snapshotHotels.filter(h=>eligibleSet.has(h)):snapshotHotels;
+  const hotels=selection.hotel==='__all__'?regionHotels:[selection.hotel].filter(h=>regionHotels.includes(h)&&Boolean(snapshot.data[h]));
+  const allYears=[...new Set(regionHotels.flatMap(h=>Object.keys(snapshot.data[h]||{})))].sort();
   const years=selection.year?[selection.year].filter(year=>allYears.includes(year)):allYears;
 
   const title=document.createElement('h2');
   title.textContent='Ocupação';
   const meta=document.createElement('p');
-  meta.textContent=`Snapshot: ${snapshot.label||snapshot.id} · ${hotels.length} ${hotels.length===1?'hotel':'hotéis'}`;
+  const regional=eligibleSet.size&&regionHotels.length!==snapshotHotels.length?` · filtro regional: ${regionHotels.length}/${snapshotHotels.length} hotéis`:'';
+  meta.textContent=`Snapshot: ${snapshot.label||snapshot.id} · ${hotels.length} ${hotels.length===1?'hotel':'hotéis'}${regional}`;
 
   const controls=document.createElement('div');
   controls.dataset.modernOccupancyControls='true';
 
-  const hotelControl=selectControl('Hotel',selection.hotel,[{value:'__all__',label:'Todos os hotéis'},...allHotels.map(h=>({value:h,label:h}))]);
+  const hotelValue=selection.hotel==='__all__'||regionHotels.includes(selection.hotel)?selection.hotel:'__all__';
+  const hotelControl=selectControl('Hotel',hotelValue,[{value:'__all__',label:'Todos os hotéis'},...regionHotels.map(h=>({value:h,label:h}))]);
   const snapshotControl=selectControl('Snapshot',selection.snapshot,[{value:'__latest__',label:'Mais recente'},...source.snapshots.map(s=>({value:String(s.id),label:String(s.label||s.id)}))]);
   const yearControl=selectControl('Ano',selection.year||'', [{value:'',label:'Todos os anos'},...allYears.map(y=>({value:y,label:y}))]);
   const monthControl=selectControl('Mês',selection.month==null?'':String(selection.month), [{value:'',label:'Todos os meses'},...MONTHS.map((m,i)=>({value:String(i),label:m}))]);
