@@ -1,0 +1,3 @@
+export interface CityLedgerSelection{hotel:string;bucket:string;query:string;tab:'panorama'|'entidades'|'faturas'|'diligencias';}
+type Listener=(s:Readonly<CityLedgerSelection>)=>void;class Store{private s:CityLedgerSelection={hotel:'__all__',bucket:'__all__',query:'',tab:'panorama'};private ls=new Set<Listener>();current(){return Object.freeze({...this.s});}replace(n:Partial<CityLedgerSelection>){const next={...this.s,...n};const changed=JSON.stringify(next)!==JSON.stringify(this.s);this.s=next;if(changed)this.ls.forEach(l=>l(this.current()));return this.current();}subscribe(l:Listener){this.ls.add(l);return()=>this.ls.delete(l);}}
+export const cityLedgerState=new Store();
