@@ -1,0 +1,5 @@
+import {cachedData,ensureDataSource} from './data-registry';import {normalizeCityLedgerRows,normalizeCityLedgerDiligences,type CityLedgerSourceSnapshot} from './city-ledger-model';
+export interface CityLedgerPrepared{rows:ReturnType<typeof normalizeCityLedgerRows>;diligences:ReturnType<typeof normalizeCityLedgerDiligences>;snapshots:unknown[];snapshot:unknown|null;market:string;currency:string;available:boolean;}
+function prep(raw:CityLedgerSourceSnapshot|undefined):CityLedgerPrepared{return{rows:normalizeCityLedgerRows(raw?.rows||[]),diligences:normalizeCityLedgerDiligences(raw?.diligences||[]),snapshots:Array.isArray(raw?.snapshots)?raw!.snapshots:[],snapshot:raw?.snapshot||null,market:raw?.market||'',currency:raw?.currency||'EUR',available:!!raw?.available};}
+export async function cityLedgerData(force=false){return prep(await ensureDataSource<CityLedgerSourceSnapshot>('cityledger',{force}));}
+export function currentCityLedgerData(){return prep(cachedData<CityLedgerSourceSnapshot>('cityledger'));}
