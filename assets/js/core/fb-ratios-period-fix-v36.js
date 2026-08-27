@@ -38,8 +38,6 @@
     if(direct!=null) return direct;
     const total=fbRevenue(hotel,year,d);
     if(total==null) return null;
-    // Só o RAW representa a seleção temporal atual. A repartição vem do detalhe,
-    // mas o valor absoluto continua a ser o total F&B do P&L selecionado.
     if(typeof RAW!=='undefined' && d===RAW){
       const share=splitShare(hotel,year,'COMIDA');
       if(share!=null) return total*share;
@@ -77,4 +75,37 @@
     const r=window.revAB(hotel,year,RAW);
     return r>0&&(c1||c2)?(c1+c2)/r*100:null;
   };
+
+  // Deploy Preview: expõe a Ocupação moderna na navegação normal para validação visual.
+  function installOccupancyEntry(){
+    if(document.getElementById('nav-ocupacao')) return;
+    const anchor=document.getElementById('nav-revenuehub') || document.getElementById('nav-revenueint') || document.getElementById('nav-pl');
+    if(!anchor?.parentElement) return;
+
+    if(!document.getElementById('view-ocupacao')){
+      const view=document.createElement('div');
+      view.className='tab-content';
+      view.id='view-ocupacao';
+      const reference=document.getElementById('view-revenuehub') || document.getElementById('view-reputacao');
+      if(reference?.parentElement) reference.parentElement.insertBefore(view,reference.nextSibling);
+      else document.body.appendChild(view);
+    }
+
+    const btn=document.createElement('button');
+    btn.className='sb-nav-btn';
+    btn.id='nav-ocupacao';
+    btn.innerHTML='<span class="sb-nav-icon">▥</span> Ocupação';
+    btn.addEventListener('click',async function(){
+      try{
+        const nav=window.VG?.modernPreview?.navigation;
+        if(nav?.go){ await nav.go('ocupacao'); return; }
+        const once=()=>window.VG?.modernPreview?.navigation?.go?.('ocupacao');
+        window.addEventListener('vg-modern-preview-ready',once,{once:true});
+      }catch(e){ console.error('Ocupação moderna: falha de navegação',e); }
+    });
+    anchor.insertAdjacentElement('afterend',btn);
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installOccupancyEntry,{once:true});
+  else installOccupancyEntry();
 })();
