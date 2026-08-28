@@ -48,22 +48,42 @@ function restoreLegacyView(){
   });
   hiddenLegacy=[];
 }
+function showLoading(root:HTMLElement){
+  let host=root.querySelector<HTMLElement>('[data-modern-reputation-readonly]');
+  if(!host){host=document.createElement('section');host.dataset.modernReputationReadonly='true';root.appendChild(host);}
+  host.replaceChildren();
+  const title=document.createElement('h2');title.textContent='Reputação & Guest Experience';
+  const loading=document.createElement('p');loading.textContent='A carregar reputação…';loading.setAttribute('role','status');loading.setAttribute('aria-live','polite');
+  host.append(title,loading);
+}
 
 const reputation:ModernModule = {
   id:'reputation',
   async mount(root){
     mountedRoot=root;
-    const prepared=await reputationController.prepare();
-    root.dataset.modernReputation='ready';
-    root.dataset.modernReputationRecords=String(prepared.diagnostics.records);
-    root.dataset.modernReputationAvailable=String(prepared.diagnostics.available);
-    unsubscribe?.();
-    unsubscribe=reputationState.subscribe(()=>render());
-    window.removeEventListener('vg-reputation-data-changed',onLegacyChange);
-    window.addEventListener('vg-reputation-data-changed',onLegacyChange);
-    scheduleEmptyRetries(prepared.diagnostics.records);
-    render();
+    // Esconde a vista legacy imediatamente, antes de qualquer await. Assim não há
+    // um frame intermédio com a versão antiga enquanto os dados modernos são preparados.
     hideLegacyView(root);
+    showLoading(root);
+    root.dataset.modernReputation='loading';
+    try{
+      const prepared=await reputationController.prepare();
+      root.dataset.modernReputation='ready';
+      root.dataset.modernReputationRecords=String(prepared.diagnostics.records);
+      root.dataset.modernReputationAvailable=String(prepared.diagnostics.available);
+      unsubscribe?.();
+      unsubscribe=reputationState.subscribe(()=>render());
+      window.removeEventListener('vg-reputation-data-changed',onLegacyChange);
+      window.addEventListener('vg-reputation-data-changed',onLegacyChange);
+      scheduleEmptyRetries(prepared.diagnostics.records);
+      render();
+    }catch(error){
+      root.dataset.modernReputation='error';
+      clearReputationReadOnly(root);
+      restoreLegacyView();
+      mountedRoot=undefined;
+      throw error;
+    }
   },
   unmount(){
     unsubscribe?.();unsubscribe=undefined;
