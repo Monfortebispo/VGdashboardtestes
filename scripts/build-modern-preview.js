@@ -11,11 +11,10 @@ if(html.includes(marker)){
   process.exit(0);
 }
 
-// Evita qualquer flash da Reputação legacy no modo moderno. A classe é colocada
-// no <html> ainda no <head>, antes de o body ser pintado. Assim o conteúdo antigo
-// nunca chega a ficar visível; o host moderno, criado depois, continua visível.
-// Em caso de erro real do módulo, este pode ativar a classe de fallback.
-const reputationPrehide=`\n<!-- VG REPUTATION PREPAINT GUARD -->\n<style>\nhtml.vg-modern-preview #view-reputacao > :not([data-modern-reputation-readonly]){display:none!important}\nhtml.vg-modern-preview.vg-modern-reputation-fallback #view-reputacao > :not([data-modern-reputation-readonly]){display:revert!important}\n</style>\n<script>\n(function(){\n  try{\n    if(new URLSearchParams(location.search).get('modern')==='1')document.documentElement.classList.add('vg-modern-preview');\n  }catch(e){}\n})();\n</script>\n`;
+// No artefacto de Deploy Preview, a Reputação legacy nunca é pintada. Isto não
+// depende de ?modern=1, do clique, do hash nem da velocidade de montagem do módulo.
+// A vista antiga só é libertada explicitamente se o módulo moderno falhar.
+const reputationPrehide=`\n<!-- VG REPUTATION PREPAINT GUARD -->\n<style>\nhtml.vg-reputation-modern-preview #view-reputacao > :not([data-modern-reputation-readonly]):not([data-modern-reputation-preview-pending]){display:none!important}\nhtml.vg-reputation-modern-preview.vg-modern-reputation-fallback #view-reputacao > :not([data-modern-reputation-readonly]):not([data-modern-reputation-preview-pending]){display:revert!important}\n</style>\n<script>\ndocument.documentElement.classList.add('vg-reputation-modern-preview');\n</script>\n`;
 
 if(!html.includes('</head>'))throw new Error('index.html sem </head>');
 html=html.replace('</head>',`${reputationPrehide}</head>`);
