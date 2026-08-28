@@ -101,7 +101,7 @@
 
   window.VG=window.VG||{};
   window.VG.fbRatios=Object.freeze({
-    version:3,
+    version:4,
     selectedMonths,
     isYtdSelection,
     periodSource:function(){
@@ -115,27 +115,49 @@
     }
   });
 
-  // O utilizador optou por deixar de apresentar no separador de Custos
-  // os rácios específicos de Comidas, Bebidas e A&B, por não serem fiáveis
-  // em todas as combinações mensal/acumulada.
+  // Remove integralmente qualquer bloco residual de rácios F&B no separador de Custos.
   function removeCostFbRatioUi(){
+    const root=document.getElementById('view-custos');
+    if(!root)return;
+
     const chart=document.getElementById('chartCostFBRatio');
     if(chart){
-      const card=chart.closest('.chart-card');
-      if(card) card.remove();
-      else chart.remove();
+      const card=chart.closest('.chart-card,.table-card,.card,.section-card');
+      if(card)card.remove(); else chart.remove();
     }
 
     const body=document.getElementById('costFbRatioTableBody');
     if(body){
       const card=body.closest('.chart-card,.table-card,.card,.section-card');
-      if(card) card.remove();
+      if(card)card.remove();
       else {
         const table=body.closest('table');
-        if(table) table.remove();
-        else body.remove();
+        if(table)table.remove(); else body.remove();
       }
     }
+
+    // A faixa de título/nota pode existir isolada, sem gráfico nem tabela.
+    // Remove o menor contentor que contenha o título específico e não contenha outra informação de Custos.
+    const title='Rácios de Comidas & Bebidas';
+    const nodes=Array.from(root.querySelectorAll('div,section,header'))
+      .filter(function(el){
+        const txt=String(el.textContent||'').replace(/\s+/g,' ').trim();
+        return txt.includes(title);
+      })
+      .sort(function(a,b){
+        const ta=String(a.textContent||'').length;
+        const tb=String(b.textContent||'').length;
+        return ta-tb;
+      });
+
+    const residual=nodes.find(function(el){
+      const txt=String(el.textContent||'').replace(/\s+/g,' ').trim();
+      return txt.includes(title) &&
+        !el.querySelector('table,canvas') &&
+        (txt.includes('Exclui armazém') || txt.includes('1 mês = mensal') || txt.length<260);
+    }) || nodes[0];
+
+    if(residual)residual.remove();
   }
 
   function installCostFbRatioRemoval(){
@@ -144,6 +166,9 @@
     if(!view||typeof MutationObserver==='undefined')return;
     const observer=new MutationObserver(function(){ removeCostFbRatioUi(); });
     observer.observe(view,{childList:true,subtree:true});
+    setTimeout(removeCostFbRatioUi,0);
+    setTimeout(removeCostFbRatioUi,300);
+    setTimeout(removeCostFbRatioUi,1000);
   }
 
   // Deploy Preview: expõe a Ocupação moderna na navegação normal para validação visual.
