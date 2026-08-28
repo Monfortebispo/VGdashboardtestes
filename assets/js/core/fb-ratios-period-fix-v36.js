@@ -1,7 +1,4 @@
-// VG Operations V36 — correção de consistência temporal dos rácios A&B
-// Regra: custos e receitas usam sempre exatamente o mesmo período P&L selecionado.
-// A Receita Detalhada serve apenas para repartir a Receita F&B entre Comidas/Bebidas;
-// nunca substitui o denominador absoluto do P&L mensal/acumulado.
+// VG Operations V36 — compatibilidade dos rácios A&B e remoção da apresentação no separador de custos
 (function(){
   'use strict';
   if(window.__VG_FB_RATIOS_PERIOD_FIX_V36__) return;
@@ -57,6 +54,7 @@
     }catch(e){return null;}
   }
 
+  // Mantidas apenas por compatibilidade com chamadas antigas fora do separador de Custos.
   window.revAB=function(hotel,year,data){
     return fbRevenue(hotel,year,data||selectedPeriodData());
   };
@@ -103,7 +101,7 @@
 
   window.VG=window.VG||{};
   window.VG.fbRatios=Object.freeze({
-    version:2,
+    version:3,
     selectedMonths,
     isYtdSelection,
     periodSource:function(){
@@ -116,6 +114,37 @@
       return 'selecao-agregada';
     }
   });
+
+  // O utilizador optou por deixar de apresentar no separador de Custos
+  // os rácios específicos de Comidas, Bebidas e A&B, por não serem fiáveis
+  // em todas as combinações mensal/acumulada.
+  function removeCostFbRatioUi(){
+    const chart=document.getElementById('chartCostFBRatio');
+    if(chart){
+      const card=chart.closest('.chart-card');
+      if(card) card.remove();
+      else chart.remove();
+    }
+
+    const body=document.getElementById('costFbRatioTableBody');
+    if(body){
+      const card=body.closest('.chart-card,.table-card,.card,.section-card');
+      if(card) card.remove();
+      else {
+        const table=body.closest('table');
+        if(table) table.remove();
+        else body.remove();
+      }
+    }
+  }
+
+  function installCostFbRatioRemoval(){
+    removeCostFbRatioUi();
+    const view=document.getElementById('view-custos');
+    if(!view||typeof MutationObserver==='undefined')return;
+    const observer=new MutationObserver(function(){ removeCostFbRatioUi(); });
+    observer.observe(view,{childList:true,subtree:true});
+  }
 
   // Deploy Preview: expõe a Ocupação moderna na navegação normal para validação visual.
   function installOccupancyEntry(){
@@ -147,6 +176,10 @@
     anchor.insertAdjacentElement('afterend',btn);
   }
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installOccupancyEntry,{once:true});
-  else installOccupancyEntry();
+  function install(){
+    installCostFbRatioRemoval();
+    installOccupancyEntry();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
 })();
