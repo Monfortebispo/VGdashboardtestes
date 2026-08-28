@@ -1,5 +1,6 @@
 import { currentReputationData } from '../data/reputation-service';
-import { reputationRecords } from '../data/reputation-model';
+import { latestReputationRecordsByHotel, reputationPeriodDate, reputationRecords } from '../data/reputation-model';
+import type { ReputationRecord } from '../data/reputation-model';
 import type { ReputationSelection } from './reputation-state';
 
 export interface ReputationRenderActions {
@@ -14,15 +15,49 @@ function control(labelText:string,value:string,values:string[]):HTMLLabelElement
   values.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v==='__all__'?'Todos':v==='__latest__'?'Mais recente':v;select.appendChild(o);});
   select.value=value;label.append(span,select);return label;
 }
-function fmt(v:number|null):string{return v==null?'—':Number.isInteger(v)?String(v):v.toFixed(1);}
-const MONTHS:Record<string,number>={jan:0,feb:1,fev:1,mar:2,apr:3,abr:3,may:4,mai:4,jun:5,jul:6,aug:7,ago:7,sep:8,set:8,oct:9,out:9,nov:10,dec:11,dez:11};
-function periodDate(value:string):number{
-  const text=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const all=[...text.matchAll(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/g)];
-  const m=all.length?all[all.length-1]:null;
-  if(!m)return 0;
-  const month=MONTHS[m[2].slice(0,3).toLowerCase()];
-  return month==null?0:new Date(Number(m[3]),month,Number(m[1])).getTime();
+function fmt(v:number|null,digits=1):string{return v==null?'—':Number.isInteger(v)?String(v):v.toFixed(digits);}
+function pct(v:number|null):string{return v==null?'—':`${fmt(v)}%`;}
+function average(values:(number|null)[]):number|null{
+  const valid=values.filter((v):v is number=>v!=null&&Number.isFinite(v));
+  return valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:null;
+}
+function sum(values:(number|null)[]):number{return values.reduce<number>((a,b)=>a+(b??0),0);}
+function cell(value:string):HTMLTableCellElement{const td=document.createElement('td');td.textContent=value;return td;}
+function heading(text:string):HTMLHeadingElement{const h=document.createElement('h3');h.textContent=text;return h;}
+function section(className:string):HTMLElement{const s=document.createElement('section');s.className=className;return s;}
+function metricCard(label:string,value:string,detail?:string):HTMLElement{
+  const card=document.createElement('div');card.className='modern-reputation-kpi';
+  const l=document.createElement('span');l.textContent=label;const v=document.createElement('strong');v.textContent=value;card.append(l,v);
+  if(detail){const d=document.createElement('small');d.textContent=detail;card.appendChild(d);}return card;
+}
+function selectedRecords(records:ReputationRecord[],selection:Readonly<ReputationSelection>):ReputationRecord[]{
+  const hotelFiltered=selection.hotel==='__all__'?records:records.filter(r=>r.hotel===selection.hotel);
+  if(selection.period==='__latest__')return latestReputationRecordsByHotel(hotelFiltered);
+  return hotelFiltered.filter(r=>r.period===selection.period).sort((a,b)=>a.hotel.localeCompare(b.hotel,'pt'));
+}
+function renderRanking(records:ReputationRecord[]):HTMLElement{
+  const wrap=section('modern-reputation-section');wrap.appendChild(heading('Ranking GRI'));
+  const table=document.createElement('table');table.dataset.modernReputationRanking='true';
+  const head=document.createElement('thead'),hr=document.createElement('tr');['#','Hotel','Período','GRI','Meta','Δ GRI','Avaliações','Resposta Gestão'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
+  const body=document.createElement('tbody');[...records].sort((a,b)=>(b.gri??-Infinity)-(a.gri??-Infinity)).forEach((r,i)=>{const tr=document.createElement('tr');[String(i+1),r.hotel,r.period,pct(r.gri),pct(r.griGoal),r.griDelta==null?'—':`${r.griDelta>=0?'+':''}${fmt(r.griDelta)} p.p.`,fmt(r.reviews,0),pct(r.managementResponse)].forEach(v=>tr.appendChild(cell(v)));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
+}
+function renderSources(records:ReputationRecord[]):HTMLElement{
+  const wrap=section('modern-reputation-section');wrap.appendChild(heading('Resultados por origem'));
+  const names=[...new Set(records.flatMap(r=>r.sources.map(s=>s.name)))];
+  const table=document.createElement('table');table.dataset.modernReputationSources='true';const head=document.createElement('thead'),hr=document.createElement('tr');['Hotel',...names].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
+  const body=document.createElement('tbody');records.forEach(r=>{const tr=document.createElement('tr');tr.appendChild(cell(r.hotel));names.forEach(name=>tr.appendChild(cell(pct(r.sources.find(s=>s.name===name)?.score??null))));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
+}
+function renderDepartments(records:ReputationRecord[]):HTMLElement{
+  const wrap=section('modern-reputation-section');wrap.appendChild(heading('Departamentos'));
+  const names=[...new Set(records.flatMap(r=>r.departments.map(d=>d.name)))];
+  const table=document.createElement('table');table.dataset.modernReputationDepartments='true';const head=document.createElement('thead'),hr=document.createElement('tr');['Hotel',...names].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
+  const body=document.createElement('tbody');records.forEach(r=>{const tr=document.createElement('tr');tr.appendChild(cell(r.hotel));names.forEach(name=>tr.appendChild(cell(pct(r.departments.find(d=>d.name===name)?.value??null))));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
+}
+function renderEvolution(records:ReputationRecord[],selection:Readonly<ReputationSelection>):HTMLElement{
+  const wrap=section('modern-reputation-section');wrap.appendChild(heading('Evolução temporal'));
+  const scoped=selection.hotel==='__all__'?records:records.filter(r=>r.hotel===selection.hotel);
+  const table=document.createElement('table');table.dataset.modernReputationEvolution='true';const head=document.createElement('thead'),hr=document.createElement('tr');['Hotel','Período','GRI','Avaliações','Resposta Gestão'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
+  const body=document.createElement('tbody');[...scoped].sort((a,b)=>a.hotel.localeCompare(b.hotel,'pt')||reputationPeriodDate(a.period)-reputationPeriodDate(b.period)).forEach(r=>{const tr=document.createElement('tr');[r.hotel,r.period,pct(r.gri),fmt(r.reviews,0),pct(r.managementResponse)].forEach(v=>tr.appendChild(cell(v)));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
 }
 
 export function renderReputationReadOnly(root:HTMLElement,selection:Readonly<ReputationSelection>,actions:ReputationRenderActions={}):HTMLElement {
@@ -34,11 +69,10 @@ export function renderReputationReadOnly(root:HTMLElement,selection:Readonly<Rep
 
   const records=reputationRecords(source.data);
   const hotels=[...new Set(records.map(r=>r.hotel).filter(v=>v!=='—'))].sort((a,b)=>a.localeCompare(b,'pt'));
-  const periods=[...new Set(records.map(r=>r.period).filter(v=>v!=='—'))].sort((a,b)=>periodDate(b)-periodDate(a)||b.localeCompare(a,'pt'));
-  const currentPeriod=selection.period==='__latest__'?(periods[0]||'__latest__'):selection.period;
-  const filtered=records.filter(r=>(selection.hotel==='__all__'||r.hotel===selection.hotel)&&(selection.period==='__latest__'?(!periods.length||r.period===currentPeriod):r.period===selection.period));
+  const periods=[...new Set(records.map(r=>r.period).filter(v=>v!=='—'))].sort((a,b)=>reputationPeriodDate(b)-reputationPeriodDate(a)||b.localeCompare(a,'pt'));
+  const filtered=selectedRecords(records,selection);
 
-  const meta=document.createElement('p');meta.textContent=`${filtered.length} hotéis na seleção atual · ${records.length} resumos ReviewPro carregados`;
+  const meta=document.createElement('p');meta.textContent=`${filtered.length} hotéis/resumos na seleção atual · ${records.length} resumos ReviewPro carregados`;
   const controls=document.createElement('div');controls.dataset.modernReputationControls='true';
   const hc=control('Hotel',selection.hotel,['__all__',...hotels]);
   const pc=control('Período',selection.period,['__latest__',...periods]);
@@ -48,11 +82,19 @@ export function renderReputationReadOnly(root:HTMLElement,selection:Readonly<Rep
   const refresh=document.createElement('button');refresh.type='button';refresh.textContent='Atualizar reputação';refresh.addEventListener('click',async()=>{refresh.disabled=true;try{await actions.onRefresh?.();}finally{refresh.disabled=false;}});
   controls.append(hc,pc,refresh);
 
-  const table=document.createElement('table');table.dataset.modernReputationTable='true';
-  const thead=document.createElement('thead');const hr=document.createElement('tr');['Hotel','Período','GRI','Avaliações'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});thead.appendChild(hr);table.appendChild(thead);
-  const tbody=document.createElement('tbody');filtered.sort((a,b)=>a.hotel.localeCompare(b.hotel,'pt')).forEach(r=>{const tr=document.createElement('tr');[r.hotel,r.period,fmt(r.gri),fmt(r.reviews)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td);});tbody.appendChild(tr);});table.appendChild(tbody);
   if(!filtered.length){const empty=document.createElement('p');empty.textContent='Sem registos para os filtros selecionados.';host.replaceChildren(title,meta,controls,empty);return host;}
-  host.replaceChildren(title,meta,controls,table);return host;
+
+  const kpis=document.createElement('div');kpis.className='modern-reputation-kpis';
+  const avgGri=average(filtered.map(r=>r.gri)),avgGoal=average(filtered.map(r=>r.griGoal)),avgResp=average(filtered.map(r=>r.managementResponse));
+  const goalHits=filtered.filter(r=>r.gri!=null&&r.griGoal!=null&&r.gri>=r.griGoal).length;
+  kpis.append(
+    metricCard('GRI médio',pct(avgGri),avgGoal==null?undefined:`Meta média ${pct(avgGoal)}`),
+    metricCard('Avaliações',String(sum(filtered.map(r=>r.reviews)))),
+    metricCard('Resposta da gestão',pct(avgResp)),
+    metricCard('Hotéis na meta',`${goalHits}/${filtered.filter(r=>r.griGoal!=null).length}`)
+  );
+
+  host.replaceChildren(title,meta,controls,kpis,renderRanking(filtered),renderSources(filtered),renderDepartments(filtered),renderEvolution(records,selection));return host;
 }
 
 export function clearReputationReadOnly(root:HTMLElement):void {root.querySelector('[data-modern-reputation-readonly]')?.remove();}
