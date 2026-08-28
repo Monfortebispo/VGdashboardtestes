@@ -8,6 +8,10 @@ export interface ReputationRenderActions {
   onRefresh?:()=>void|Promise<void>;
 }
 
+type ChartConfig={type:string;data:{labels:string[];datasets:Array<Record<string,unknown>>};options?:Record<string,unknown>};
+type ChartInstance={destroy:()=>void};
+type ChartConstructor={new(ctx:CanvasRenderingContext2D,config:ChartConfig):ChartInstance;getChart?:(canvas:HTMLCanvasElement)=>ChartInstance|undefined};
+
 function control(labelText:string,value:string,values:string[]):HTMLLabelElement{
   const label=document.createElement('label');label.className='modern-reputation-filter';
   const span=document.createElement('span');span.textContent=labelText;
@@ -17,6 +21,7 @@ function control(labelText:string,value:string,values:string[]):HTMLLabelElement
 }
 function fmt(v:number|null,digits=1):string{return v==null?'—':Number.isInteger(v)?String(v):v.toFixed(digits);}
 function pct(v:number|null):string{return v==null?'—':`${fmt(v)}%`;}
+function signed(v:number|null,suffix=''):string{return v==null?'—':`${v>=0?'+':''}${fmt(v)}${suffix}`;}
 function average(values:(number|null)[]):number|null{
   const valid=values.filter((v):v is number=>v!=null&&Number.isFinite(v));
   return valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:null;
@@ -38,8 +43,8 @@ function selectedRecords(records:ReputationRecord[],selection:Readonly<Reputatio
 function renderRanking(records:ReputationRecord[]):HTMLElement{
   const wrap=section('modern-reputation-section');wrap.appendChild(heading('Ranking GRI'));
   const table=document.createElement('table');table.dataset.modernReputationRanking='true';
-  const head=document.createElement('thead'),hr=document.createElement('tr');['#','Hotel','Período','GRI','Meta','Δ GRI','Avaliações','Resposta Gestão'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
-  const body=document.createElement('tbody');[...records].sort((a,b)=>(b.gri??-Infinity)-(a.gri??-Infinity)).forEach((r,i)=>{const tr=document.createElement('tr');[String(i+1),r.hotel,r.period,pct(r.gri),pct(r.griGoal),r.griDelta==null?'—':`${r.griDelta>=0?'+':''}${fmt(r.griDelta)} p.p.`,fmt(r.reviews,0),pct(r.managementResponse)].forEach(v=>tr.appendChild(cell(v)));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
+  const head=document.createElement('thead'),hr=document.createElement('tr');['#','Hotel','Período','GRI','Meta','Δ GRI','Avaliações','Δ Avaliações','Resposta Gestão','CQI','Rank VG'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
+  const body=document.createElement('tbody');[...records].sort((a,b)=>(b.gri??-Infinity)-(a.gri??-Infinity)).forEach((r,i)=>{const tr=document.createElement('tr');[String(i+1),r.hotel,r.period,pct(r.gri),pct(r.griGoal),signed(r.griDelta,' p.p.'),fmt(r.reviews,0),signed(r.reviewsDelta),pct(r.managementResponse),pct(r.cqi),fmt(r.rankVG,0)].forEach(v=>tr.appendChild(cell(v)));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
 }
 function renderSources(records:ReputationRecord[]):HTMLElement{
   const wrap=section('modern-reputation-section');wrap.appendChild(heading('Resultados por origem'));
@@ -56,8 +61,65 @@ function renderDepartments(records:ReputationRecord[]):HTMLElement{
 function renderEvolution(records:ReputationRecord[],selection:Readonly<ReputationSelection>):HTMLElement{
   const wrap=section('modern-reputation-section');wrap.appendChild(heading('Evolução temporal'));
   const scoped=selection.hotel==='__all__'?records:records.filter(r=>r.hotel===selection.hotel);
-  const table=document.createElement('table');table.dataset.modernReputationEvolution='true';const head=document.createElement('thead'),hr=document.createElement('tr');['Hotel','Período','GRI','Avaliações','Resposta Gestão'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
-  const body=document.createElement('tbody');[...scoped].sort((a,b)=>a.hotel.localeCompare(b.hotel,'pt')||reputationPeriodDate(a.period)-reputationPeriodDate(b.period)).forEach(r=>{const tr=document.createElement('tr');[r.hotel,r.period,pct(r.gri),fmt(r.reviews,0),pct(r.managementResponse)].forEach(v=>tr.appendChild(cell(v)));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
+  const table=document.createElement('table');table.dataset.modernReputationEvolution='true';const head=document.createElement('thead'),hr=document.createElement('tr');['Hotel','Período','GRI','Δ GRI','Avaliações','Δ Avaliações','Resposta Gestão'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.appendChild(th);});head.appendChild(hr);table.appendChild(head);
+  const body=document.createElement('tbody');[...scoped].sort((a,b)=>a.hotel.localeCompare(b.hotel,'pt')||reputationPeriodDate(a.period)-reputationPeriodDate(b.period)).forEach(r=>{const tr=document.createElement('tr');[r.hotel,r.period,pct(r.gri),signed(r.griDelta,' p.p.'),fmt(r.reviews,0),signed(r.reviewsDelta),pct(r.managementResponse)].forEach(v=>tr.appendChild(cell(v)));body.appendChild(tr);});table.appendChild(body);wrap.appendChild(table);return wrap;
+}
+function miniTable(titleText:string,headers:string[],rows:string[][]):HTMLElement{
+  const block=document.createElement('div');block.className='modern-reputation-detail-block';block.appendChild(heading(titleText));
+  if(!rows.length){const p=document.createElement('p');p.textContent='Sem dados.';block.appendChild(p);return block;}
+  const table=document.createElement('table');const thead=document.createElement('thead'),hr=document.createElement('tr');headers.forEach(h=>{const th=document.createElement('th');th.textContent=h;hr.appendChild(th);});thead.appendChild(hr);table.appendChild(thead);
+  const tbody=document.createElement('tbody');rows.forEach(row=>{const tr=document.createElement('tr');row.forEach(v=>tr.appendChild(cell(v)));tbody.appendChild(tr);});table.appendChild(tbody);block.appendChild(table);return block;
+}
+function renderDetail(records:ReputationRecord[]):HTMLElement{
+  const wrap=section('modern-reputation-section');wrap.dataset.modernReputationDetail='true';wrap.appendChild(heading('Detalhe por unidade e semana'));
+  const cards=document.createElement('div');cards.className='modern-reputation-detail-grid';
+  records.forEach(r=>{
+    const card=document.createElement('article');card.className='modern-reputation-detail-card';
+    const h=document.createElement('h4');h.textContent=`${r.hotel} · ${r.week}`;
+    const summary=document.createElement('div');summary.className='modern-reputation-detail-summary';
+    summary.append(
+      metricCard('GRI',pct(r.gri),`Δ ${signed(r.griDelta,' p.p.')}`),
+      metricCard('Meta',pct(r.griGoal)),
+      metricCard('Avaliações',fmt(r.reviews,0),`Δ ${signed(r.reviewsDelta)}`),
+      metricCard('Resposta gestão',pct(r.managementResponse)),
+      metricCard('CQI',pct(r.cqi)),
+      metricCard('Rank VG',fmt(r.rankVG,0))
+    );
+    card.append(h,summary,
+      miniTable('Origens',['Origem','Score','Δ','Reviews'],r.sources.map(s=>[s.name,pct(s.score),signed(s.delta,' p.p.'),fmt(s.reviews,0)])),
+      miniTable('Departamentos',['Departamento','Score','Δ'],r.departments.map(d=>[d.name,pct(d.value),signed(d.delta,' p.p.')])),
+      miniTable('Categorias negativas',['Categoria','Menções','Impacto'],r.negativeCategories.map(c=>[c.category,fmt(c.mentions,0),signed(c.impact)])),
+      miniTable('Categorias positivas',['Categoria','Menções','Impacto'],r.positiveCategories.map(c=>[c.category,fmt(c.mentions,0),signed(c.impact)]))
+    );
+    cards.appendChild(card);
+  });
+  wrap.appendChild(cards);return wrap;
+}
+function chartCard(titleText:string,id:string):HTMLElement{
+  const card=document.createElement('div');card.className='modern-reputation-chart-card';card.appendChild(heading(titleText));
+  const canvas=document.createElement('canvas');canvas.id=id;canvas.height=220;card.appendChild(canvas);return card;
+}
+function renderChartArea():HTMLElement{
+  const wrap=section('modern-reputation-section');wrap.dataset.modernReputationCharts='true';wrap.appendChild(heading('Gráficos de reputação'));
+  const grid=document.createElement('div');grid.className='modern-reputation-chart-grid';
+  grid.append(chartCard('GRI por hotel','modernRepChartGri'),chartCard('Resultados por origem','modernRepChartSources'),chartCard('Departamentos','modernRepChartDepartments'),chartCard('Evolução GRI','modernRepChartEvolution'));
+  wrap.appendChild(grid);return wrap;
+}
+function chartConstructor():ChartConstructor|undefined{return (window as unknown as {Chart?:ChartConstructor}).Chart;}
+function destroyChart(canvas:HTMLCanvasElement,Chart:ChartConstructor):void{try{Chart.getChart?.(canvas)?.destroy();}catch{}}
+function buildCharts(root:HTMLElement,visible:ReputationRecord[],all:ReputationRecord[],selection:Readonly<ReputationSelection>):void{
+  const Chart=chartConstructor();if(!Chart)return;
+  const make=(id:string,config:ChartConfig)=>{const canvas=root.querySelector<HTMLCanvasElement>(`#${id}`);if(!canvas)return;const ctx=canvas.getContext('2d');if(!ctx)return;destroyChart(canvas,Chart);new Chart(ctx,config);};
+  const labels=visible.map(r=>r.hotel);
+  make('modernRepChartGri',{type:'bar',data:{labels,datasets:[{label:'GRI %',data:visible.map(r=>r.gri),borderWidth:1} ]},options:{responsive:true,maintainAspectRatio:false}});
+  const sourceNames=[...new Set(visible.flatMap(r=>r.sources.map(s=>s.name)))];
+  make('modernRepChartSources',{type:'bar',data:{labels,datasets:sourceNames.map(name=>({label:name,data:visible.map(r=>r.sources.find(s=>s.name===name)?.score??null),borderWidth:1}))},options:{responsive:true,maintainAspectRatio:false}});
+  const deptNames=[...new Set(visible.flatMap(r=>r.departments.map(d=>d.name)))];
+  make('modernRepChartDepartments',{type:'bar',data:{labels,datasets:deptNames.map(name=>({label:name,data:visible.map(r=>r.departments.find(d=>d.name===name)?.value??null),borderWidth:1}))},options:{responsive:true,maintainAspectRatio:false}});
+  const scoped=selection.hotel==='__all__'?all:all.filter(r=>r.hotel===selection.hotel);
+  const periods=[...new Set(scoped.map(r=>r.period))].sort((a,b)=>reputationPeriodDate(a)-reputationPeriodDate(b));
+  const hotels=[...new Set(scoped.map(r=>r.hotel))];
+  make('modernRepChartEvolution',{type:'line',data:{labels:periods,datasets:hotels.map(h=>({label:h,data:periods.map(p=>scoped.find(r=>r.hotel===h&&r.period===p)?.gri??null),spanGaps:true,tension:.3,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false}});
 }
 
 export function renderReputationReadOnly(root:HTMLElement,selection:Readonly<ReputationSelection>,actions:ReputationRenderActions={}):HTMLElement {
@@ -94,7 +156,11 @@ export function renderReputationReadOnly(root:HTMLElement,selection:Readonly<Rep
     metricCard('Hotéis na meta',`${goalHits}/${filtered.filter(r=>r.griGoal!=null).length}`)
   );
 
-  host.replaceChildren(title,meta,controls,kpis,renderRanking(filtered),renderSources(filtered),renderDepartments(filtered),renderEvolution(records,selection));return host;
+  const chartArea=renderChartArea();
+  const detailRecords=selection.hotel==='__all__'?filtered:records.filter(r=>r.hotel===selection.hotel).sort((a,b)=>reputationPeriodDate(b.period)-reputationPeriodDate(a.period));
+  host.replaceChildren(title,meta,controls,kpis,chartArea,renderRanking(filtered),renderSources(filtered),renderDepartments(filtered),renderEvolution(records,selection),renderDetail(detailRecords));
+  window.requestAnimationFrame(()=>buildCharts(host!,filtered,records,selection));
+  return host;
 }
 
 export function clearReputationReadOnly(root:HTMLElement):void {root.querySelector('[data-modern-reputation-readonly]')?.remove();}
