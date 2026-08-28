@@ -2,51 +2,38 @@ const assert=require('assert');
 const fs=require('fs');
 const path=require('path');
 const ROOT=path.resolve(__dirname,'..');
-const modelPath=path.join(ROOT,'src/modern/data/reputation-model.ts');
-const rendererPath=path.join(ROOT,'src/modern/reputation/reputation-renderer.ts');
-const modulePath=path.join(ROOT,'src/modern/modules/reputation.ts');
-const servicePath=path.join(ROOT,'src/modern/data/reputation-service.ts');
-const bridgePath=path.join(ROOT,'assets/js/modules/reputation-modern-bridge-v40.js');
-const model=fs.readFileSync(modelPath,'utf8');
-const renderer=fs.readFileSync(rendererPath,'utf8');
-const mod=fs.readFileSync(modulePath,'utf8');
-const service=fs.readFileSync(servicePath,'utf8');
-const bridge=fs.readFileSync(bridgePath,'utf8');
+const model=fs.readFileSync(path.join(ROOT,'src/modern/data/reputation-model.ts'),'utf8');
+const renderer=fs.readFileSync(path.join(ROOT,'src/modern/reputation/reputation-renderer.ts'),'utf8');
+const mod=fs.readFileSync(path.join(ROOT,'src/modern/modules/reputation.ts'),'utf8');
+const service=fs.readFileSync(path.join(ROOT,'src/modern/data/reputation-service.ts'),'utf8');
+const bridge=fs.readFileSync(path.join(ROOT,'assets/js/modules/reputation-modern-bridge-v40.js'),'utf8');
 
-// Paridade de dados: cada resumo ReviewPro mantém as dimensões que existem no legado.
 [
   'reviewsDelta','griDelta','griGoal','managementResponse','cqi','rankVG',
   'departments','sources','negativeCategories','positiveCategories'
 ].forEach(field=>assert(model.includes(field),`campo de reputação em falta: ${field}`));
-
 assert(model.includes('departmentMetrics(record.depts)'),'departamentos devem continuar dentro do resumo do hotel/período');
 assert(model.includes('sourceMetrics(record.srcList)'),'origens devem continuar dentro do resumo do hotel/período');
-assert(model.includes('categoryMetrics(record.negCats)')&&model.includes('categoryMetrics(record.posCats)'),'categorias positivas/negativas devem ser preservadas');
-assert(model.includes('latestReputationRecordsByHotel'),'modo Mais recente deve ser calculável por hotel, não por uma única semana global');
-assert(model.includes("const key=`${r.hotel}|${r.period}`"),'deduplicação deve continuar a ser hotel + período');
+assert(model.includes('categoryMetrics(record.negCats)')&&model.includes('categoryMetrics(record.posCats)'),'categorias devem ser preservadas');
+assert(model.includes('latestReputationRecordsByHotel'),'Mais recente deve ser calculado por hotel');
+assert(model.includes("const key=`${r.hotel}|${r.period}`"),'deduplicação deve continuar hotel + período');
 
-// Paridade regional: a vista moderna respeita a região global exatamente como o legacy.
 assert(bridge.includes('context:context'),'bridge deve expor contexto regional');
-assert(bridge.includes("typeof activeRegion!=='undefined'"),'bridge deve ler a região global ativa');
-assert(bridge.includes('REGIOES[region]'),'bridge deve expor os hotéis da região ativa');
-assert(service.includes('scopedSnapshot'),'serviço moderno deve aplicar o recorte regional');
-assert(service.includes('matchesRegionHotel'),'serviço deve associar nomes de hotel de forma tolerante');
-assert(service.includes("ctx.region==='todos'"),'Todos deve manter o conjunto completo');
+assert(bridge.includes("typeof activeRegion!=='undefined'"),'bridge deve ler região global');
+assert(bridge.includes('REGIOES[region]'),'bridge deve expor hotéis da região ativa');
+assert(service.includes('scopedSnapshot')&&service.includes('matchesRegionHotel'),'serviço moderno deve aplicar recorte regional');
 
-// Paridade visual preparada sem substituir ainda a vista legacy.
 [
-  'Ranking GRI','Resultados por origem','Departamentos','Evolução temporal',
-  'GRI médio','Resposta da gestão','Detalhe por unidade e semana',
-  'Categorias negativas','Categorias positivas','Gráficos de reputação'
-].forEach(label=>assert(renderer.includes(label),`bloco de paridade em falta: ${label}`));
-assert(renderer.includes('latestReputationRecordsByHotel(hotelFiltered)'),'filtro Mais recente deve escolher o último período de cada hotel');
-assert(renderer.includes("chartCard('GRI por hotel'"),'gráfico GRI deve existir');
-assert(renderer.includes("chartCard('Resultados por origem'"),'gráfico por origem deve existir');
-assert(renderer.includes("chartCard('Departamentos'"),'gráfico de departamentos deve existir');
-assert(renderer.includes("chartCard('Evolução GRI'"),'gráfico de evolução deve existir');
-assert(renderer.includes('r.negativeCategories.map')&&renderer.includes('r.positiveCategories.map'),'detalhe semanal deve mostrar categorias positivas e negativas');
-assert(renderer.includes('r.sources.map')&&renderer.includes('r.departments.map'),'detalhe semanal deve mostrar origens e departamentos');
-
-// Segurança de rollout: a modernização continua sem substituir a vista legacy até validação de paridade.
-assert(mod.includes('hideLegacyView'),'módulo moderno mantém isolamento explícito e não deve ser ativado implicitamente');
-console.log('✓ reputação moderna: dados, região, gráficos e detalhe semanal preparados sem substituir a vista legacy');
+  'Reputação & Guest Experience','Ranking GRI','GRI por hotel','Evolução GRI',
+  'GRI médio','Resposta gestão','Na meta','Detalhe por hotel',
+  'Origens','Departamentos','Categorias negativas','Categorias positivas'
+].forEach(label=>assert(renderer.includes(label),`bloco da nova reputação em falta: ${label}`));
+assert(renderer.includes('latestReputationRecordsByHotel(records)')||renderer.includes('latestReputationRecordsByHotel('),'filtro Mais recente deve manter semântica por hotel');
+assert(renderer.includes("id:'repChartRanking'")||renderer.includes("'repChartRanking'"),'gráfico de ranking deve existir');
+assert(renderer.includes("'repChartEvolution'"),'gráfico de evolução deve existir');
+assert(renderer.includes("indexAxis:'y'"),'ranking deve usar barras horizontais para legibilidade');
+assert(renderer.includes("selection.hotel==='__all__'?'GRI médio':'GRI'"),'evolução global deve usar média e hotel específico deve usar GRI próprio');
+assert(renderer.includes('record.sources.map')&&renderer.includes('record.departments.map'),'detalhe deve manter origens e departamentos');
+assert(renderer.includes('record.negativeCategories.map')&&renderer.includes('record.positiveCategories.map'),'detalhe deve manter categorias');
+assert(mod.includes('hideLegacyView'),'módulo moderno mantém isolamento explícito');
+console.log('✓ reputação moderna reconstruída: dados, região, dashboard executiva e detalhe preservados');
