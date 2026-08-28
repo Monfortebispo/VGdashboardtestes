@@ -59,10 +59,12 @@
     try{
       if(typeof occUpdateUI==='function'){
         occUpdateUI();
+        syncSnapshotManager();
         return {ok:true,method:'occUpdateUI',elapsedMs:+(performance.now()-started).toFixed(2)};
       }
       if(typeof occRender==='function'){
         occRender();
+        syncSnapshotManager();
         return {ok:true,method:'occRender',elapsedMs:+(performance.now()-started).toFixed(2)};
       }
       return {ok:false,method:'none',elapsedMs:+(performance.now()-started).toFixed(2)};
@@ -70,13 +72,63 @@
       return {ok:false,method:'error',elapsedMs:+(performance.now()-started).toFixed(2),error:String(e&&e.message||e)};
     }
   }
+
+  let snapshotObserver=null;
+  function syncSnapshotManager(){
+    const chips=document.getElementById('occSnapshots');
+    if(!chips)return false;
+    let toggle=document.getElementById('vgOccSnapshotToggle');
+    if(!toggle){
+      toggle=document.createElement('button');
+      toggle.id='vgOccSnapshotToggle';
+      toggle.type='button';
+      toggle.setAttribute('aria-expanded','false');
+      toggle.style.cssText='margin:4px 0 10px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-2);font:600 10px/1.2 var(--font);cursor:pointer';
+      toggle.addEventListener('click',function(){
+        const open=toggle.getAttribute('aria-expanded')==='true';
+        toggle.setAttribute('aria-expanded',open?'false':'true');
+        chips.style.display=open?'none':'';
+        updateSnapshotToggleLabel(toggle,!open);
+      });
+      chips.insertAdjacentElement('beforebegin',toggle);
+    }
+    const open=toggle.getAttribute('aria-expanded')==='true';
+    chips.style.display=open?'':'none';
+    updateSnapshotToggleLabel(toggle,open);
+    if(!snapshotObserver){
+      snapshotObserver=new MutationObserver(function(){
+        const current=document.getElementById('vgOccSnapshotToggle');
+        if(current)updateSnapshotToggleLabel(current,current.getAttribute('aria-expanded')==='true');
+      });
+      snapshotObserver.observe(chips,{childList:true,subtree:true});
+    }
+    return true;
+  }
+  function updateSnapshotToggleLabel(toggle,open){
+    const count=stats().snapshots;
+    toggle.textContent=open?'Ocultar snapshots':`Gerir snapshots (${count})`;
+    toggle.style.display=count>0?'':'none';
+  }
+  function installSnapshotManager(){
+    if(syncSnapshotManager())return;
+    let tries=0;
+    const timer=setInterval(function(){
+      tries++;
+      if(syncSnapshotManager()||tries>=40)clearInterval(timer);
+    },100);
+  }
+
   window.VG.occupancyModernBridge=Object.freeze({
-    version:5,
+    version:6,
     read(){return cloneLite(snapshots())||[];},
     selection,
     eligibleHotels,
     applySelection,
     stats,
-    refresh
+    refresh,
+    syncSnapshotManager
   });
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installSnapshotManager,{once:true});
+  else installSnapshotManager();
 })();
