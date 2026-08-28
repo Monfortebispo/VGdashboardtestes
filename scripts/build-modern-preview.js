@@ -11,10 +11,11 @@ if(html.includes(marker)){
   process.exit(0);
 }
 
-// Este guard é injetado no <head> (não no fim do body) para correr antes dos
-// handlers legacy. Ao clicar em Reputação, a vista antiga fica invisível antes
-// do browser poder pintar o primeiro frame; o módulo moderno assume de seguida.
-const reputationPrehide=`\n<!-- VG REPUTATION PREPAINT GUARD -->\n<style>\n#view-reputacao.vg-modern-reputation-prehide > :not([data-modern-reputation-readonly]){visibility:hidden!important}\n</style>\n<script>\n(function(){\n  try{\n    if(new URLSearchParams(location.search).get('modern')!=='1')return;\n    function prehide(){var root=document.getElementById('view-reputacao');if(root)root.classList.add('vg-modern-reputation-prehide');}\n    document.addEventListener('pointerdown',function(e){var p=e.composedPath?e.composedPath():[];if(p.some(function(n){return n&&n.id==='nav-reputacao';}))prehide();},true);\n    document.addEventListener('click',function(e){var p=e.composedPath?e.composedPath():[];if(p.some(function(n){return n&&n.id==='nav-reputacao';}))prehide();},true);\n    if(location.hash.replace(/^#/,'')==='reputacao'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',prehide,{once:true});else prehide();}\n  }catch(e){}\n})();\n</script>\n`;
+// Evita qualquer flash da Reputação legacy no modo moderno. A classe é colocada
+// no <html> ainda no <head>, antes de o body ser pintado. Assim o conteúdo antigo
+// nunca chega a ficar visível; o host moderno, criado depois, continua visível.
+// Em caso de erro real do módulo, este pode ativar a classe de fallback.
+const reputationPrehide=`\n<!-- VG REPUTATION PREPAINT GUARD -->\n<style>\nhtml.vg-modern-preview #view-reputacao > :not([data-modern-reputation-readonly]){display:none!important}\nhtml.vg-modern-preview.vg-modern-reputation-fallback #view-reputacao > :not([data-modern-reputation-readonly]){display:revert!important}\n</style>\n<script>\n(function(){\n  try{\n    if(new URLSearchParams(location.search).get('modern')==='1')document.documentElement.classList.add('vg-modern-preview');\n  }catch(e){}\n})();\n</script>\n`;
 
 if(!html.includes('</head>'))throw new Error('index.html sem </head>');
 html=html.replace('</head>',`${reputationPrehide}</head>`);
