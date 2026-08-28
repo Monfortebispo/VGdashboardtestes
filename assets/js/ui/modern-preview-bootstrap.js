@@ -7,6 +7,7 @@
   const params=new URLSearchParams(location.search);
   const modernMode=params.get('modern')==='1';
   let abRepairPromise=null;
+  let reputationRouting=false;
 
   function api(){return window.VG&&window.VG.modernPreview;}
   function viewFromNav(el){const node=el&&el.closest&&el.closest('[id^="nav-"]');return node?String(node.id).replace(/^nav-/,''):'';}
@@ -19,21 +20,47 @@
     document.querySelectorAll('.sb-nav-btn').forEach(el=>el.classList.remove('active'));
     document.getElementById('nav-reputacao')?.classList.add('active');
     if(root.querySelector('[data-modern-reputation-readonly]'))return;
-    Array.from(root.children).forEach(node=>{const el=node;if(el instanceof HTMLElement){el.dataset.modernReputationPreviewPrevDisplay=el.style.display||'';el.style.display='none';}});
     let pending=root.querySelector('[data-modern-reputation-preview-pending]');
     if(!pending){pending=document.createElement('div');pending.dataset.modernReputationPreviewPending='true';pending.textContent='A carregar reputação…';pending.style.cssText='padding:28px 20px;font:600 13px/1.4 system-ui,sans-serif;color:#64748b';root.appendChild(pending);}
   }
-  function restoreReputationPending(){
-    const root=document.getElementById('view-reputacao');if(!root)return;
-    root.querySelector('[data-modern-reputation-preview-pending]')?.remove();
-    Array.from(root.children).forEach(node=>{const el=node;if(el instanceof HTMLElement&&'modernReputationPreviewPrevDisplay' in el.dataset){el.style.display=el.dataset.modernReputationPreviewPrevDisplay||'';delete el.dataset.modernReputationPreviewPrevDisplay;}});
+  function restoreReputationPending(){document.getElementById('view-reputacao')?.querySelector('[data-modern-reputation-preview-pending]')?.remove();}
+  async function go(view){const modern=api();if(!modern||!modern.navigation)return false;try{await modern.navigation.go(view);if(view==='reputacao')restoreReputationPending();return true;}catch(err){if(view==='reputacao'){restoreReputationPending();document.documentElement.classList.add('vg-modern-reputation-fallback');}console.error('[VG modern preview] navigation failed',err);return false;}}
+  async function routeReputation(){
+    if(reputationRouting)return;
+    const modern=api();if(!modern||!modern.navigation)return;
+    reputationRouting=true;
+    try{showReputationPending();await go('reputacao');}finally{reputationRouting=false;}
   }
-  async function go(view){const modern=api();if(!modern||!modern.navigation)return false;try{await modern.navigation.go(view);if(view==='reputacao')document.getElementById('view-reputacao')?.querySelector('[data-modern-reputation-preview-pending]')?.remove();return true;}catch(err){if(view==='reputacao')restoreReputationPending();console.error('[VG modern preview] navigation failed',err);return false;}}
   function abMount(){return document.getElementById('ab35NativeMount');}function abModule(){return window.VG&&window.VG.comprasNative35;}function abRoot(){try{return abModule()?.getRoot?.()||window.AB35Root||null;}catch(e){return null;}}function abIsMounted(){const mount=abMount();return !!(mount&&mount.querySelector('.vg-compras-native-v35'));}
   function abIntegrate(){const root=abRoot();if(!root||!root.querySelector)return false;if(root.getElementById('vgAbEmbeddedStyle'))return true;const style=document.createElement('style');style.id='vgAbEmbeddedStyle';style.textContent=':host{display:block!important;max-width:100%!important;overflow:hidden!important}.ab35-shell{min-height:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important}.ab35-top,.ab35-nav{display:none!important}#main{padding:14px 16px!important;min-height:0!important;width:100%!important;max-width:100%!important;overflow:visible!important}.view,.panel,.cards,.grid2,.tbl-wrap{max-width:100%!important}';root.appendChild(style);return true;}
   async function abMountDirect(){const mount=abMount(),mod=abModule();if(!mount||!mod||typeof mod.mount!=='function')return false;try{await mod.mount(mount);abIntegrate();return abIsMounted()||!!abModule();}catch(err){console.error('[VG preview] Compras & A&B mount',err);return false;}}
   async function abRepair(){if(abRepairPromise)return abRepairPromise;abRepairPromise=(async()=>{await new Promise(r=>setTimeout(r,700));if(abIsMounted()){abIntegrate();return true;}return abMountDirect();})().finally(()=>{abRepairPromise=null;});return abRepairPromise;}
   function scheduleABRepair(){[150,500,1200].forEach(ms=>setTimeout(()=>{if(abIsMounted())abIntegrate();else void abRepair();},ms));}
-  function install(){if(!api())return false;showBadge();if(modernMode)document.addEventListener('click',function(event){const view=viewFromNav(event.target);if(!view||!MODERN_VIEWS.has(view))return;event.preventDefault();event.stopImmediatePropagation();if(view==='reputacao')showReputationPending();void go(view);},true);document.addEventListener('click',function(event){if(viewFromNav(event.target)==='ab')scheduleABRepair();},false);window.addEventListener('hashchange',function(){if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();});if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();window.VG.modernPreview.enabled=modernMode;window.VG.modernPreview.compatibilityMode=!modernMode;window.VG.modernPreview.migratedViews=Array.from(MODERN_VIEWS);window.VG.modernPreview.repairAB=abRepair;return true;}
+  function install(){
+    if(!api())return false;
+    showBadge();
+    document.addEventListener('click',function(event){
+      const view=viewFromNav(event.target);if(!view)return;
+      if(view==='reputacao'){
+        event.preventDefault();event.stopImmediatePropagation();
+        void routeReputation();return;
+      }
+      if(!modernMode||!MODERN_VIEWS.has(view))return;
+      event.preventDefault();event.stopImmediatePropagation();void go(view);
+    },true);
+    document.addEventListener('click',function(event){if(viewFromNav(event.target)==='ab')scheduleABRepair();},false);
+    window.addEventListener('hashchange',function(){
+      const view=location.hash.replace(/^#/,'');
+      if(view==='reputacao')void routeReputation();
+      if(view==='ab')scheduleABRepair();
+    });
+    if(location.hash.replace(/^#/,'')==='reputacao')void routeReputation();
+    if(location.hash.replace(/^#/,'')==='ab')scheduleABRepair();
+    window.VG.modernPreview.enabled=modernMode;
+    window.VG.modernPreview.compatibilityMode=!modernMode;
+    window.VG.modernPreview.migratedViews=Array.from(MODERN_VIEWS);
+    window.VG.modernPreview.repairAB=abRepair;
+    return true;
+  }
   if(!install()){window.addEventListener('vg-modern-preview-ready',install,{once:true});let tries=0;const timer=setInterval(function(){tries++;if(install()||tries>80)clearInterval(timer);},100);}
 })();
