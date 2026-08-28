@@ -28,7 +28,7 @@ function clearRetries(){retryTimers.forEach(id=>window.clearTimeout(id));retryTi
 function scheduleEmptyRetries(records:number){
   clearRetries();
   if(records>0)return;
-  [300,1000,2500,5000,10000].forEach(ms=>retryTimers.push(window.setTimeout(()=>void refreshFromLegacy(),ms)));
+  [300,1000,2500,5000,10000].forEach(ms=>retryTimers.push(window.setTimeout(id=>void refreshFromLegacy(),ms)) as unknown as number);
 }
 function hideLegacyView(root:HTMLElement){
   hiddenLegacy=[];
@@ -41,9 +41,8 @@ function hideLegacyView(root:HTMLElement){
     hiddenLegacy.push(el);
   });
 }
-function clearPrepaintGuard(root?:HTMLElement){
-  root?.classList.remove('vg-modern-reputation-prehide');
-}
+function enableFallback(){document.documentElement.classList.add('vg-modern-reputation-fallback');}
+function disableFallback(){document.documentElement.classList.remove('vg-modern-reputation-fallback');}
 function restoreLegacyView(){
   hiddenLegacy.forEach(el=>{
     el.style.display=el.dataset.modernReputationPrevDisplay||'';
@@ -64,10 +63,10 @@ const reputation:ModernModule = {
   id:'reputation',
   async mount(root){
     mountedRoot=root;
-    // O guard de prepaint esconde a vista legacy ainda no pointerdown. Aqui
-    // convertemos essa ocultação temporária em display:none antes de remover o guard.
+    disableFallback();
+    // Além do guard de CSS instalado no <head>, mantemos display:none inline para
+    // isolamento durante toda a vida do módulo moderno.
     hideLegacyView(root);
-    clearPrepaintGuard(root);
     showLoading(root);
     root.dataset.modernReputation='loading';
     try{
@@ -85,7 +84,7 @@ const reputation:ModernModule = {
       root.dataset.modernReputation='error';
       clearReputationReadOnly(root);
       restoreLegacyView();
-      clearPrepaintGuard(root);
+      enableFallback();
       mountedRoot=undefined;
       throw error;
     }
@@ -96,7 +95,7 @@ const reputation:ModernModule = {
     window.removeEventListener('vg-reputation-data-changed',onLegacyChange);
     if(mountedRoot)clearReputationReadOnly(mountedRoot);
     restoreLegacyView();
-    clearPrepaintGuard(mountedRoot);
+    disableFallback();
     mountedRoot=undefined;
   }
 };
