@@ -41,6 +41,9 @@ function hideLegacyView(root:HTMLElement){
     hiddenLegacy.push(el);
   });
 }
+function clearPrepaintGuard(root?:HTMLElement){
+  root?.classList.remove('vg-modern-reputation-prehide');
+}
 function restoreLegacyView(){
   hiddenLegacy.forEach(el=>{
     el.style.display=el.dataset.modernReputationPrevDisplay||'';
@@ -61,9 +64,10 @@ const reputation:ModernModule = {
   id:'reputation',
   async mount(root){
     mountedRoot=root;
-    // Esconde a vista legacy imediatamente, antes de qualquer await. Assim não há
-    // um frame intermédio com a versão antiga enquanto os dados modernos são preparados.
+    // O guard de prepaint esconde a vista legacy ainda no pointerdown. Aqui
+    // convertemos essa ocultação temporária em display:none antes de remover o guard.
     hideLegacyView(root);
+    clearPrepaintGuard(root);
     showLoading(root);
     root.dataset.modernReputation='loading';
     try{
@@ -81,6 +85,7 @@ const reputation:ModernModule = {
       root.dataset.modernReputation='error';
       clearReputationReadOnly(root);
       restoreLegacyView();
+      clearPrepaintGuard(root);
       mountedRoot=undefined;
       throw error;
     }
@@ -91,6 +96,7 @@ const reputation:ModernModule = {
     window.removeEventListener('vg-reputation-data-changed',onLegacyChange);
     if(mountedRoot)clearReputationReadOnly(mountedRoot);
     restoreLegacyView();
+    clearPrepaintGuard(mountedRoot);
     mountedRoot=undefined;
   }
 };
