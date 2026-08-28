@@ -21,10 +21,20 @@ assert(model.includes('categoryMetrics(record.negCats)')&&model.includes('catego
 assert(model.includes('latestReputationRecordsByHotel'),'modo Mais recente deve ser calculável por hotel, não por uma única semana global');
 assert(model.includes("const key=`${r.hotel}|${r.period}`"),'deduplicação deve continuar a ser hotel + período');
 
-// Primeiros blocos visuais preparados, ainda sem substituir o legacy.
-['Ranking GRI','Resultados por origem','Departamentos','Evolução temporal','GRI médio','Resposta da gestão'].forEach(label=>assert(renderer.includes(label),`bloco de paridade em falta: ${label}`));
+// Paridade visual preparada sem substituir ainda a vista legacy.
+[
+  'Ranking GRI','Resultados por origem','Departamentos','Evolução temporal',
+  'GRI médio','Resposta da gestão','Detalhe por unidade e semana',
+  'Categorias negativas','Categorias positivas','Gráficos de reputação'
+].forEach(label=>assert(renderer.includes(label),`bloco de paridade em falta: ${label}`));
 assert(renderer.includes('latestReputationRecordsByHotel(hotelFiltered)'),'filtro Mais recente deve escolher o último período de cada hotel');
+assert(renderer.includes("chartCard('GRI por hotel'"),'gráfico GRI deve existir');
+assert(renderer.includes("chartCard('Resultados por origem'"),'gráfico por origem deve existir');
+assert(renderer.includes("chartCard('Departamentos'"),'gráfico de departamentos deve existir');
+assert(renderer.includes("chartCard('Evolução GRI'"),'gráfico de evolução deve existir');
+assert(renderer.includes('r.negativeCategories.map')&&renderer.includes('r.positiveCategories.map'),'detalhe semanal deve mostrar categorias positivas e negativas');
+assert(renderer.includes('r.sources.map')&&renderer.includes('r.departments.map'),'detalhe semanal deve mostrar origens e departamentos');
 
 // Segurança de rollout: a modernização continua sem substituir a vista legacy até validação de paridade.
 assert(mod.includes('hideLegacyView'),'módulo moderno mantém isolamento explícito e não deve ser ativado implicitamente');
-console.log('✓ reputação moderna: modelo e primeiros blocos de paridade preparados sem substituir a vista legacy');
+console.log('✓ reputação moderna: dados, gráficos e detalhe semanal preparados sem substituir a vista legacy');
