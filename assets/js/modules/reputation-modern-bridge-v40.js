@@ -34,6 +34,14 @@
     var records=countRecords(data);
     return {records:records,available:records>0};
   }
+  function context(){
+    var region='todos',hotels=[];
+    try{if(typeof activeRegion!=='undefined'&&activeRegion)region=String(activeRegion);}catch(e){}
+    try{
+      if(region!=='todos'&&typeof REGIOES!=='undefined'&&REGIOES&&Array.isArray(REGIOES[region]))hotels=REGIOES[region].map(String);
+    }catch(e){}
+    return {region:region,hotels:hotels};
+  }
 
-  window.VG.reputationModernBridge=Object.freeze({version:3,read:read,stats:stats});
+  window.VG.reputationModernBridge=Object.freeze({version:4,read:read,stats:stats,context:context});
 })();
