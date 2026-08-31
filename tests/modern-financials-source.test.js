@@ -1,0 +1,11 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const model=read('src/modern/data/financials-model.ts');
+const legacy=read('src/modern/data/legacy-data-sources.ts');
+const costs=read('src/modern/data/costs-service.ts');
+assert(model.includes('interface FinancialsSourceSnapshot'),'deve existir contrato financeiro tipado');
+assert(model.includes('raw:unknown'),'snapshot financeiro deve preservar payload legado durante a migração');
+assert(legacy.includes("case'financials':return financialsSnapshot(w.RAW)"),'registry deve adaptar RAW para snapshot financeiro tipado');
+assert(costs.includes("ensureDataSource<FinancialsSourceSnapshot>('financials'"),'custos deve consumir a fonte financeira tipada');
+assert(costs.includes('costsSnapshot(financials.raw)'),'normalização de custos deve receber apenas o payload financeiro');
+console.log('✓ Modern financials source: contrato tipado e custos desacoplados do RAW genérico');
