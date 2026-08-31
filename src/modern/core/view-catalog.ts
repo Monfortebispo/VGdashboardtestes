@@ -9,7 +9,7 @@ export const VIEW_CATALOG:readonly ViewDefinition[]=Object.freeze([
 {id:'agenda',label:'Agenda Operacional',group:'Gestão',icon:'📅',legacyViewId:'agenda',access:'authenticated',dataIndependent:true},
 {id:'approvals',label:'Aprovações',group:'Gestão',icon:'✓',legacyViewId:'approvals',moduleId:'approvals',access:'authenticated',dataIndependent:true},
 {id:'cityledger',label:'City Ledger',group:'Gestão',icon:'▤',legacyViewId:'cityledger',moduleId:'city-ledger',access:'authenticated',dataIndependent:true},
-{id:'receitas',label:'Receitas',group:'Análise',icon:'↗',legacyViewId:'receitas',access:'authenticated'},
+{id:'receitas',label:'Receitas',group:'Análise',icon:'↗',legacyViewId:'receitas',moduleId:'financial-revenue',access:'authenticated'},
 {id:'custos',label:'Custos',group:'Análise',icon:'↘',legacyViewId:'custos',moduleId:'costs',access:'authenticated'},
 {id:'pl',label:'P&L USALI',group:'Análise',icon:'▦',legacyViewId:'pl',moduleId:'pl-usali',access:'authenticated'},
 {id:'revenuehub',label:'Revenue & Forecast',group:'Análise',icon:'◈',legacyViewId:'revenuehub',moduleId:'revenue',access:'authenticated'},
