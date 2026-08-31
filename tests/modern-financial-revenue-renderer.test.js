@@ -1,9 +1,11 @@
 const fs=require('fs'),path=require('path'),assert=require('assert');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const renderer=read('src/modern/revenue/financial-revenue-renderer.ts');
+const context=read('src/modern/revenue/financial-view-context.ts');
 const moduleFile=read('src/modern/modules/financial-revenue.ts');
-assert(renderer.includes("type Section='hotels_rev'|'hotels_ops'"),'renderer deve consumir apenas secções financeiras tipadas');
-assert(renderer.includes('snapshot.raw'),'renderer deve partir do snapshot financeiro moderno');
+assert(renderer.includes('financialValue as value')&&renderer.includes('resolveFinancialViewContext'),'renderer deve consumir API financeira partilhada');
+assert(context.includes("export type FinancialSection='hotels_rev'|'hotels_ops'|'hotels_costs'"),'contexto deve tipar as secções financeiras');
+assert(context.includes('snapshot.raw'),'contexto deve partir do snapshot financeiro moderno');
 assert(renderer.includes("'Receita Total'"),'renderer deve manter Receita Total oficial');
 assert(renderer.includes("'ALOJAMENTO'"),'renderer deve manter receita de alojamento');
 assert(renderer.includes("'ALIMENTACAO'"),'renderer deve manter receita F&B');
@@ -15,4 +17,4 @@ assert(renderer.includes("dc('chartVarPct'"),'renderer deve preservar o gráfico
 assert(!moduleFile.includes('window.buildChartsReceitas?.()'),'módulo moderno não deve chamar renderer legacy de gráficos');
 assert(!moduleFile.includes('window.buildRevTable?.()'),'módulo moderno não deve chamar renderer legacy da tabela');
 assert(moduleFile.includes('renderFinancialRevenue(financials)'),'módulo deve usar renderer financeiro moderno');
-console.log('✓ Modern Receitas renderer: gráficos e tabela usam snapshot financeiro sem RAW global');
+console.log('✓ Modern Receitas renderer: gráficos e tabela usam contexto financeiro partilhado sem RAW global');
