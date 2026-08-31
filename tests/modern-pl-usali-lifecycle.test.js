@@ -1,0 +1,16 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const registry=read('src/modern/core/module-registry.ts');
+const catalog=read('src/modern/core/view-catalog.ts');
+const main=read('src/modern/main.ts');
+const moduleSource=read('src/modern/modules/pl-usali.ts');
+const loader=read('src/modern/modules/pl-usali-reconciliation-loader.ts');
+assert(registry.includes("| 'pl-usali'"),'USALI deve existir como ModernModuleId');
+assert(catalog.includes("id:'pl'")&&catalog.includes("moduleId:'pl-usali'"),'vista P&L deve usar lifecycle moderno');
+assert(main.includes("registerModule('pl-usali'"),'bootstrap deve lazy-load USALI moderno');
+assert(moduleSource.includes("id:'pl-usali'"),'módulo USALI deve declarar o id correto');
+assert(moduleSource.includes('financialsData(false)'),'módulo USALI deve garantir a fonte financeira antes de renderizar');
+assert(moduleSource.includes('w.plRender?.()'),'módulo deve preservar o renderer visual legacy já validado');
+assert(loader.includes('Promise<void>'),'loader de reconciliação deve poder ser aguardado');
+assert(!moduleSource.includes('refreshAll'),'USALI moderno não deve disparar refresh global');
+console.log('✓ Modern USALI lifecycle: dados seletivos, renderer preservado e sem refreshAll');
