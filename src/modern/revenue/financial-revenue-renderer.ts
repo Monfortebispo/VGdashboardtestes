@@ -1,0 +1,68 @@
+import type { FinancialsSourceSnapshot } from '../data/financials-model';
+
+type Section='hotels_rev'|'hotels_ops';
+type RawFinancials={hotel_list?:string[];hotels_rev?:Record<string,Record<string,Record<string,unknown>>>;hotels_ops?:Record<string,Record<string,Record<string,unknown>>>};
+type Dataset=Record<string,unknown>;
+type LegacyRevenueWindow=Window&{
+  getActiveHotels?:()=>string[];
+  dc?:(id:string,type:string,labels:string[],datasets:Dataset[],opts?:Record<string,unknown>)=>void;
+  buildChartsReceitas?:()=>void;
+  buildRevTable?:()=>void;
+  VG?:Window['VG']&{market?:{symbol?:()=>string}};
+};
+
+function raw(snapshot:FinancialsSourceSnapshot):RawFinancials{return snapshot.raw&&typeof snapshot.raw==='object'?snapshot.raw as RawFinancials:{};}
+function num(v:unknown):number{const n=Number(v);return Number.isFinite(n)?n:0;}
+function value(data:RawFinancials,section:Section,hotel:string,field:string,year:string):number{
+  return num(data[section]?.[hotel]?.[field]?.[year]);
+}
+function years(data:RawFinancials):[string,string]{
+  const found=new Set<string>();
+  for(const section of ['hotels_ops','hotels_rev'] as const){
+    for(const hotel of Object.values(data[section]||{}))for(const field of Object.values(hotel||{}))for(const key of Object.keys(field||{}))if(/^20\d{2}$/.test(key))found.add(key);
+  }
+  const sorted=[...found].sort((a,b)=>Number(a)-Number(b));
+  const current=sorted.at(-1)||String(new Date().getFullYear());
+  const previous=sorted.at(-2)||String(Number(current)-1);
+  return[previous,current];
+}
+function hotels(data:RawFinancials,w:LegacyRevenueWindow):string[]{
+  const selected=w.getActiveHotels?.();
+  if(Array.isArray(selected)&&selected.length)return selected;
+  if(Array.isArray(data.hotel_list))return data.hotel_list.slice();
+  return Object.keys(data.hotels_ops||{});
+}
+function label(name:string):string{return name.length>16?name.substring(0,14)+'…':name;}
+function fmt(v:number):string{return new Intl.NumberFormat('pt-PT',{maximumFractionDigits:0}).format(v);}
+function pct(v:number|null):string{return v==null?'—':`${v>=0?'+':''}${new Intl.NumberFormat('pt-PT',{minimumFractionDigits:1,maximumFractionDigits:1}).format(v)}%`;}
+
+const overflowPlugin={
+  id:'modernRevenueOverflow',
+  afterDatasetsDraw(chart:any){
+    if(chart.canvas?.id!=='chartVarPct')return;
+    const ds=chart.data.datasets?.[0],rawData=ds?._rawData||[],meta=chart.getDatasetMeta(0),ctx=chart.ctx;
+    ctx.save();rawData.forEach((v:number,i:number)=>{if(!(v>100))return;const el=meta.data[i];if(!el)return;const p=el.getProps(['x','y','base','width'],true),left=p.x-p.width/2,top=chart.scales.y.getPixelForValue(100)+2,bottom=chart.scales.y.getPixelForValue(0),h=Math.max(4,bottom-top);ctx.setLineDash([6,4]);ctx.strokeStyle='#2ecc8f';ctx.lineWidth=2;ctx.strokeRect(left,top,p.width,h);ctx.setLineDash([]);ctx.fillStyle='#2ecc8f';ctx.font='700 10px JetBrains Mono, monospace';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('+'+v.toFixed(1)+'%',p.x,top+4);});ctx.restore();
+  }
+};
+
+export function renderFinancialRevenue(snapshot:FinancialsSourceSnapshot):boolean{
+  const w=window as LegacyRevenueWindow,data=raw(snapshot),dc=w.dc;
+  if(!dc){w.buildChartsReceitas?.();w.buildRevTable?.();return false;}
+  const [previous,current]=years(data),active=hotels(data,w),money=w.VG?.market?.symbol?.()||'€';
+  const sa=[...active].sort((a,b)=>value(data,'hotels_rev',b,'ALOJAMENTO',current)-value(data,'hotels_rev',a,'ALOJAMENTO',current)).slice(0,15);
+  dc('chartRevAloj','bar',sa.map(label),[
+    {label:'Aloj '+previous,data:sa.map(h=>value(data,'hotels_rev',h,'ALOJAMENTO',previous)),backgroundColor:'rgba(42,125,140,.55)',borderColor:'#2a7d8c',borderWidth:1,borderRadius:3},
+    {label:'Aloj '+current,data:sa.map(h=>value(data,'hotels_rev',h,'ALOJAMENTO',current)),backgroundColor:'rgba(201,168,76,.65)',borderColor:'#c9a84c',borderWidth:1,borderRadius:3}
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:(v:number)=>money+fmt(v/1000)+'K'}}}});
+  const sf=[...active].sort((a,b)=>value(data,'hotels_rev',b,'ALIMENTACAO',current)-value(data,'hotels_rev',a,'ALIMENTACAO',current)).slice(0,15);
+  dc('chartRevFB','bar',sf.map(label),[
+    {label:'FB '+previous,data:sf.map(h=>value(data,'hotels_rev',h,'ALIMENTACAO',previous)),backgroundColor:'rgba(42,125,140,.55)',borderColor:'#2a7d8c',borderWidth:1,borderRadius:3},
+    {label:'FB '+current,data:sf.map(h=>value(data,'hotels_rev',h,'ALIMENTACAO',current)),backgroundColor:'rgba(201,168,76,.65)',borderColor:'#c9a84c',borderWidth:1,borderRadius:3}
+  ],{plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}},y:{ticks:{callback:(v:number)=>money+fmt(v/1000)+'K'}}}});
+  const variations=active.map(h=>{const p=value(data,'hotels_ops',h,'Receita Total',previous),c=value(data,'hotels_ops',h,'Receita Total',current);return p>0?{h,v:(c-p)/p*100}:null;}).filter((x):x is {h:string;v:number}=>!!x).sort((a,b)=>b.v-a.v);
+  const real=variations.map(d=>d.v),plot=real.map(v=>Math.max(-100,Math.min(100,v)));
+  dc('chartVarPct','bar',variations.map(d=>label(d.h)),[{label:'Var%',data:plot,_rawData:real,backgroundColor:variations.map(d=>d.v>=100?'rgba(39,174,96,.32)':d.v>=0?'rgba(39,174,96,.72)':'rgba(192,57,43,.72)'),borderColor:variations.map(d=>d.v>=100?'#2ecc8f':d.v>=0?'#27ae60':'#c0392b'),borderWidth:variations.map(d=>d.v>=100?2:1),borderRadius:4}],{localPlugins:[overflowPlugin],plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx:any)=>'Variação real: '+((ctx.dataset._rawData?.[ctx.dataIndex]??ctx.parsed.y).toFixed(1))+'%'}}},scales:{x:{ticks:{maxRotation:55,minRotation:45,font:{size:9},autoSkip:false}},y:{min:-100,max:100,ticks:{stepSize:20,callback:(v:number)=>(Number(v)||0).toFixed(0)+'%'}}}});
+  const body=document.getElementById('revTableBody');
+  if(body)body.innerHTML=active.map(h=>{const p=value(data,'hotels_ops',h,'Receita Total',previous),c=value(data,'hotels_ops',h,'Receita Total',current),variation=p>0?(c-p)/p*100:null;return `<tr><td><div class="td-hotel-name"><div class="hotel-dot"></div>${h}</div></td><td>${money}${fmt(value(data,'hotels_rev',h,'ALOJAMENTO',previous))}</td><td>${money}${fmt(value(data,'hotels_rev',h,'ALOJAMENTO',current))}</td><td>${money}${fmt(value(data,'hotels_rev',h,'ALIMENTACAO',previous))}</td><td>${money}${fmt(value(data,'hotels_rev',h,'ALIMENTACAO',current))}</td><td>${money}${fmt(value(data,'hotels_rev',h,'DIVERSOS',previous))}</td><td>${money}${fmt(value(data,'hotels_rev',h,'DIVERSOS',current))}</td><td>${money}${fmt(p)}</td><td>${money}${fmt(c)}</td><td><span class="delta-badge ${(variation||0)>=0?'pos':'neg'}">${pct(variation)}</span></td></tr>`;}).join('');
+  return true;
+}
