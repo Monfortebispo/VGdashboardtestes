@@ -3,8 +3,7 @@ import { invalidateData } from '../data/data-registry';
 import { TheoreticalConsumptionController } from '../purchases/theoretical-controller';
 
 type PurchasesNative={mount?:(container:HTMLElement)=>unknown;reload?:()=>unknown;getRoot?:()=>ShadowRoot|null;};
-type Domains33={renderAB?:()=>unknown;};
-type VGWindow=Window&{VG?:Record<string,unknown>&{comprasNative35?:PurchasesNative;domains33?:Domains33;events?:{on?:(name:string,handler:()=>void)=>unknown}};};
+type VGWindow=Window&{VG?:Record<string,unknown>&{comprasNative35?:PurchasesNative;events?:{on?:(name:string,handler:()=>void)=>unknown}};};
 
 let mountedRoot:HTMLElement|null=null;
 let cleanup:((()=>void)|null)=null;
@@ -32,7 +31,7 @@ function scheduleActive(root:HTMLElement):void{
 function bindDomainEvents():void{
   if(domainEventsBound)return;domainEventsBound=true;
   const w=window as VGWindow;
-  w.VG?.events?.on?.('revenue-detail:changed',()=>{invalidateData('purchases');theoryController?.schedule(60);});
+  w.VG?.events?.on?.('revenue-detail:changed',()=>{invalidateData('purchases');theoryController?.refreshFromSource();});
   w.VG?.events?.on?.('market:changed',()=>{invalidateData('purchases');theoryController?.reset();});
 }
 
@@ -54,10 +53,8 @@ const purchasesModule:ModernModule={
     const onDataChanged=()=>{
       invalidateData('purchases');
       const hub=root.querySelector<HTMLElement>('#abHubRoot');
-      if(hub?.dataset.tab==='theoretical'){
-        try{(window as VGWindow).VG?.domains33?.renderAB?.();}catch(error){console.warn('[VG Modern] refresh A&B',error);}
-        theoryController?.schedule(60);
-      }else scheduleNativeMount(root);
+      if(hub?.dataset.tab==='theoretical')theoryController?.refreshFromSource();
+      else scheduleNativeMount(root);
     };
     root.addEventListener('click',onClick,false);
     window.addEventListener('vg-purchases-data-changed',onDataChanged);
