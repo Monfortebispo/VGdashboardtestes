@@ -1,7 +1,7 @@
 (function(){
   'use strict';
-  if(window.__VG_AB_INTEGRATION_STABILITY_V44__)return;
-  window.__VG_AB_INTEGRATION_STABILITY_V44__=true;
+  if(window.__VG_AB_INTEGRATION_STABILITY_V45__)return;
+  window.__VG_AB_INTEGRATION_STABILITY_V45__=true;
 
   const labels={
     resumo:'Resumo',evolucao:'Evolução Mensal',subfam:'Sub-Famílias',artigos:'Detalhe Artigos',hotel:'Análise Hotel',
@@ -18,8 +18,8 @@
 
   function ensureShadowStyle(r){
     if(!r||!r.querySelector)return;
-    let style=r.getElementById&&r.getElementById('vgAbEmbeddedStyleV44');
-    if(!style){style=document.createElement('style');style.id='vgAbEmbeddedStyleV44';r.appendChild(style);}
+    let style=r.getElementById&&r.getElementById('vgAbEmbeddedStyleV45');
+    if(!style){style=document.createElement('style');style.id='vgAbEmbeddedStyleV45';r.appendChild(style);}
     style.textContent=`
       :host{display:block!important;max-width:100%!important;overflow:hidden!important}
       .ab35-shell{min-height:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important;max-width:100%!important}
@@ -42,34 +42,47 @@
   }
 
   /*
-    Não usamos btn.click() nem window.setView() a partir do select exterior.
-    O módulo A&B tem dispatchers que distinguem chamadas vindas de dentro do Shadow DOM;
-    quando o evento nasce no select exterior pode cair no setView da Dashboard e regressar a Resumo.
-    Aqui criamos um evento PRIVADO no próprio botão nativo. Durante esse evento, window.event.target
-    pertence ao ShadowRoot e os dispatchers chamam obrigatoriamente o renderizador A&B correto.
+    A navegação exterior nunca chama diretamente window.setView(). O módulo A&B
+    instala dispatchers globais que só encaminham para o setView nativo quando o
+    evento nasce dentro do ShadowRoot. Por isso reproduzimos um clique sintético
+    PRIVADO no próprio botão nativo (composed:false). O onclick original do botão
+    chama o dispatcher enquanto window.event.target ainda pertence ao AB35Root.
+    Desta forma evitamos o fallback para o setView geral da Dashboard, que fazia
+    algumas análises regressarem indevidamente a Resumo.
   */
+  function nativeClick(btn){
+    try{
+      const ev=new MouseEvent('click',{bubbles:true,composed:false,cancelable:true,view:window});
+      return btn.dispatchEvent(ev);
+    }catch(e){return false;}
+  }
+
+  function privateDispatcherClick(r,btn,v){
+    const type='vg-ab-native-nav-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    const handler=function(){
+      try{
+        if(typeof window.setView==='function')window.setView(v,btn);
+      }catch(e){console.error('[VG A&B] erro ao renderizar '+v,e);}
+    };
+    btn.addEventListener(type,handler,{once:true});
+    btn.dispatchEvent(new CustomEvent(type,{bubbles:false,composed:false,cancelable:false}));
+    return currentView(r)===v;
+  }
+
   function navigate(v){
     const r=root();
     if(!r||!labels[v])return false;
     const btn=r.querySelector('.ab35-nav .nav-btn[data-view="'+v+'"]');
     const view=r.getElementById?r.getElementById('view-'+v):r.querySelector('#view-'+v);
     if(!btn||!view)return false;
+    if(currentView(r)===v){syncSelector(r);return true;}
 
-    const type='vg-ab-native-nav-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-    const handler=function(){
-      r.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
-      view.classList.add('on');
-      r.querySelectorAll('.ab35-nav .nav-btn[data-view]').forEach(b=>b.classList.toggle('on',b===btn));
-      try{
-        if(typeof window.renderView==='function')window.renderView(v);
-        else if(typeof window.setView==='function')window.setView(v,btn);
-      }catch(e){console.error('[VG A&B] erro ao renderizar '+v,e);}
-    };
-    btn.addEventListener(type,handler,{once:true});
-    btn.dispatchEvent(new CustomEvent(type,{bubbles:false,composed:false,cancelable:false}));
+    nativeClick(btn);
+    let ok=currentView(r)===v;
+    if(!ok)ok=privateDispatcherClick(r,btn,v);
 
-    const ok=currentView(r)===v;
     syncSelector(r);
+    if(!ok)console.warn('[VG A&B] vista nativa não confirmou navegação:',v);
     return ok;
   }
 
