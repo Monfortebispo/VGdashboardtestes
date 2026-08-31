@@ -1,12 +1,11 @@
 import type { ModernModule } from '../core/module-registry';
 import { financialsData } from '../data/financials-service';
+import { renderFinancialRevenue } from '../revenue/financial-revenue-renderer';
 
 declare global{
   interface Window{
     buildKPIs?:(targetId:string)=>void;
     updateContextPanel?:()=>void;
-    buildChartsReceitas?:()=>void;
-    buildRevTable?:()=>void;
   }
 }
 
@@ -19,13 +18,12 @@ type RevenueWindow=Window&{
 let mountedRoot:HTMLElement|undefined;
 
 async function render(force=false):Promise<void>{
-  await financialsData(force);
+  const financials=await financialsData(force);
   const w=window as RevenueWindow;
   w.VG?.market?.syncMarketDataUi?.();
   window.buildKPIs?.('kpiGrid');
   window.updateContextPanel?.();
-  window.buildChartsReceitas?.();
-  window.buildRevTable?.();
+  renderFinancialRevenue(financials);
   if(mountedRoot){mountedRoot.dataset.modernFinancialRevenue='ready';mountedRoot.dataset.modernFinancialRevenueRefresh=force?'forced':'cached';}
 }
 
