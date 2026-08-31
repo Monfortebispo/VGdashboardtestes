@@ -1,0 +1,12 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const source=read('src/modern/data/legacy-data-sources.ts');
+const model=read('src/modern/data/purchases-model.ts');
+assert(model.includes('interface PurchasesSourceSnapshot'),'deve existir snapshot tipado de purchases');
+assert(source.includes("import type { PurchasesSourceSnapshot }"),'legacy source deve usar o modelo tipado');
+assert(source.includes('function purchasesSnapshot'),'deve existir adaptador dedicado para purchases');
+assert(source.includes('nativeAvailable'),'snapshot deve indicar disponibilidade do módulo A&B nativo');
+assert(source.includes('theoreticalAvailable'),'snapshot deve indicar disponibilidade do consumo teórico');
+assert(source.includes('matched:Array.isArray'),'snapshot deve contar vendas com ficha');
+assert(source.includes("case'purchases':return purchasesSnapshot(w)"),'registry não deve devolver RAW genérico para purchases');
+console.log('✓ Modern purchases source: snapshot tipado e consumo teórico expostos');
