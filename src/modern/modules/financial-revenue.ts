@@ -7,15 +7,21 @@ declare global{
     updateContextPanel?:()=>void;
     buildChartsReceitas?:()=>void;
     buildRevTable?:()=>void;
-    VG?:{market?:{syncMarketDataUi?:()=>void}}&Record<string,unknown>;
   }
 }
+
+type RevenueWindow=Window&{
+  VG?:Window['VG']&{
+    market?:{syncMarketDataUi?:()=>void};
+  };
+};
 
 let mountedRoot:HTMLElement|undefined;
 
 async function render(force=false):Promise<void>{
   await financialsData(force);
-  window.VG?.market?.syncMarketDataUi?.();
+  const w=window as RevenueWindow;
+  w.VG?.market?.syncMarketDataUi?.();
   window.buildKPIs?.('kpiGrid');
   window.updateContextPanel?.();
   window.buildChartsReceitas?.();
