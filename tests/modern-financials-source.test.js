@@ -9,6 +9,7 @@ const usali=read('assets/js/modules/pl-usali-reconciliation-v46.js');
 const main=read('src/modern/main.ts');
 assert(model.includes('interface FinancialsSourceSnapshot'),'deve existir contrato financeiro tipado');
 assert(model.includes('raw:unknown'),'snapshot financeiro deve preservar payload legado durante a migração');
+assert(model.includes('store?:unknown'),'snapshot financeiro deve transportar os meses necessários aos cálculos acumulados');
 assert(model.includes('canonicalFinancialValue'),'deve existir acesso canónico a métricas financeiras por hotel/ano');
 assert(model.includes("canonicalFinancialTotal(value,hotels,'Receita Total',year)"),'Receita Total oficial deve ter um único accessor moderno');
 assert(model.includes('reconcileUsaliRevenue'),'modelo financeiro deve expor reconciliação USALI testável');
@@ -21,5 +22,5 @@ assert(usali.includes("modernSum('hotels_rev'"),'USALI deve preferir a fonte fin
 assert(usali.includes("modernSum('hotels_costs'"),'USALI deve preferir a fonte financeira moderna para custos');
 assert(usali.includes("modernSum('hotels_ops'"),'USALI deve preferir a fonte financeira moderna para indicadores');
 assert(main.includes('installFinancialsBridge();'),'bootstrap moderno deve instalar bridge financeiro antes do USALI');
-assert(legacy.includes("case'financials':return financialsSnapshot(w.RAW)"),'registry deve adaptar RAW para snapshot financeiro tipado');
-console.log('✓ Modern financials source: fachada, bridge e USALI usam o domínio financeiro moderno');
+assert(legacy.includes("financialsSnapshot(w.RAW,w.STORE)"),'registry deve adaptar RAW e STORE para snapshot financeiro tipado');
+console.log('✓ Modern financials source: fachada, bridge, meses e USALI usam o domínio financeiro moderno');
