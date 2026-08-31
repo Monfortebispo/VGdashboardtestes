@@ -1,0 +1,18 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const renderer=read('src/modern/revenue/financial-revenue-renderer.ts');
+const moduleFile=read('src/modern/modules/financial-revenue.ts');
+assert(renderer.includes("type Section='hotels_rev'|'hotels_ops'"),'renderer deve consumir apenas secções financeiras tipadas');
+assert(renderer.includes('snapshot.raw'),'renderer deve partir do snapshot financeiro moderno');
+assert(renderer.includes("'Receita Total'"),'renderer deve manter Receita Total oficial');
+assert(renderer.includes("'ALOJAMENTO'"),'renderer deve manter receita de alojamento');
+assert(renderer.includes("'ALIMENTACAO'"),'renderer deve manter receita F&B');
+assert(renderer.includes("'DIVERSOS'"),'renderer deve manter Outros/Diversos na tabela');
+assert(renderer.includes("document.getElementById('revTableBody')"),'renderer deve preservar a tabela existente');
+assert(renderer.includes("dc('chartRevAloj'"),'renderer deve preservar o gráfico de alojamento');
+assert(renderer.includes("dc('chartRevFB'"),'renderer deve preservar o gráfico F&B');
+assert(renderer.includes("dc('chartVarPct'"),'renderer deve preservar o gráfico de variação');
+assert(!moduleFile.includes('window.buildChartsReceitas?.()'),'módulo moderno não deve chamar renderer legacy de gráficos');
+assert(!moduleFile.includes('window.buildRevTable?.()'),'módulo moderno não deve chamar renderer legacy da tabela');
+assert(moduleFile.includes('renderFinancialRevenue(financials)'),'módulo deve usar renderer financeiro moderno');
+console.log('✓ Modern Receitas renderer: gráficos e tabela usam snapshot financeiro sem RAW global');
