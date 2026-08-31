@@ -1,10 +1,10 @@
 import type { ModernModule } from '../core/module-registry';
 import { financialsData } from '../data/financials-service';
 import { renderFinancialRevenue } from '../revenue/financial-revenue-renderer';
+import { renderFinancialKpis } from '../revenue/financial-kpi-renderer';
 
 declare global{
   interface Window{
-    buildKPIs?:(targetId:string)=>void;
     updateContextPanel?:()=>void;
   }
 }
@@ -21,7 +21,7 @@ async function render(force=false):Promise<void>{
   const financials=await financialsData(force);
   const w=window as RevenueWindow;
   w.VG?.market?.syncMarketDataUi?.();
-  window.buildKPIs?.('kpiGrid');
+  renderFinancialKpis(financials,'kpiGrid');
   window.updateContextPanel?.();
   renderFinancialRevenue(financials);
   if(mountedRoot){mountedRoot.dataset.modernFinancialRevenue='ready';mountedRoot.dataset.modernFinancialRevenueRefresh=force?'forced':'cached';}
