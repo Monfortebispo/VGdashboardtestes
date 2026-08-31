@@ -13,7 +13,7 @@ export const VIEW_CATALOG:readonly ViewDefinition[]=Object.freeze([
 {id:'custos',label:'Custos',group:'Análise',icon:'↘',legacyViewId:'custos',moduleId:'costs',access:'authenticated'},
 {id:'pl',label:'P&L USALI',group:'Análise',icon:'▦',legacyViewId:'pl',access:'authenticated'},
 {id:'revenuehub',label:'Revenue & Forecast',group:'Análise',icon:'◈',legacyViewId:'revenuehub',moduleId:'revenue',access:'authenticated'},
-{id:'compras',label:'Compras & Artigos',group:'Análise',icon:'▤',legacyViewId:'compras',access:'authenticated',dataIndependent:true},
+{id:'compras',label:'Compras & Artigos',group:'Análise',icon:'▤',legacyViewId:'compras',moduleId:'purchases',access:'authenticated',dataIndependent:true},
 {id:'benchmark',label:'Benchmarking',group:'Análise',icon:'◎',legacyViewId:'benchmark',access:'authenticated'},
 {id:'anomalies',label:'Deteção de Anomalias',group:'Análise',icon:'⚠',legacyViewId:'anomalies',access:'authenticated'},
 {id:'ocupacao',label:'Ocupação',group:'Análise avançada',icon:'▥',legacyViewId:'ocupacao',moduleId:'occupancy',access:'authenticated'},
