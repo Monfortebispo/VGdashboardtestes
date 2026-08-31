@@ -12,7 +12,11 @@ assert(moduleCode.includes('costsController.prepare'),'Custos deve usar controla
 assert(moduleCode.includes('costsState.subscribe'),'Custos deve reagir ao estado próprio');
 assert(modelCode.includes('normalizeCosts'),'Custos deve normalizar a fonte financeira');
 assert(rendererCode.includes("data-modern-costs-readonly")||rendererCode.includes("modernCostsReadonly"),'Custos deve ter renderer próprio');
+assert(rendererCode.includes('currentFinancialsData'),'Custos deve reutilizar o snapshot financeiro comum');
+assert(rendererCode.includes('resolveFinancialViewContext'),'Custos deve usar o mesmo contexto de hotéis/período do domínio financeiro');
+assert(rendererCode.includes('context.activeHotels'),'Custos deve respeitar a seleção global de hotéis');
+assert(rendererCode.includes("context?.currencySymbol||'€'"),'Custos deve usar a moeda do contexto financeiro');
 assert(rendererCode.includes('Todos os hotéis'),'Renderer deve disponibilizar filtro de hotel');
 assert(rendererCode.includes('Todas as rubricas'),'Renderer deve disponibilizar filtro de rubrica');
 assert(bootstrap.includes("'custos'"),'Custos deve estar ativo no modo moderno seletivo');
-console.log('✓ modern costs source');
+console.log('✓ modern costs source: domínio próprio alinhado com contexto financeiro comum');
