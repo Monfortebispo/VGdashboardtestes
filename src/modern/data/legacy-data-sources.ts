@@ -25,12 +25,16 @@ function purchasesSnapshot(w:LegacyWindow):PurchasesSourceSnapshot{
   const native=w.VG?.comprasNative35;
   let theory:{matched?:unknown[];unmatched?:unknown[];ingredients?:unknown[]}|null=null;
   try{theory=w.VG?.domains33?.theoreticalData?.()||null;}catch(e){theory=null;}
+  const matched=Array.isArray(theory?.matched)?theory!.matched!.slice():[];
+  const unmatched=Array.isArray(theory?.unmatched)?theory!.unmatched!.slice():[];
+  const ingredients=Array.isArray(theory?.ingredients)?theory!.ingredients!.slice():[];
   return{
     nativeAvailable:!!native,
     nativeVersion:Number.isFinite(Number(native?.version))?Number(native?.version):null,
     nativeMounted:!!native?.getRoot?.(),
     theoreticalAvailable:!!theory,
-    theoretical:{matched:Array.isArray(theory?.matched)?theory!.matched!.length:0,unmatched:Array.isArray(theory?.unmatched)?theory!.unmatched!.length:0,ingredients:Array.isArray(theory?.ingredients)?theory!.ingredients!.length:0},
+    theoretical:{matched:matched.length,unmatched:unmatched.length,ingredients:ingredients.length},
+    theoreticalData:{matched,unmatched,ingredients},
     rawAvailable:!!w.RAW
   };
 }
