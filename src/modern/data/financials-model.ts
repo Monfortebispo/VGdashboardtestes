@@ -1,5 +1,6 @@
 export interface FinancialsSourceSnapshot {
   raw:unknown;
+  store?:unknown;
   available:boolean;
   topLevelKeys:string[];
   approxRecords:number;
@@ -45,6 +46,6 @@ export function reconcileUsaliRevenue(value:FinancialsSourceSnapshot|unknown,hot
   return{rooms,fb,other:legacyOther+residual,total:official,residual};
 }
 
-export function financialsSnapshot(value:unknown):FinancialsSourceSnapshot{
-  return{raw:value,available:value!=null,topLevelKeys:value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value as Record<string,unknown>):[],approxRecords:approxRecords(value)};
+export function financialsSnapshot(value:unknown,store?:unknown):FinancialsSourceSnapshot{
+  return{raw:value,store,available:value!=null,topLevelKeys:value&&typeof value==='object'&&!Array.isArray(value)?Object.keys(value as Record<string,unknown>):[],approxRecords:approxRecords(value)};
 }
