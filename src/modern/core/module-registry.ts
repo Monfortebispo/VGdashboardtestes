@@ -2,6 +2,7 @@ export type ModernModuleId =
   | 'shell'
   | 'portfolio'
   | 'revenue'
+  | 'financial-revenue'
   | 'costs'
   | 'pl-usali'
   | 'occupancy'
