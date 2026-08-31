@@ -1,6 +1,7 @@
 import type { TheoryViewModel } from './theoretical-model';
 
-const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]!));
+const ESC:Record<string,string>={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,m=>ESC[m]||m);
 const fmt=(v:unknown,d=0)=>Number(v||0).toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
 export interface TheoryRenderOptions {money:(value:number,digits?:number)=>string;onHotel:(hotel:string)=>void;}
 
