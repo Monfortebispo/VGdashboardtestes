@@ -1,0 +1,16 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const registry=read('src/modern/core/module-registry.ts');
+const catalog=read('src/modern/core/view-catalog.ts');
+const main=read('src/modern/main.ts');
+const mod=read('src/modern/modules/financial-revenue.ts');
+const legacy=read('assets/js/core/02-navigation-kpis.js');
+assert(registry.includes("| 'financial-revenue'"),'registry deve incluir módulo financeiro de Receitas');
+assert(catalog.includes("id:'receitas'")&&catalog.includes("moduleId:'financial-revenue'"),'Receitas deve usar lifecycle moderno');
+assert(main.includes("registerModule('financial-revenue'"),'main deve registar Receitas em lazy loading');
+assert(mod.includes("financialsData(force)"),'Receitas deve preparar a fonte financeira tipada');
+assert(mod.includes("window.buildChartsReceitas?.()"),'módulo deve preservar gráficos legacy existentes');
+assert(mod.includes("window.buildRevTable?.()"),'módulo deve preservar tabela legacy existente');
+assert(!mod.includes('refreshAll'),'módulo moderno de Receitas não pode disparar refreshAll');
+assert(legacy.includes('function buildChartsReceitas()')&&legacy.includes('buildRevTable()'),'renderers seletivos legacy devem continuar disponíveis durante a migração');
+console.log('✓ Modern Receitas: lifecycle seletivo, dados financeiros e renderer atual preservados');
