@@ -5,6 +5,7 @@ import { createNavigationController, navigationGroups } from './shell/navigation
 import { registerLegacyDataSources } from './data/legacy-data-sources';
 import { dataRegistryStats, invalidateData } from './data/data-registry';
 import { viewDataPlan } from './data/view-data-plan';
+import { ensureUsaliReconciliation } from './modules/pl-usali-reconciliation-loader';
 
 registerModule('shell',async()=>({id:'shell',mount(root){root.dataset.vgModernShell='ready';},unmount(){}}));
 registerModule('portfolio',async()=>(await import('./modules/portfolio')).default);
@@ -16,6 +17,7 @@ registerModule('approvals',async()=>(await import('./modules/approvals')).defaul
 registerModule('city-ledger',async()=>(await import('./modules/city-ledger')).default);
 registerModule('purchases',async()=>(await import('./modules/purchases')).default);
 registerLegacyDataSources();
+ensureUsaliReconciliation();
 const runtime=createLegacyRuntime();export const modernViewRouter=new ModernViewRouter(runtime);export const modernNavigation=createNavigationController(modernViewRouter);
 export async function openModernModule(id:ModernModuleId):Promise<void>{const mod=await loadModule(id);await mod.mount?.(document.body);}export function resetModernDataCache():void{invalidateData();}
 export const modernArchitecture=Object.freeze({status:'isolated',version:7,lazyModules:['portfolio','occupancy','reputation','revenue','costs','approvals','city-ledger','purchases'] as const,navigationGroups:navigationGroups().map(group=>({name:group.name,views:group.items.map(item=>item.id)})),dataPlan:viewDataPlan(),dataStats:dataRegistryStats,navigationMetrics:()=>modernViewRouter.navigationMetrics()});
