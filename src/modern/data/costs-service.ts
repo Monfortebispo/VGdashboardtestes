@@ -1,16 +1,15 @@
-import { cachedData, ensureDataSource } from './data-registry';
 import { costsSnapshot, type CostsSourceSnapshot } from './costs-model';
-import type { FinancialsSourceSnapshot } from './financials-model';
+import { currentFinancialsData, financialsData } from './financials-service';
 
 export interface CostsDiagnostics {loadMs:number;records:number;hotels:number;categories:number;available:boolean;}
 
 export async function costsData(force=false):Promise<CostsSourceSnapshot>{
-  const financials=await ensureDataSource<FinancialsSourceSnapshot>('financials',{force});
+  const financials=await financialsData(force);
   return costsSnapshot(financials.raw);
 }
 
 export function currentCostsData():CostsSourceSnapshot|undefined{
-  const financials=cachedData<FinancialsSourceSnapshot>('financials');
+  const financials=currentFinancialsData();
   return financials===undefined?undefined:costsSnapshot(financials.raw);
 }
 
