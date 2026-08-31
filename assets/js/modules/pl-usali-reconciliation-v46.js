@@ -1,12 +1,12 @@
 // ==========================================================
 // P&L USALI — reconciliação com Receita Total oficial
-// Garante que a classificação USALI não perde receitas e,
-// quando disponível, usa a fonte financeira moderna tipada.
+// Garante que a classificação USALI não perde receitas e usa
+// o mesmo contexto financeiro moderno de Receitas/Custos.
 // ==========================================================
 (function(){
 'use strict';
-if(window.__VG_PL_USALI_RECON_V46__)return;
-window.__VG_PL_USALI_RECON_V46__=true;
+if(window.__VG_PL_USALI_RECON_V48__)return;
+window.__VG_PL_USALI_RECON_V48__=true;
 
 const originalCost=(typeof plSum==='function')?plSum:(typeof window.plSum==='function'?window.plSum:null);
 const originalRev=(typeof plSumRev==='function')?plSumRev:(typeof window.plSumRev==='function'?window.plSumRev:null);
@@ -14,9 +14,14 @@ const originalOps=(typeof plSumOps==='function')?plSumOps:(typeof window.plSumOp
 if(!originalRev)return;
 
 function bridge(){return window.VG?.modernFinancials||null;}
-function data(){try{return typeof RAW!=='undefined'?RAW:window.RAW;}catch(e){return window.RAW;}}
+function sharedContext(){
+  const b=bridge();if(!b||typeof b.context!=='function')return null;
+  try{return b.context()||null;}catch(e){return null;}
+}
 function hotelsOf(hotels){
   if(Array.isArray(hotels))return hotels;
+  const context=sharedContext();
+  if(Array.isArray(context?.activeHotels))return context.activeHotels;
   try{return typeof getActiveHotels==='function'?getActiveHotels():[];}catch(e){return [];}
 }
 function modernSum(section,field,year,hotels){
@@ -26,15 +31,14 @@ function modernSum(section,field,year,hotels){
 function officialTotal(year,hotels){
   const hs=hotelsOf(hotels),b=bridge();
   try{if(b&&typeof b.officialRevenue==='function'){const v=b.officialRevenue(year,hs);if(Number.isFinite(Number(v)))return Number(v);}}catch(e){}
-  const d=data();
-  return hs.reduce((sum,h)=>{const v=Number(d?.hotels_ops?.[h]?.['Receita Total']?.[year]);return sum+(Number.isFinite(v)?v:0);},0);
+  return originalOps?Number(originalOps('Receita Total',year,hs))||0:0;
 }
-function bridgedCost(field,year,hotels){const v=modernSum('hotels_costs',field,year,hotels);return v==null?(originalCost?originalCost(field,year,hotels):0):v;}
-function bridgedOps(field,year,hotels){const v=modernSum('hotels_ops',field,year,hotels);return v==null?(originalOps?originalOps(field,year,hotels):0):v;}
-function baseRevenue(field,year,hotels){const v=modernSum('hotels_rev',field,year,hotels);return v==null?originalRev(field,year,hotels):v;}
+function bridgedCost(field,year,hotels){const hs=hotelsOf(hotels),v=modernSum('hotels_costs',field,year,hs);return v==null?(originalCost?originalCost(field,year,hs):0):v;}
+function bridgedOps(field,year,hotels){const hs=hotelsOf(hotels),v=modernSum('hotels_ops',field,year,hs);return v==null?(originalOps?originalOps(field,year,hs):0):v;}
+function baseRevenue(field,year,hotels){const hs=hotelsOf(hotels),v=modernSum('hotels_rev',field,year,hs);return v==null?originalRev(field,year,hs):v;}
 function reconciledRevenue(field,year,hotels){
-  if(field!=='DIVERSOS')return baseRevenue(field,year,hotels);
   const hs=hotelsOf(hotels);
+  if(field!=='DIVERSOS')return baseRevenue(field,year,hs);
   const total=officialTotal(year,hs);
   const rooms=Number(baseRevenue('ALOJAMENTO',year,hs))||0;
   const fb=Number(baseRevenue('ALIMENTACAO',year,hs))||0;
@@ -45,5 +49,5 @@ function reconciledRevenue(field,year,hotels){
 if(originalCost){try{plSum=bridgedCost;}catch(e){}window.plSum=bridgedCost;}
 try{plSumRev=reconciledRevenue;}catch(e){}window.plSumRev=reconciledRevenue;
 if(originalOps){try{plSumOps=bridgedOps;}catch(e){}window.plSumOps=bridgedOps;}
-try{window.dispatchEvent(new CustomEvent('vg-pl-usali-reconciled'));}catch(e){}
+try{window.dispatchEvent(new CustomEvent('vg-pl-usali-reconciled',{detail:{context:sharedContext()}}));}catch(e){}
 })();
