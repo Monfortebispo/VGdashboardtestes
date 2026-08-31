@@ -11,7 +11,7 @@ export const VIEW_CATALOG:readonly ViewDefinition[]=Object.freeze([
 {id:'cityledger',label:'City Ledger',group:'Gestão',icon:'▤',legacyViewId:'cityledger',moduleId:'city-ledger',access:'authenticated',dataIndependent:true},
 {id:'receitas',label:'Receitas',group:'Análise',icon:'↗',legacyViewId:'receitas',access:'authenticated'},
 {id:'custos',label:'Custos',group:'Análise',icon:'↘',legacyViewId:'custos',moduleId:'costs',access:'authenticated'},
-{id:'pl',label:'P&L USALI',group:'Análise',icon:'▦',legacyViewId:'pl',access:'authenticated'},
+{id:'pl',label:'P&L USALI',group:'Análise',icon:'▦',legacyViewId:'pl',moduleId:'pl-usali',access:'authenticated'},
 {id:'revenuehub',label:'Revenue & Forecast',group:'Análise',icon:'◈',legacyViewId:'revenuehub',moduleId:'revenue',access:'authenticated'},
 {id:'compras',label:'Compras & Artigos',group:'Análise',icon:'▤',legacyViewId:'compras',moduleId:'purchases',access:'authenticated',dataIndependent:true},
 {id:'benchmark',label:'Benchmarking',group:'Análise',icon:'◎',legacyViewId:'benchmark',access:'authenticated'},
