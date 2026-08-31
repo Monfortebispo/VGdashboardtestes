@@ -5,6 +5,7 @@ import type { RevenueSourceSnapshot } from './revenue-model';
 import type { PortfolioSourceSnapshot } from './portfolio-model';
 import type { CityLedgerSourceSnapshot } from './city-ledger-model';
 import type { PurchasesSourceSnapshot } from './purchases-model';
+import { financialsSnapshot } from './financials-model';
 
 type OccupancyBridge={version:number;read:()=>unknown[];selection:()=>{hotel:string;snapshot:string};eligibleHotels?:()=>string[];stats:()=>OccupancySourceSnapshot['stats'];};
 type ReputationBridge={version:number;read:()=>unknown;stats:()=>ReputationSourceSnapshot['stats'];};
@@ -28,16 +29,8 @@ function purchasesSnapshot(w:LegacyWindow):PurchasesSourceSnapshot{
   const matched=Array.isArray(theory?.matched)?theory!.matched!.slice():[];
   const unmatched=Array.isArray(theory?.unmatched)?theory!.unmatched!.slice():[];
   const ingredients=Array.isArray(theory?.ingredients)?theory!.ingredients!.slice():[];
-  return{
-    nativeAvailable:!!native,
-    nativeVersion:Number.isFinite(Number(native?.version))?Number(native?.version):null,
-    nativeMounted:!!native?.getRoot?.(),
-    theoreticalAvailable:!!theory,
-    theoretical:{matched:matched.length,unmatched:unmatched.length,ingredients:ingredients.length},
-    theoreticalData:{matched,unmatched,ingredients},
-    rawAvailable:!!w.RAW
-  };
+  return{nativeAvailable:!!native,nativeVersion:Number.isFinite(Number(native?.version))?Number(native?.version):null,nativeMounted:!!native?.getRoot?.(),theoreticalAvailable:!!theory,theoretical:{matched:matched.length,unmatched:unmatched.length,ingredients:ingredients.length},theoreticalData:{matched,unmatched,ingredients},rawAvailable:!!w.RAW};
 }
-function snapshot(id:DataSourceId):unknown{const w=window as LegacyWindow;switch(id){case'core':return{RAW:w.RAW,STORE:w.STORE,VG:w.VG};case'financials':return w.RAW;case'portfolio':return portfolioSnapshot(w);case'occupancy':return occupancySnapshot(w);case'reputation':return reputationSnapshot(w);case'revenue':return revenueSnapshot(w);case'approvals':return approvalsSnapshot(w);case'hotels':return{RAW:w.RAW,hotels:w.VG?.hotels};case'documents':return w.VG?.documents;case'purchases':return purchasesSnapshot(w);}}
+function snapshot(id:DataSourceId):unknown{const w=window as LegacyWindow;switch(id){case'core':return{RAW:w.RAW,STORE:w.STORE,VG:w.VG};case'financials':return financialsSnapshot(w.RAW);case'portfolio':return portfolioSnapshot(w);case'occupancy':return occupancySnapshot(w);case'reputation':return reputationSnapshot(w);case'revenue':return revenueSnapshot(w);case'approvals':return approvalsSnapshot(w);case'hotels':return{RAW:w.RAW,hotels:w.VG?.hotels};case'documents':return w.VG?.documents;case'purchases':return purchasesSnapshot(w);}}
 const TTL:Readonly<Record<DataSourceId,number>>=Object.freeze({core:15_000,financials:60_000,portfolio:30_000,occupancy:30_000,reputation:120_000,revenue:30_000,approvals:5_000,cityledger:15_000,hotels:300_000,documents:60_000,purchases:15_000});
 export function registerLegacyDataSources():void{(Object.keys(TTL) as DataSourceId[]).forEach(id=>registerDataSource({id,ttlMs:TTL[id],load:ctx=>id==='cityledger'?cityLedgerSnapshot(window as LegacyWindow,!!ctx.force):snapshot(id)}));}
