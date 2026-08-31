@@ -10,7 +10,10 @@ assert(catalog.includes("id:'pl'")&&catalog.includes("moduleId:'pl-usali'"),'vis
 assert(main.includes("registerModule('pl-usali'"),'bootstrap deve lazy-load USALI moderno');
 assert(moduleSource.includes("id:'pl-usali'"),'módulo USALI deve declarar o id correto');
 assert(moduleSource.includes('financialsData(false)'),'módulo USALI deve garantir a fonte financeira antes de renderizar');
+assert(moduleSource.includes('resolveFinancialViewContext(financials)'),'USALI deve resolver o mesmo contexto financeiro de Receitas/Custos');
+assert(moduleSource.includes('vgModernUsaliHotels'),'USALI deve expor diagnóstico da seleção de hotéis utilizada');
+assert(moduleSource.includes('vgModernUsaliCurrentYear'),'USALI deve expor diagnóstico do ano financeiro utilizado');
 assert(moduleSource.includes('w.plRender?.()'),'módulo deve preservar o renderer visual legacy já validado');
 assert(loader.includes('Promise<void>'),'loader de reconciliação deve poder ser aguardado');
 assert(!moduleSource.includes('refreshAll'),'USALI moderno não deve disparar refresh global');
-console.log('✓ Modern USALI lifecycle: dados seletivos, renderer preservado e sem refreshAll');
+console.log('✓ Modern USALI lifecycle: contexto financeiro partilhado, renderer preservado e sem refreshAll');
