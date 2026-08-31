@@ -3,6 +3,7 @@ export type ModernModuleId =
   | 'portfolio'
   | 'revenue'
   | 'costs'
+  | 'pl-usali'
   | 'occupancy'
   | 'reputation'
   | 'city-ledger'
