@@ -14,9 +14,10 @@ registerModule('revenue',async()=>(await import('./modules/revenue')).default);
 registerModule('costs',async()=>(await import('./modules/costs')).default);
 registerModule('approvals',async()=>(await import('./modules/approvals')).default);
 registerModule('city-ledger',async()=>(await import('./modules/city-ledger')).default);
+registerModule('purchases',async()=>(await import('./modules/purchases')).default);
 registerLegacyDataSources();
 const runtime=createLegacyRuntime();export const modernViewRouter=new ModernViewRouter(runtime);export const modernNavigation=createNavigationController(modernViewRouter);
 export async function openModernModule(id:ModernModuleId):Promise<void>{const mod=await loadModule(id);await mod.mount?.(document.body);}export function resetModernDataCache():void{invalidateData();}
-export const modernArchitecture=Object.freeze({status:'isolated',version:6,lazyModules:['portfolio','occupancy','reputation','revenue','costs','approvals','city-ledger'] as const,navigationGroups:navigationGroups().map(group=>({name:group.name,views:group.items.map(item=>item.id)})),dataPlan:viewDataPlan(),dataStats:dataRegistryStats,navigationMetrics:()=>modernViewRouter.navigationMetrics()});
+export const modernArchitecture=Object.freeze({status:'isolated',version:7,lazyModules:['portfolio','occupancy','reputation','revenue','costs','approvals','city-ledger','purchases'] as const,navigationGroups:navigationGroups().map(group=>({name:group.name,views:group.items.map(item=>item.id)})),dataPlan:viewDataPlan(),dataStats:dataRegistryStats,navigationMetrics:()=>modernViewRouter.navigationMetrics()});
 type PreviewWindow=Window&{VG?:Record<string,unknown>&{modernPreview?:{router:ModernViewRouter;navigation:typeof modernNavigation;architecture:typeof modernArchitecture;resetDataCache:typeof resetModernDataCache;};};};
 const previewWindow=window as PreviewWindow;previewWindow.VG=previewWindow.VG||{};previewWindow.VG.modernPreview={router:modernViewRouter,navigation:modernNavigation,architecture:modernArchitecture,resetDataCache:resetModernDataCache};window.dispatchEvent(new CustomEvent('vg-modern-preview-ready'));
