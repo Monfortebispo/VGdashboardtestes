@@ -6,6 +6,7 @@ export type ModernModuleId =
   | 'occupancy'
   | 'reputation'
   | 'city-ledger'
+  | 'purchases'
   | 'housekeeping'
   | 'energy'
   | 'approvals';
