@@ -1,0 +1,12 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const ctx=read('src/modern/revenue/financial-view-context.ts');
+const rev=read('src/modern/revenue/financial-revenue-renderer.ts');
+const kpi=read('src/modern/revenue/financial-kpi-renderer.ts');
+assert(ctx.includes('resolveFinancialViewContext'),'deve existir contexto financeiro partilhado');
+assert(ctx.includes('activeHotels')&&ctx.includes('previousYear')&&ctx.includes('currentYear'),'contexto deve centralizar seleção e período');
+assert(rev.includes('resolveFinancialViewContext(snapshot)'),'renderer de receitas deve consumir contexto partilhado');
+assert(kpi.includes('resolveFinancialViewContext(snapshot)'),'KPIs devem consumir contexto partilhado');
+assert(!rev.includes('function years(')&&!kpi.includes('function years('),'renderers não devem duplicar resolução de anos');
+assert(!rev.includes('function hotels(')&&!kpi.includes('function hotels('),'renderers não devem duplicar resolução de hotéis');
+console.log('✓ Financial view context: seleção, anos e moeda centralizados');
