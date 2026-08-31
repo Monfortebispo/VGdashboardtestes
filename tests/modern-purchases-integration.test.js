@@ -1,0 +1,14 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const registry=read('src/modern/core/module-registry.ts');
+const main=read('src/modern/main.ts');
+const catalog=read('src/modern/core/view-catalog.ts');
+const mod=read('src/modern/modules/purchases.ts');
+assert(registry.includes("| 'purchases'"),'purchases deve existir como ModernModuleId');
+assert(main.includes("registerModule('purchases'"),'purchases deve ser lazy-loaded no main moderno');
+assert(catalog.includes("id:'compras'")&&catalog.includes("moduleId:'purchases'"),'vista compras deve usar módulo moderno');
+assert(mod.includes("id:'purchases'"),'módulo deve declarar id purchases');
+assert(mod.includes("#ab35NativeMount"),'módulo deve montar no contentor nativo A&B');
+assert(mod.includes("hub.dataset.tab&&hub.dataset.tab!=='exact'"),'módulo não deve forçar montagem A&B fora do separador exato');
+assert(mod.includes("invalidateData('purchases')"),'alterações de dados devem invalidar cache de purchases');
+console.log('✓ Modern purchases: router, lifecycle e cache integrados');
