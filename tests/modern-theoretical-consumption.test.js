@@ -6,7 +6,7 @@ const renderer=read('src/modern/purchases/theoretical-renderer.ts');
 const purchases=read('src/modern/modules/purchases.ts');
 const build=read('scripts/build-modern-preview.js');
 assert(model.includes('buildTheoryViewModel'),'modelo teórico tipado deve existir');
-assert(model.includes("selectedHotel==='__all'"),'modelo deve filtrar por hotel');
+assert(model.includes("const accepts=(row:{hotel?:unknown})=>selected==='__all'||canonical(row.hotel)===selected"),'modelo deve filtrar por hotel canónico');
 assert(model.includes('recipe?.ingredients'),'ingredientes devem ser recalculados pelas fichas das vendas filtradas');
 assert(controller.includes('TheoreticalConsumptionState'),'controller deve gerir estado próprio');
 assert(controller.includes("hub.dataset.tab!=='theoretical'"),'controller só deve atuar no separador teórico');
