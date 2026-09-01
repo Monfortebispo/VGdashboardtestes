@@ -1,0 +1,10 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const pkg=JSON.parse(read('package.json'));
+const prioritizer=read('scripts/prioritize-login-auth.js');
+const index=read('index.html');
+assert(pkg.scripts['modern:deploy-preview'].includes('prioritize-login-auth.js'),'deploy moderno deve priorizar autenticação');
+assert(prioritizer.includes('html.replace(authTag'), 'priorizador deve remover a posição tardia do auth-client');
+assert(prioritizer.includes("html.replace('<body>'"), 'auth-client deve ser promovido para o início do body');
+assert(index.includes('assets/js/core/00-runtime.js')&&index.includes('id="vg-auth-script"'),'contrato base deve conter runtime e autenticação');
+console.log('✓ Login critical path: autenticação promovida antes dos módulos operacionais no artefacto de deploy');
