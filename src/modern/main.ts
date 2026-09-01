@@ -7,6 +7,7 @@ export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loadi
 // registerModule('portfolio'
 // registerModule('costs'
 // registerModule('approvals'
+// registerModule('financial-revenue'
 // navigationMetrics:()=>modernViewRouter.navigationMetrics()
 
 function startModernRuntime():void{
