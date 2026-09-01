@@ -5,6 +5,7 @@ const cp=require('child_process');
 const {ROOT,createSandbox,load}=require('./helpers/browser-sandbox');
 const rel='assets/js/modules/unit-economics-v32.js';
 cp.execFileSync(process.execPath,['--check',path.join(ROOT,rel)],{stdio:'pipe'});
+const source=fs.readFileSync(path.join(ROOT,rel),'utf8');
 const RAW={
   hotel_list:['A','B'],
   hotels_ops:{
@@ -37,4 +38,12 @@ assert.strictEqual(api.semanticClass('energy',-5),'good','queda de custo unitár
 assert.strictEqual(api.semanticClass('energy',5),'bad','subida de custo unitário é negativa');
 assert.strictEqual(api.semanticClass('totalRevenue',5),'good','subida de receita unitária é positiva');
 assert.strictEqual(api.semanticClass('gop',-5),'bad','queda de GOP unitário é negativa');
-console.log('✓ V32 Unit Economics: custos/receitas/GOP por QD, QO, dormida, cliente e chegada, com energia em todas as bases');
+
+// O KPI pode não devolver valor sem lançar exceção: nesse caso deve usar o GOP COM SEDE do RAW.
+s.window.VG.kpi.gop=()=>null;
+assert.strictEqual(api.numerator('A','gop','2026'),25000,'GOP deve fazer fallback quando o helper KPI devolve null');
+RAW.hotels_ops.A['GOP COM SEDE'][2026]=-25000;
+assert.strictEqual(api.unitValue('A','gop','occupied','2026'),-50,'GOP unitário deve preservar o sinal negativo');
+assert(source.includes("const sign=x<0?'-':''"),'formatação monetária deve preservar sinal negativo');
+
+console.log('✓ V32 Unit Economics: fórmulas ponderadas, fallback GOP e sinais monetários validados');
