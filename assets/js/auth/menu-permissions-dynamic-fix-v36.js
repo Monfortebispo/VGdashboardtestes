@@ -43,6 +43,71 @@ function setCityStatus(text,bad){
   const e=document.querySelector('#cityLedgerRoot #clStatus');
   if(e){e.textContent=text||'';e.classList.toggle('bad',!!bad);}
 }
+function cityMoney(value){
+  const d=window.VG?.market?.def?.()||{};
+  const symbol=d.symbol||'€';
+  const locale=d.locale||'pt-PT';
+  const v=Number(value||0);
+  return (v<0?'-':'')+symbol+' '+Math.abs(v).toLocaleString(locale,{maximumFractionDigits:0});
+}
+function cityMainCurrency(){
+  return window.VG?.market?.def?.()?.currency||'EUR';
+}
+function cityRowsForView(){
+  const cl=window.VG?.cityLedger;
+  if(!cl) return [];
+  try{
+    if(typeof cl.filteredRows==='function') return cl.filteredRows()||[];
+  }catch(e){}
+  return cl.state?.rows||[];
+}
+function correctCityLedgerSummary(){
+  const root=document.getElementById('cityLedgerRoot');
+  const kpis=root?.querySelector('.cl-kpis');
+  const cl=window.VG?.cityLedger;
+  if(!kpis||!cl) return;
+
+  const main=cityMainCurrency();
+  const rows=cityRowsForView().filter(function(r){return String(r?.currency||main)===main;});
+  if(!rows.length&&!(cl.state?.rows||[]).length) return;
+
+  let grossDebt=0,credits=0,net=0;
+  const clients=new Set();
+  for(const r of rows){
+    const bal=Number(r?.balance||0);
+    net+=bal;
+    if(bal>0) grossDebt+=bal;
+    if(bal<0) credits+=bal;
+    if(r?.clientKey) clients.add(r.clientKey);
+  }
+
+  const cards=[...kpis.querySelectorAll(':scope > article')];
+  const first=cards[0];
+  if(first){
+    const label=first.querySelector('span');
+    const value=first.querySelector('strong');
+    const small=first.querySelector('small');
+    if(label) label.textContent='Saldo líquido em dívida';
+    if(value) value.textContent=cityMoney(net);
+    if(small) small.textContent=rows.length.toLocaleString('pt-PT')+' documentos · '+clients.size.toLocaleString('pt-PT')+' clientes';
+  }
+
+  let gross=kpis.querySelector('[data-vg-cl-gross-debt]');
+  if(!gross){
+    gross=document.createElement('article');
+    gross.dataset.vgClGrossDebt='1';
+    gross.innerHTML='<span>Débitos em aberto</span><strong></strong><small>Antes da dedução de créditos</small>';
+    if(first?.nextSibling) kpis.insertBefore(gross,first.nextSibling); else kpis.appendChild(gross);
+  }
+  const grossValue=gross.querySelector('strong');
+  if(grossValue) grossValue.textContent=cityMoney(grossDebt);
+
+  const creditCard=[...kpis.querySelectorAll(':scope > article')].find(function(a){return (a.querySelector('span')?.textContent||'').trim().toLowerCase()==='créditos';});
+  if(creditCard){
+    const value=creditCard.querySelector('strong');
+    if(value) value.textContent=cityMoney(credits);
+  }
+}
 async function forceCityRefresh(){
   const cl=window.VG?.cityLedger;
   if(!cl) return;
@@ -51,6 +116,7 @@ async function forceCityRefresh(){
     await cl.render();
   }catch(e){console.warn('City Ledger refresh falhou',e);}
   ensureCityLedgerActions();
+  correctCityLedgerSummary();
 }
 async function runDirectImport(file){
   const cl=window.VG?.cityLedger;
@@ -65,7 +131,8 @@ async function runDirectImport(file){
     await new Promise(function(r){setTimeout(r,700);});
     await forceCityRefresh();
     const snap=cl.state?.snapshot;
-    const rows=cl.state?.rows||[];
+    const main=cityMainCurrency();
+    const rows=(cl.state?.rows||[]).filter(function(r){return String(r?.currency||main)===main;});
     setCityStatus('City Ledger atualizado · '+rows.length.toLocaleString('pt-PT')+' documentos'+(snap?.snapshotDate?' · snapshot '+snap.snapshotDate:'')+'.');
   }catch(err){
     setCityStatus('Erro na importação: '+(err?.message||String(err)),true);
@@ -116,18 +183,23 @@ function ensureCityLedgerActions(){
 function install(){
   const original=window.vgAuthApplyMenuPermissions;
   if(typeof original==='function'&&!original.__vgDynamicMenuWrappedV41){
-    const wrapped=function(){const out=original.apply(this,arguments);syncDynamicMenus();ensureCityLedgerActions();return out;};
+    const wrapped=function(){const out=original.apply(this,arguments);syncDynamicMenus();ensureCityLedgerActions();correctCityLedgerSummary();return out;};
     wrapped.__vgDynamicMenuWrappedV41=true;
     window.vgAuthApplyMenuPermissions=wrapped;
   }
   syncDynamicMenus();
   ensureCityLedgerActions();
+  correctCityLedgerSummary();
   setInterval(function(){
-    if(document.getElementById('cityLedgerRoot')) ensureCityLedgerActions();
+    if(document.getElementById('cityLedgerRoot')){
+      ensureCityLedgerActions();
+      correctCityLedgerSummary();
+    }
   },500);
 }
 window.vgSyncDynamicMenus=syncDynamicMenus;
 window.vgEnsureCityLedgerActions=ensureCityLedgerActions;
+window.vgCorrectCityLedgerSummary=correctCityLedgerSummary;
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(install,0);},{once:true});
 else setTimeout(install,0);
 })();
