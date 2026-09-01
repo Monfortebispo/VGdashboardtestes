@@ -9,7 +9,7 @@
     "modern:dev": "vite --config vite.config.ts",
     "modern:build": "tsc --noEmit && vite build --config vite.config.ts",
     "modern:preview": "vite preview --config vite.config.ts",
-    "modern:deploy-preview": "npm test && npm run modern:build && node scripts/build-modern-preview.js && node scripts/defer-modern-preview-runtime.js"
+    "modern:deploy-preview": "npm test && npm run modern:build && node scripts/build-modern-preview.js && node scripts/defer-modern-preview-runtime.js && node scripts/prioritize-login-auth.js"
   },
   "engines": {
     "node": ">=18"
