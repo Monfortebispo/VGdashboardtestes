@@ -5,11 +5,17 @@ export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loadi
 // registerLegacyDataSources();
 // installFinancialsBridge();
 // dataPlan:viewDataPlan()
+// registerModule('shell'
 // registerModule('portfolio'
-// registerModule('costs'
-// registerModule('approvals'
+// registerModule('occupancy'
+// registerModule('reputation'
+// registerModule('revenue'
 // registerModule('financial-revenue'
+// registerModule('costs'
 // registerModule('pl-usali'
+// registerModule('approvals'
+// registerModule('city-ledger'
+// registerModule('purchases'
 // navigationMetrics:()=>modernViewRouter.navigationMetrics()
 
 function startModernRuntime():void{
