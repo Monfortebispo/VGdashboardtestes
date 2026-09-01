@@ -13,13 +13,17 @@ window.__VG_PL_USALI_RECON_V48__=true;
 const originalCost=(typeof plSum==='function')?plSum:(typeof window.plSum==='function'?window.plSum:null);
 const originalRev=(typeof plSumRev==='function')?plSumRev:(typeof window.plSumRev==='function'?window.plSumRev:null);
 const originalOps=(typeof plSumOps==='function')?plSumOps:(typeof window.plSumOps==='function'?window.plSumOps:null);
+const originalBuildStmt=(typeof plBuildStmt==='function')?plBuildStmt:(typeof window.plBuildStmt==='function'?window.plBuildStmt:null);
 if(!originalRev||!originalOps)return;
 
 function hotelsOf(hotels){
   if(Array.isArray(hotels))return hotels;
   try{return typeof getActiveHotels==='function'?getActiveHotels():[];}catch(e){return [];}
 }
-function finite(value){const n=Number(value);return Number.isFinite(n)?n:null;}
+function finite(value){
+  if(value==null||value==='')return null;
+  const n=Number(value);return Number.isFinite(n)?n:null;
+}
 function liveOps(field,year,hotels){
   try{return finite(originalOps(field,year,hotelsOf(hotels)));}catch(e){return null;}
 }
@@ -53,8 +57,51 @@ function liveCost(field,year,hotels){
 }
 function liveOpsSum(field,year,hotels){return liveOps(field,year,hotels)||0;}
 
+// GOP com sede: usa a imputação real de cada hotel, nunca uma distribuição
+// artificial. A diferença entre GOP sem sede e GOP com sede é o custo de sede
+// imputado à seleção atual. Funciona para 1 hotel, vários hotéis ou Todos.
+function normMetric(value){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,' ').trim().toLowerCase();
+}
+function rawOpsMetric(hotel,metric,year){
+  try{
+    const bucket=window.RAW?.hotels_ops?.[hotel];
+    if(!bucket||typeof bucket!=='object')return null;
+    const wanted=normMetric(metric);
+    const key=Object.keys(bucket).find(k=>normMetric(k)===wanted);
+    return key?finite(bucket[key]?.[String(year)]):null;
+  }catch(e){return null;}
+}
+function metricTotal(metric,year,hotels){
+  let found=false,total=0;
+  for(const hotel of hotelsOf(hotels)){
+    const value=rawOpsMetric(hotel,metric,year);
+    if(value!=null){found=true;total+=value;}
+  }
+  return found?total:null;
+}
+function headOfficeDeduction(hotel,year){
+  const hs=hotel?[hotel]:hotelsOf();
+  const without=metricTotal('GOP sem sede',year,hs);
+  const withHeadOffice=metricTotal('GOP com sede',year,hs);
+  if(without==null||withHeadOffice==null)return null;
+  return without-withHeadOffice;
+}
+function relabelGopWithHeadOffice(){
+  try{
+    document.querySelectorAll('#view-pl .pl-nop td:first-child').forEach(td=>{
+      if(/NET OPERATING PROFIT|NOP/i.test(td.textContent||''))td.textContent='GOP COM SEDE';
+    });
+  }catch(e){}
+}
+
 if(originalCost){try{plSum=liveCost;}catch(e){}window.plSum=liveCost;}
 try{plSumRev=reconciledRevenue;}catch(e){}window.plSumRev=reconciledRevenue;
 try{plSumOps=liveOpsSum;}catch(e){}window.plSumOps=liveOpsSum;
-try{window.dispatchEvent(new CustomEvent('vg-pl-usali-reconciled',{detail:{source:'live-filtered-financials'}}));}catch(e){}
+try{getNopValue=headOfficeDeduction;}catch(e){}window.getNopValue=headOfficeDeduction;
+if(originalBuildStmt){
+  const reconciledBuildStmt=function(){const result=originalBuildStmt.apply(this,arguments);relabelGopWithHeadOffice();return result;};
+  try{plBuildStmt=reconciledBuildStmt;}catch(e){}window.plBuildStmt=reconciledBuildStmt;
+}
+try{window.dispatchEvent(new CustomEvent('vg-pl-usali-reconciled',{detail:{source:'live-filtered-financials',gopWithHeadOffice:true}}));}catch(e){}
 })();
