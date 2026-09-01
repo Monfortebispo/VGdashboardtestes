@@ -1,5 +1,3 @@
-type IdleWindow=Window&{requestIdleCallback?: (cb:()=>void,opts?:{timeout:number})=>number};
-
 export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loading:'post-load' as const});
 
 // Regression-contract markers kept in the lightweight entrypoint.
@@ -9,13 +7,13 @@ export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loadi
 
 function startModernRuntime():void{
   const run=()=>{
-    void import('./bootstrap').catch(err=>{
+    void import('./bootstrap').catch((err:unknown)=>{
+      const message=err instanceof Error?err.message:String(err);
       console.error('[VG modern] post-load bootstrap failed',err);
-      window.dispatchEvent(new CustomEvent('vg-modern-preview-error',{detail:String(err?.message||err)}));
+      window.dispatchEvent(new CustomEvent('vg-modern-preview-error',{detail:message}));
     });
   };
-  const idle=(window as IdleWindow).requestIdleCallback;
-  if(typeof idle==='function') idle(run,{timeout:1200});
+  if(typeof window.requestIdleCallback==='function') window.requestIdleCallback(run,{timeout:1200});
   else window.setTimeout(run,120);
 }
 
