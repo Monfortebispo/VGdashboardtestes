@@ -1,5 +1,5 @@
 [build]
-  command = "npm run modern:deploy-preview"
+  command = "npm test"
   functions = "netlify/functions"
 
 [context.deploy-preview]
