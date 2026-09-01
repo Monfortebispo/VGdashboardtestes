@@ -13,7 +13,7 @@
   const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const marketSymbol=()=>window.VG?.market?.symbol?.()||'€';
   const locale=()=>window.VG?.market?.locale?.()||'pt-PT';
-  const money=(v,d=2)=>n(v)==null?'—':`${marketSymbol()} ${Math.abs(Number(v)).toLocaleString(locale(),{minimumFractionDigits:d,maximumFractionDigits:d})}`;
+  const money=(v,d=2)=>{const x=n(v);if(x==null)return '—';const sign=x<0?'-':'';return `${sign}${marketSymbol()} ${Math.abs(x).toLocaleString(locale(),{minimumFractionDigits:d,maximumFractionDigits:d})}`;};
   const signedPct=v=>n(v)==null?'—':`${v>=0?'+':''}${Number(v).toLocaleString('pt-PT',{maximumFractionDigits:1})}%`;
   const yearCur=()=>String(typeof YR_CUR!=='undefined'?YR_CUR:new Date().getFullYear());
   const yearPrev=()=>String(typeof YR_PREV!=='undefined'?YR_PREV:Number(yearCur())-1);
@@ -42,7 +42,7 @@
     roomRevenue:{group:'revenue',label:'Receita alojamento',short:'Receita aloj.',better:'higher',icon:'🛏',value:(h,y)=>op(h,'Receita Alojamento',y)},
     fbRevenue:{group:'revenue',label:'Receita A&B',short:'Receita A&B',better:'higher',icon:'🍷',value:(h,y)=>op(h,'Receita FB',y)},
     otherRevenue:{group:'revenue',label:'Receita complementar',short:'Receita compl.',better:'higher',icon:'＋',value:(h,y)=>{const t=op(h,'Receita Total',y)||0,a=op(h,'Receita Alojamento',y)||0,f=op(h,'Receita FB',y)||0;return t-a-f;}},
-    gop:{group:'result',label:'GOP com sede',short:'GOP',better:'higher',icon:'◆',value:(h,y)=>{try{return n(window.VG?.kpi?.gop?.(h,String(y),RAW));}catch(e){return op(h,'GOP COM SEDE',y);}}}
+    gop:{group:'result',label:'GOP com sede',short:'GOP',better:'higher',icon:'◆',value:(h,y)=>{let v=null;try{v=n(window.VG?.kpi?.gop?.(h,String(y),RAW));}catch(e){}return v!=null?v:op(h,'GOP COM SEDE',y);}}
   };
 
   function op(h,key,y){try{return n(RAW?.hotels_ops?.[h]?.[key]?.[String(y)]);}catch(e){return null;}}
