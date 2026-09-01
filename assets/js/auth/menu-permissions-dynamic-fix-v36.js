@@ -19,7 +19,8 @@ function installCurrentUserNormalizer(){
   if(typeof original!=='function'||original.__vgDirectionNormalized) return;
   const wrapped=function(){
     const u=original.apply(this,arguments);
-    if(!u||!isDirectionRole(u.role)||String(u.role||'').toLowerCase()==='direcao') return u;
+    if(!u||!isDirectionRole(u.role)) return u;
+    if(String(u.role||'').toLowerCase()==='direcao') return u;
     return Object.assign({},u,{role:'direcao'});
   };
   wrapped.__vgDirectionNormalized=true;
@@ -33,21 +34,6 @@ function moduleAllowed(id){
   if(isDirectionRole(u.role)) return true;
   if(typeof window.vgAuthCanAccessModule==='function') return window.vgAuthCanAccessModule(id)===true;
   return Array.isArray(u.modules)&&u.modules.includes(id);
-}
-
-function syncCityLedgerDirectionActions(){
-  const root=document.getElementById('cityLedgerRoot');
-  if(!root) return;
-  const u=window.vgAuthCurrent?.();
-  if(!u||!isDirectionRole(u.role)) return;
-  root.querySelectorAll('[data-cl-import],[data-cl-templates]').forEach(function(el){
-    el.hidden=false;
-    el.disabled=false;
-    el.removeAttribute('aria-hidden');
-    el.style.removeProperty('display');
-    el.style.removeProperty('visibility');
-    el.style.removeProperty('opacity');
-  });
 }
 
 function syncDynamicMenus(){
@@ -66,19 +52,6 @@ function syncDynamicMenus(){
     const visible=[...group.querySelectorAll('.sb-nav-btn')].some(function(btn){return btn.style.display!=='none';});
     group.style.display=visible?'':'none';
   });
-  syncCityLedgerDirectionActions();
-}
-
-function installCityLedgerObserver(){
-  if(window.__VG_CITYLEDGER_DIRECTION_OBSERVER__) return;
-  window.__VG_CITYLEDGER_DIRECTION_OBSERVER__=true;
-  const observer=new MutationObserver(function(mutations){
-    if(!mutations.some(function(m){
-      return m.type==='childList'&&(m.addedNodes.length||m.removedNodes.length);
-    })) return;
-    syncCityLedgerDirectionActions();
-  });
-  observer.observe(document.documentElement,{childList:true,subtree:true});
 }
 
 function install(){
@@ -86,15 +59,14 @@ function install(){
   const original=window.vgAuthApplyMenuPermissions;
   if(typeof original==='function'&&!original.__vgDynamicMenuWrapped){
     const wrapped=function(){
-      const out=original.apply(this,arguments);
       installCurrentUserNormalizer();
+      const out=original.apply(this,arguments);
       syncDynamicMenus();
       return out;
     };
     wrapped.__vgDynamicMenuWrapped=true;
     window.vgAuthApplyMenuPermissions=wrapped;
   }
-  installCityLedgerObserver();
   syncDynamicMenus();
 }
 
