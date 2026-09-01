@@ -9,8 +9,8 @@
   if(window.VG.unitEconomics?.version>=32)return;
 
   const state={tab:'overview',numerator:'energy',denominator:'available',year:'',hotel:''};
-  const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null;};
-  const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const n=v=>{if(v==null||v==='')return null;const x=Number(v);return Number.isFinite(x)?x:null;};
+  const esc=v=>window.VG?.util?.escapeHtml?window.VG.util.escapeHtml(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
   const marketSymbol=()=>window.VG?.market?.symbol?.()||'€';
   const locale=()=>window.VG?.market?.locale?.()||'pt-PT';
   const money=(v,d=2)=>{const x=n(v);if(x==null)return '—';const sign=x<0?'-':'';return `${sign}${marketSymbol()} ${Math.abs(x).toLocaleString(locale(),{minimumFractionDigits:d,maximumFractionDigits:d})}`;};
