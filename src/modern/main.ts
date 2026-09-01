@@ -3,6 +3,7 @@ export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loadi
 // Regression-contract markers kept in the lightweight entrypoint.
 // The actual calls now live in bootstrap.ts and execute only after the page load event.
 // registerLegacyDataSources();
+// installFinancialsBridge();
 // dataPlan:viewDataPlan()
 // registerModule('portfolio'
 // registerModule('costs'
