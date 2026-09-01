@@ -2,7 +2,7 @@ name: Modern development CI
 
 on:
   push:
-    branches: [refactor-modern-architecture]
+    branches: [refactor-modern-architecture, performance-postload-modern]
   workflow_dispatch:
 
 jobs:
