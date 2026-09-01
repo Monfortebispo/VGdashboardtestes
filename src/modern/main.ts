@@ -4,6 +4,7 @@ export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loadi
 // The actual calls now live in bootstrap.ts and execute only after the page load event.
 // registerLegacyDataSources();
 // installFinancialsBridge();
+// ensureUsaliReconciliation();
 // dataPlan:viewDataPlan()
 // registerModule('shell'
 // registerModule('portfolio'
