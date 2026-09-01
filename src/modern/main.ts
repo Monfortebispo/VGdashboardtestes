@@ -1,5 +1,7 @@
 type IdleWindow=Window&{requestIdleCallback?: (cb:()=>void,opts?:{timeout:number})=>number};
 
+export const modernEntryMetadata=Object.freeze({status:'isolated' as const,loading:'post-load' as const});
+
 function startModernRuntime():void{
   const run=()=>{
     void import('./bootstrap').catch(err=>{
