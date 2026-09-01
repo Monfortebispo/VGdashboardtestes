@@ -18,9 +18,9 @@ assert(costs.includes('financialsData(force)'),'custos deve passar pela fachada 
 assert(costs.includes('costsSnapshot(financials.raw)'),'normalização de custos deve receber apenas o payload financeiro');
 assert(bridge.includes('modernFinancials'),'deve existir bridge financeiro moderno para compatibilidade legacy');
 assert(bridge.includes("sum('hotels_ops','Receita Total'"),'bridge deve expor Receita Total oficial');
-assert(usali.includes('liveSum'),'USALI deve usar os helpers financeiros vivos para respeitar seleção e período ativos');
-assert(usali.includes("opsValue('Receita Total'"),'USALI deve reconciliar o total com Receita Total operacional oficial');
-assert(usali.includes("liveSum('cost'"),'USALI deve usar custos vivos para respeitar seleção e período ativos');
+assert(usali.includes('liveRev(')&&usali.includes('liveOps('),'USALI deve usar helpers financeiros vivos para respeitar seleção e período ativos');
+assert(usali.includes("liveOps('Receita Total'"),'USALI deve reconciliar o total com Receita Total operacional oficial');
+assert(usali.includes('liveCost('),'USALI deve usar custos vivos para respeitar seleção e período ativos');
 assert(main.includes('installFinancialsBridge();'),'bootstrap moderno deve instalar bridge financeiro antes do USALI');
 assert(legacy.includes("financialsSnapshot(w.RAW,w.STORE)"),'registry deve adaptar RAW e STORE para snapshot financeiro tipado');
 console.log('✓ Modern financials source: fachada, bridge e USALI reconciliam com o contexto financeiro vivo');
