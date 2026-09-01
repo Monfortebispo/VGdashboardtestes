@@ -26,8 +26,13 @@ function moduleAllowed(id){
 function syncDynamicMenus(){
   document.querySelectorAll('.sb-nav-btn[id^="nav-"]').forEach(function(el){
     const ok=moduleAllowed(el.id.slice(4));
-    el.style.display=ok?'':'none';
-    if(ok) delete el.dataset.vgAccessHidden; else el.dataset.vgAccessHidden='1';
+    if(ok){
+      el.style.display='';
+      delete el.dataset.vgAccessHidden;
+    }else{
+      el.style.display='none';
+      el.dataset.vgAccessHidden='1';
+    }
   });
   document.querySelectorAll('.sb-nav-group').forEach(function(group){
     group.style.display=[...group.querySelectorAll('.sb-nav-btn')].some(function(btn){return btn.style.display!=='none';})?'':'none';
