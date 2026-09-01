@@ -24,8 +24,7 @@ installFinancialsBridge();
 
 function runDeferredBackgroundInit():void{
   const work=()=>{void ensureUsaliReconciliation();};
-  const idle=(window as Window & {requestIdleCallback?: (cb:()=>void,opts?:{timeout:number})=>number}).requestIdleCallback;
-  if(typeof idle==='function') idle(work,{timeout:2500});
+  if(typeof window.requestIdleCallback==='function') window.requestIdleCallback(work,{timeout:2500});
   else window.setTimeout(work,600);
 }
 runDeferredBackgroundInit();
