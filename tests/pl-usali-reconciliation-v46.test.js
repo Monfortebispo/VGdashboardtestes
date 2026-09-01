@@ -9,9 +9,11 @@ assert(parser.includes("'DRHP'"),'parser deve preservar DRHP como receita');
 assert(usali.includes("plSumRev('DIVERSOS'"),'USALI mantém a classificação Outros Departamentos');
 assert(patch.includes('getActiveHotels'),'USALI deve respeitar a seleção viva de hotéis');
 assert(!patch.includes('modernFinancials'),'USALI não deve usar snapshot/cache financeira que possa estar fora do período ativo');
-assert(patch.includes("metricTotal('GOP sem sede'"),'USALI deve obter GOP sem sede por hotel');
-assert(patch.includes("metricTotal('GOP com sede'"),'USALI deve obter GOP com sede por hotel');
-assert(patch.includes("td.textContent='GOP COM SEDE'"),'linha NOP deve ser apresentada como GOP COM SEDE');
+assert(patch.includes('gopSemSedeTotal'),'USALI deve obter GOP sem sede por hotel/seleção');
+assert(patch.includes('gopComSedeTotal'),'USALI deve obter GOP com sede por hotel/seleção');
+assert(patch.includes('(-) Imputações / Custos de Sede'),'USALI deve apresentar explicitamente as imputações de sede');
+assert(patch.includes('GOP COM SEDE'),'USALI deve apresentar explicitamente o GOP com sede');
+assert(patch.includes("data-vg-head-office")||patch.includes("dataset.vgHeadOffice"),'linhas de sede devem ser identificáveis no DOM');
 assert(main.includes('ensureUsaliReconciliation'),'preview moderno deve ativar a reconciliação');
 
 const base={A:{ALOJAMENTO:60,ALIMENTACAO:20,DIVERSOS:5},B:{ALOJAMENTO:25,ALIMENTACAO:10,DIVERSOS:5}};
@@ -44,4 +46,4 @@ assert.strictEqual(ctx.plSumRev('ALIMENTACAO','2026'),20,'mudança de filtro dev
 assert.strictEqual(ctx.plSumRev('DIVERSOS','2026'),20,'Outros deve reconciliar após mudança de filtro');
 assert.strictEqual(ctx.plSumRev('ALOJAMENTO','2026')+ctx.plSumRev('ALIMENTACAO','2026')+ctx.plSumRev('DIVERSOS','2026'),100,'Total USALI deve acompanhar imediatamente o filtro ativo');
 assert.strictEqual(ctx.getNopValue('A','2026'),5,'seleção de um hotel preserva o custo de sede real desse hotel');
-console.log('✓ USALI: Receita Total, filtros e GOP com sede usam valores vivos por hotel, sem snapshot stale');
+console.log('✓ USALI: Receita Total, filtros, imputações de sede e GOP com sede usam valores vivos por hotel');
